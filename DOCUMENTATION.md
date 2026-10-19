@@ -164,6 +164,10 @@ El acceso sigue la directriz **Default-Deny**:
 | `MANAGE_ROLES_PERMS` | Configurar matriz de permisos RBAC | `ADMIN` |
 | `CONFIG_PRICING_TIERS`| Modificar tarifas por metro del cotizador | `ADMIN` |
 
+### Regla Específica de Visibilidad de Marca en Navbar:
+* **"KROMA LAB":** Visible universalmente para todos los usuarios (Visitantes, Clientes, Empleados y Administradores).
+* **"Sales Studio":** Oculto por defecto (`display: none`). **Únicamente visible cuando el usuario tiene rol `ADMIN` o `EMPLOYEE`**. Los clientes y visitantes no registrados jamás ven el texto "Sales Studio", manteniendo un perfil limpio hacia el consumidor.
+
 ---
 
 ## 6. Estructura del Monorepo y Mapa de Carpetas
@@ -173,7 +177,7 @@ kroma-lab-sales-studio/
 ├── GEMINI.md                       # Reglas operativas y mandatos para el Agente IA
 ├── DOCUMENTATION.md                # Fuente Única de Verdad viva del proyecto
 ├── frontend/                       # Aplicación Web Vanilla (HTML5, CSS3, ES Modules)
-│   ├── index.html                  # Shell único de la aplicación
+│   ├── index.html                  # Shell único con logo oficial SVG y cotizador
 │   ├── _redirects                  # Configuración de routing SPA para Cloudflare Pages
 │   ├── package.json                # Dependencias de testing (Vitest, JSDOM) y scripts
 │   ├── vitest.config.js            # Configuración de pruebas unitarias (>85% coverage)
@@ -181,34 +185,30 @@ kroma-lab-sales-studio/
 │   │   ├── css/
 │   │   │   ├── theme.css           # Tokens de diseño y variables CSS (Light/Dark)
 │   │   │   ├── base.css            # Reset, tipografía y utilidades
-│   │   │   ├── components.css      # Botones, badges, modales, cards
-│   │   │   └── views.css           # Estilos de vistas (landing, quoter, dashboard)
+│   │   │   └── views.css           # Estilos de vistas (cotizador, bobina, despiece)
+│   │   ├── shared/
+│   │   │   └── business-config.js  # Constantes de negocio espejadas para el cliente
 │   │   └── js/
-│   │       ├── app.js              # Punto de entrada e inicialización de la SPA
-│   │       ├── router.js           # Enrutador History API ligero
+│   │       ├── app.js              # Punto de entrada, sincronización de rol y cotizador
 │   │       ├── store.js            # Estado reactivo global (usuario, token, tema)
-│   │       ├── api/                # Cliente HTTP con refresco JWT proactivo/reactivo
-│   │       ├── modules/
-│   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático
-│   │       │   ├── roll-simulator.js   # Renderizador interactivo en Canvas
-│   │       │   └── file-uploader.js    # Drag-and-drop y validación TIFF/PNG
-│   │       ├── views/              # Vistas desacopladas (Home, Cotizador, Pedidos, etc.)
-│   │       └── components/         # Modales, Topbar, ThemeToggle, Tablas
-│   └── __tests__/                  # Pruebas unitarias de frontend
+│   │       └── modules/
+│   │           ├── quoter-engine.js    # Motor puro de cálculo matemático
+│   │           └── roll-simulator.js   # Renderizador interactivo en Canvas (28 cm)
+│   └── __tests__/                  # 31 pruebas unitarias de frontend (> 85% coverage)
+│       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
+│       ├── store.test.js           # 5 tests de estado y reactividad
+│       ├── roll-simulator.test.js  # 3 tests de Canvas 2D
+│       ├── app.test.js             # 9 tests de DOM, roles y WhatsApp
+│       └── setup.js                # Mock de Canvas para JSDOM
 ├── backend/                        # API REST (Node.js, Express, Prisma)
 │   ├── package.json                # Scripts y dependencias backend
 │   ├── tsconfig.json               # Configuración TypeScript
-│   ├── vitest.config.mts           # Vitest backend (>85% coverage)
-│   ├── prisma/
-│   │   └── schema.prisma           # Esquema de base de datos Neon PostgreSQL
-│   └── src/
-│       ├── index.ts                # Inicialización Express y middlewares globales
-│       ├── controllers/            # Controladores de negocio
-│       ├── routes/                 # Rutas montadas bajo /api
-│       ├── middlewares/            # Auth JWT, RBAC, Zod, error handling
-│       └── __tests__/              # Pruebas unitarias de backend
-└── shared/                         # Constantes y tipos comunes (precios, enums, status)
+│   └── prisma/
+│       └── schema.prisma           # Esquema de base de datos Neon PostgreSQL
+└── shared/                         # Constantes maestras de negocio
+    └── business-config.js
 ```
+
 
 ---
 

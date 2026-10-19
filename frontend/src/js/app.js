@@ -1,12 +1,23 @@
 /**
- * Punto de entrada principal de la SPA Vanilla JS de Kroma Lab Sales Studio.
+ * SPA Entrypoint — Kroma Lab Sales Studio
+ * Manejo de logo, roles en navbar, cotizador interactivo y simulador de bobina.
  */
 
 import { store } from './store.js';
 import { calculateQuote } from './modules/quoter-engine.js';
+import { drawRollCanvas } from './modules/roll-simulator.js';
+import { BUSINESS_CONFIG } from '../shared/business-config.js';
 
 export function initApp() {
-  // Inicializar botón de tema
+  initTheme();
+  initNavbarRoleSync();
+  initQuoter();
+}
+
+/**
+ * Inicialización y sincronización del switch de tema (Dark/Light)
+ */
+function initTheme() {
   const themeToggle = document.getElementById('themeToggleBtn');
   if (themeToggle) {
     themeToggle.addEventListener('click', () => {
@@ -14,21 +25,231 @@ export function initApp() {
     });
   }
 
-  // Escuchar cambios de estado para actualizar ícono del botón de tema
   store.subscribe((state) => {
-    updateThemeIcon(state.theme);
+    updateThemeUI(state.theme);
   });
-  updateThemeIcon(store.state.theme);
-
-  // Inicializar cotización de prueba por defecto (5x5 cm, 50 piezas)
-  const defaultQuote = calculateQuote({ widthCm: 5, heightCm: 5, qty: 50, includeCutting: false });
-  store.setActiveQuote(defaultQuote);
+  updateThemeUI(store.state.theme);
 }
 
-function updateThemeIcon(theme) {
+function updateThemeUI(theme) {
   const icon = document.getElementById('themeToggleIcon');
   if (icon) {
     icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
+  // Re-dibujar canvas al cambiar el tema para adaptar el contraste
+  const canvas = document.getElementById('rollCanvas');
+  if (canvas && store.state.activeQuote) {
+    drawRollCanvas(canvas, store.state.activeQuote, theme === 'dark');
+  }
+}
+
+/**
+ * Control dinámico del Navbar según el rol del usuario:
+ * - "Sales Studio" SOLO se muestra para ADMIN y EMPLOYEE.
+ * - Clientes y visitantes sin registrar SOLO ven "Kroma Lab".
+ */
+export function syncNavbarRole(role) {
+  const salesStudioTag = document.getElementById('salesStudioTag');
+  const navLinksContainer = document.getElementById('navRoleLinks');
+
+  const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
+
+  if (salesStudioTag) {
+    salesStudioTag.style.display = isStaff ? 'inline-block' : 'none';
+  }
+
+  if (navLinksContainer) {
+    if (isStaff) {
+      navLinksContainer.innerHTML = `
+        <a href="#produccion" class="nav-link">Cola Audley</a>
+        <a href="#pedidos" class="nav-link">Pedidos</a>
+        <a href="#clientes" class="nav-link">Clientes</a>
+        <a href="#cotizador" class="nav-link active">Cotizador</a>
+        ${role === 'ADMIN' ? '<a href="#usuarios" class="nav-link">Usuarios</a>' : ''}
+      `;
+    } else if (role === 'CUSTOMER') {
+      navLinksContainer.innerHTML = `
+        <a href="#cotizador" class="nav-link active">Cotizador</a>
+        <a href="#pedidos" class="nav-link">Mis Pedidos</a>
+        <a href="#disenos" class="nav-link">Mis Diseños</a>
+      `;
+    } else {
+      // Visitante no registrado
+      navLinksContainer.innerHTML = `
+        <a href="#cotizador" class="nav-link active">Cotizador</a>
+        <a href="#ventajas" class="nav-link">¿Qué es UV DTF?</a>
+        <a href="#contacto" class="nav-link">WhatsApp</a>
+      `;
+    }
+  }
+}
+
+function initNavbarRoleSync() {
+  store.subscribe((state) => {
+    const role = state.user?.role || 'VISITOR';
+    syncNavbarRole(role);
+  });
+  syncNavbarRole(store.state.user?.role || 'VISITOR');
+}
+
+/**
+ * Inicialización de la interfaz del cotizador interactivo
+ */
+export function initQuoter() {
+  const widthInput = document.getElementById('stickerWidth');
+  const heightInput = document.getElementById('stickerHeight');
+  const qtyInput = document.getElementById('stickerQty');
+  const cuttingCheckbox = document.getElementById('optCutting');
+
+  if (!widthInput || !heightInput || !qtyInput) return;
+
+  function handleCalculate() {
+    const w = parseFloat(widthInput.value) || 5;
+    const h = parseFloat(heightInput.value) || 5;
+    const q = parseInt(qtyInput.value, 10) || 50;
+    const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+    const quote = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+    store.setActiveQuote(quote);
+    renderQuoteResults(quote);
+
+    const canvas = document.getElementById('rollCanvas');
+    if (canvas) {
+      drawRollCanvas(canvas, quote, store.state.theme === 'dark');
+    }
+  }
+
+  widthInput.addEventListener('input', handleCalculate);
+  heightInput.addEventListener('input', handleCalculate);
+  qtyInput.addEventListener('input', handleCalculate);
+  if (cuttingCheckbox) {
+    cuttingCheckbox.addEventListener('change', handleCalculate);
+  }
+
+  // Configurar botones de presets rápidos
+  const presetChips = document.querySelectorAll('.btn-chip[data-w]');
+  presetChips.forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      presetChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      widthInput.value = chip.dataset.w;
+      heightInput.value = chip.dataset.h;
+      handleCalculate();
+    });
+  });
+
+  // Botón de WhatsApp
+  const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
+  if (btnWhatsApp) {
+    btnWhatsApp.addEventListener('click', () => {
+      sendWhatsAppQuote(store.state.activeQuote);
+    });
+  }
+
+  // Redimensionado responsivo del canvas
+  window.addEventListener('resize', () => {
+    const canvas = document.getElementById('rollCanvas');
+    if (canvas && store.state.activeQuote) {
+      drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark');
+    }
+  });
+
+  // Cálculo inicial
+  handleCalculate();
+}
+
+/**
+ * Actualiza el DOM con los resultados numéricos de la cotización
+ */
+export function renderQuoteResults(quote) {
+  const setEl = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+
+  setEl('resStickersPerRow', `${quote.stickersPerRow} pzas / fila`);
+  setEl('resRows', `${quote.rows} filas`);
+  setEl('resPhysicalLength', `${quote.physicalLengthCm.toFixed(1)} cm`);
+  setEl('resBillableMeters', `${quote.billableMeters.toFixed(2)} m ${quote.isUnderMin ? '(Mínimo 1m)' : ''}`);
+  setEl('resTierRate', `Q${quote.tierRate.toFixed(2)} / m`);
+  setEl('resTotalPrice', `Q${quote.totalPriceQ.toFixed(2)}`);
+  setEl('canvasStats', `${quote.stickersPerRow} por fila (${(quote.stickersPerRow * quote.widthCm).toFixed(1)} cm)`);
+  setEl('resUnitHint', `Costo aprox: Q${quote.unitPriceQ.toFixed(2)} por sticker ${quote.includeCutting ? '(impreso y cortado)' : ''}`);
+
+  // Detalle de corte
+  const resCuttingCost = document.getElementById('resCuttingCost');
+  if (resCuttingCost) {
+    if (quote.includeCutting) {
+      const cutHintText = quote.isCuttingMinApplied 
+        ? `(Mínimo Q${BUSINESS_CONFIG.cuttingMinimumQ.toFixed(2)})` 
+        : `(Q${quote.cuttingRateUnit.toFixed(2)} c/u)`;
+      resCuttingCost.innerHTML = `<span style="color: var(--color-success); font-weight: 700;">+Q${quote.cuttingTotalQ.toFixed(2)}</span> <span style="font-size: 0.82rem; font-weight: 500; color: var(--text-secondary);">${cutHintText}</span>`;
+    } else {
+      resCuttingCost.textContent = 'No incluido (En rollo continuo)';
+    }
+  }
+
+  const cuttingCard = document.getElementById('cuttingCard');
+  if (cuttingCard) {
+    cuttingCard.classList.toggle('active', quote.includeCutting);
+  }
+
+  const badgeRate = document.getElementById('cuttingBadgeRate');
+  if (badgeRate) {
+    badgeRate.textContent = `+Q${quote.cuttingRateUnit.toFixed(2)} / pza`;
+  }
+
+  // Tags de escala de corte
+  const tag1 = document.getElementById('tierTag1');
+  const tag2 = document.getElementById('tierTag2');
+  const tag3 = document.getElementById('tierTag3');
+  if (tag1 && tag2 && tag3) {
+    tag1.classList.toggle('active', quote.qty <= 50);
+    tag2.classList.toggle('active', quote.qty > 50 && quote.qty <= 200);
+    tag3.classList.toggle('active', quote.qty > 200);
+  }
+
+  // Aviso de aprovechamiento de metro mínimo
+  const noticeBox = document.getElementById('minimumNotice');
+  if (noticeBox) {
+    if (quote.isUnderMin) {
+      noticeBox.style.display = 'block';
+      noticeBox.innerHTML = `💡 <strong>Aprovecha tu metro:</strong> El pedido mínimo es 1 metro lineal (Q140.00). Tus ${quote.qty} stickers ocupan aprox. ${(quote.actualLinearMeters).toFixed(2)} m. ¡Puedes pedir hasta <strong>${quote.maxInOneMeter} piezas</strong> por el mismo precio exacto de Q140.00!`;
+    } else {
+      noticeBox.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Genera el enlace directo a WhatsApp con el desglose comercial
+ */
+export function sendWhatsAppQuote(quote) {
+  if (!quote) return;
+  const cuttingTotalQ = quote.cuttingTotalQ || 0;
+  const cuttingRateUnit = quote.cuttingRateUnit || 0;
+  const cutDetail = quote.isCuttingMinApplied 
+    ? `(+Q${cuttingTotalQ.toFixed(2)} tarifa base mínima)`
+    : `(+Q${cuttingTotalQ.toFixed(2)} por ${quote.qty} pzas a Q${cuttingRateUnit.toFixed(2)} c/u)`;
+
+  const cuttingText = quote.includeCutting
+    ? `• *Corte / Acabado:* Sí, corte recto con máquinas de precisión ${cutDetail}\n`
+    : `• *Corte / Acabado:* No (Entrega estándar en rollo continuo)\n`;
+
+
+  const text = `¡Hola Kroma Lab! 🚀\n\nQuisiera consultar una cotización de impresión UV DTF:\n` +
+    `• *Tamaño de sticker:* ${quote.widthCm} x ${quote.heightCm} cm\n` +
+    `• *Cantidad solicitada:* ${quote.qty} stickers\n` +
+    `• *Acomodo:* ${quote.stickersPerRow} stickers por fila\n` +
+    `• *Metros requeridos:* ${quote.billableMeters.toFixed(2)} m\n` +
+    `• *Tarifa material:* Q${quote.tierRate.toFixed(2)} / m\n` +
+    cuttingText +
+    `• *Total estimado:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
+    `¿Qué disponibilidad tienen para entrega esta semana?`;
+
+  const url = `https://wa.me/${BUSINESS_CONFIG.phoneWhatsApp}?text=${encodeURIComponent(text)}`;
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank');
   }
 }
 
