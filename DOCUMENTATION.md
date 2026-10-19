@@ -200,19 +200,22 @@ kroma-lab-sales-studio/
 │   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático de cotización
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
+│   │       │   ├── orders-store.js     # Almacén reactivo de pedidos B2B, cobros y métricas de taller
 │   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
 │   │       │   ├── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
 │   │       │   └── production-store.js # Almacén reactivo de Kanban y monitor de consumo de film PET
 │   │       └── views/
 │   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF + Dropzone
-│   │           ├── orders-view.js      # Vista de pedidos (Staff vs Cliente)
+│   │           ├── orders-view.js      # Vista de gestión de pedidos, cobros y Hoja de Taller Audley
 │   │           ├── production-view.js  # Tablero Kanban interactivo Audley + Monitor de Bobina (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 122 pruebas unitarias de frontend (> 85% coverage)
+│   └── __tests__/                  # 149 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
-│       ├── cart-store.test.js      # 6 tests de estado reactivo y localStorage
+│       ├── cart-store.test.js      # 8 tests de estado reactivo y localStorage
+│       ├── orders-store.test.js    # 10 tests de almacén de pedidos, estados de pago y métricas
+│       ├── orders-ui.test.js       # 15 tests de interfaz de pedidos, Hoja de Taller y roles
 │       ├── file-uploader.test.js   # 9 tests de validación y formatos de archivo
 │       ├── cart-ui.test.js         # 12 tests de interfaz de carrito y checkout modal
 │       ├── store.test.js           # 5 tests de estado y reactividad
@@ -254,6 +257,18 @@ kroma-lab-sales-studio/
   * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
   * **Drawer Lateral Interactivo:** Permite modificar cantidades en tiempo real (+ / -), eliminar ítems, ver el desglose financiero consolidado y despachar el pedido completo estructurado directamente hacia WhatsApp o hacia el modal de checkout.
   * **Persistencia:** Almacenado en `localStorage['kromalab_cart']` para no perder los ítems al recargar o navegar entre vistas.
+* **Módulo de Gestión de Pedidos y Hoja de Taller Audley (`orders-store.js` + `orders-view.js`):**
+  * **Vistas Contextuales por Rol:**
+    * **Staff (`ADMIN` / `EMPLOYEE`):** Monitor integral con 4 KPIs en tiempo real (Pedidos Activos, Metros en Taller, Total Facturación y Saldo Pendiente de Cobro), tabla de pedidos con selector dinámico de estado de producción y estado de pago, botón para generar Hoja de Taller Audley y modal de registro manual para ventas en mostrador.
+    * **Clientes (`CUSTOMER`):** Portal de autoservicio simplificado ("Mis Pedidos UV DTF") para consultar avance de impresión, comprobantes, metraje y canal directo de soporte por WhatsApp.
+  * **Ciclo de Vida de Producción:** Sincronizado con `ORDER_STATUS` (`IN_AUDLEY_QUEUE`, `PRINTING`, `LAMINATING_CUTTING`, `READY_FOR_DELIVERY`, `COMPLETED`, `CANCELLED`).
+  * **Ciclo Comercial y Cobranza:** Administrado con `PAYMENT_STATUS` (`PENDING`, `PARTIAL` 50%, `PAID`, `CANCELLED`).
+  * **Hoja de Taller Audley UV DTF (Imprimible):** Ficha técnica en alta definición con diseño optimizado para impresión física (`@media print` con reglas para ocultar la interfaz web y botones), diseñada para acompañar la bobina en máquina. Incluye:
+    * Datos de cliente, contacto y NIT SAT.
+    * Metraje total y tipo de acabado (corte individual vs rollo continuo).
+    * Tabla detallada de acomodo por fila (`stickersPerRow`, `rows`, medidas y archivos fuente).
+    * Checklist de control de calidad para el operador (test de inyectores, cama blanca, lámpara UV, calandrado con Film B y rebobinado o corte).
+    * Notas especiales e instrucciones de taller.
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
