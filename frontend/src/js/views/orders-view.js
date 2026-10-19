@@ -75,7 +75,10 @@ export const ordersView = {
         </div>
 
         <!-- Tabla Principal de Pedidos -->
-        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto;">
+        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <div class="mobile-scroll-hint">
+            <span>👈 Desliza horizontalmente para ver más columnas 👉</span>
+          </div>
           <table class="orders-table">
             <thead>
               <tr>
@@ -243,7 +246,7 @@ export const ordersView = {
               <textarea id="manualNotes" class="input-control" rows="2" placeholder="Instrucciones para el taller..."></textarea>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+            <div class="modal-actions-footer">
               <button type="button" class="btn btn-secondary" id="btnCancelCreateOrderModal">Cancelar</button>
               <button type="submit" class="btn btn-primary">Crear Pedido</button>
             </div>
@@ -513,7 +516,7 @@ export const ordersView = {
         const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
 
         contentEl.innerHTML = `
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; background: var(--bg-surface-elevated); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 1rem;">
+          <div class="order-detail-meta-grid">
             <div>
               <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Cliente / Contacto:</span>
               <div style="font-weight: 700;">${order.customer.name}</div>

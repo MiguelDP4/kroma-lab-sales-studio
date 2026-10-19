@@ -158,4 +158,23 @@ flowchart TD
 3. **Solicitud de Visto Bueno:** Al finalizar la tarea, se le presenta el avance detallado a Miguel para revisión.
 4. **Merge a `development`:** **Únicamente tras recibir el visto bueno explícito de Miguel**, se realiza el merge a `development`.
 
+---
+
+## 8. Regla Obligatoria de Diseño y Desarrollo Mobile-First
+
+> **NORMA DE EXPERIENCIA DE USUARIO (UX/UI):**
+> Toda la interfaz pública, cotizador, catálogo, tablas de gestión interna, modales, componentes y tableros interactivos deben construirse y optimizarse obligatoriamente con **mentalidad Mobile-First**.
+
+1. **Diseño y Estilizado Progresivo:**
+   * La estructura HTML y el CSS base deben pensarse primero para pantallas pequeñas (smartphones desde 320px - 375px de ancho) y expandirse progresivamente hacia tablets y escritorios mediante `@media (min-width: ...)`.
+2. **Tablas y Listados Adaptativos:**
+   * Ninguna tabla o panel de control debe desbordar o romper el viewport horizontal en móviles.
+   * Se deben implementar contenedores con scroll horizontal táctil suave (`overflow-x: auto; -webkit-overflow-scrolling: touch;`), vistas de tarjeta (card view) o colapso responsivo de columnas secundarias.
+3. **Zonas de Toque y Ergonomía Táctil:**
+   * Botones, selectores, checkboxes e inputs interactivos deben cumplir con un tamaño mínimo de toque ergonómico (mínimo 44 × 44 px de área táctil).
+   * Modales y hojas desplegables (drawers) deben adaptarse al 100% del ancho móvil con zonas de cierre (X y botón cerrar) cómodas con una sola mano.
+4. **Canvas y Simuladores Gráficos:**
+   * El simulador de bobina Audley y el dropzone deben escalar dinámicamente según el ancho de pantalla (`max-width: 100%`, auto-resize en Canvas), manteniendo legibilidad sin recortes.
+
+
 
