@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kroma Lab Sales Studio | Impresión UV DTF</title>
+  <meta name="description" content="Kroma Lab Sales Studio — Cotizador interactivo, portal B2B y sistema de pedidos de impresión UV DTF industrial en Guatemala.">
+  <link rel="stylesheet" href="./src/css/theme.css">
+  <link rel="stylesheet" href="./src/css/base.css">
+</head>
+<body>
+  <header class="navbar" style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface-glass); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50;">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; height: 72px;">
+      <a href="/" style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--btn-primary-bg); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.1rem;">
+          KL
+        </div>
+        <div>
+          <div style="font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1;">Kroma Lab</div>
+          <div style="font-size: 0.7rem; font-weight: 700; color: var(--cerulean); letter-spacing: 0.08em; text-transform: uppercase;">Sales Studio</div>
+        </div>
+      </a>
+
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <nav style="display: flex; align-items: center; gap: 1.5rem;">
+          <a href="#cotizador" style="font-weight: 600; font-size: 0.95rem; color: var(--text-secondary);">Cotizador</a>
+          <a href="#pedidos" style="font-weight: 600; font-size: 0.95rem; color: var(--text-secondary);">Mis Pedidos</a>
+        </nav>
+        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Cambiar tema">
+          <span id="themeToggleIcon">☀️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+    <!-- Vista inicial del Cotizador y bienvenida -->
+    <div style="text-align: center; max-width: 700px; margin: 2rem auto;">
+      <span class="badge">Impresión Industrial UV DTF</span>
+      <h1 style="font-size: 2.5rem; font-weight: 800; margin: 1rem 0; line-height: 1.2;">
+        Cotiza y gestiona tus pedidos en segundos
+      </h1>
+      <p style="color: var(--text-secondary); font-size: 1.1rem;">
+        Tecnología directa sobre film con relieve táctil, barniz UV de alto brillo y resistencia mecánica extrema.
+      </p>
+    </div>
+  </main>
+
+  <script type="module" src="./src/js/app.js"></script>
+</body>
+</html>

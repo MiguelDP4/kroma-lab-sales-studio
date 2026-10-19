@@ -1,0 +1,97 @@
+/**
+ * Sistema de Diseño y Tokens de Kroma Lab
+ * Paleta Primaria:
+ *  - Space Indigo: #21295c
+ *  - Regal Navy:   #1b3b6f
+ *  - Baltic Blue:  #065a82
+ *  - Cerulean:     #1c7293
+ *  - Powder Blue:  #9eb3c2
+ */
+
+:root {
+  /* Paleta Base Kroma Lab */
+  --space-indigo: #21295c;
+  --regal-navy: #1b3b6f;
+  --baltic-blue: #065a82;
+  --cerulean: #1c7293;
+  --powder-blue: #9eb3c2;
+
+  /* Estados Universales */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-white: #ffffff;
+
+  /* Tipografía */
+  --font-main: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, Inconsolata, 'Fira Code', 'Courier New', monospace;
+
+  /* Geometría y Sombras */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   TEMA OSCURO (Por Defecto) — Laboratorio Cyber-Industrial
+   ========================================================================== */
+html[data-theme="dark"],
+:root {
+  --bg-page: #0d1224;
+  --bg-surface: #161f3d;
+  --bg-surface-elevated: #1b294e;
+  --bg-surface-glass: rgba(22, 31, 61, 0.85);
+
+  --border-color: rgba(158, 179, 194, 0.18);
+  --border-focus: var(--cerulean);
+
+  --text-primary: #ffffff;
+  --text-secondary: var(--powder-blue);
+  --text-muted: #6b7c96;
+
+  --btn-primary-bg: linear-gradient(135deg, var(--baltic-blue) 0%, var(--cerulean) 100%);
+  --btn-primary-hover: linear-gradient(135deg, var(--cerulean) 0%, #258cb4 100%);
+  --btn-primary-text: #ffffff;
+  --btn-primary-shadow: 0 4px 20px rgba(28, 114, 147, 0.35);
+
+  --btn-secondary-bg: var(--bg-surface-elevated);
+  --btn-secondary-border: var(--border-color);
+  --btn-secondary-text: var(--text-primary);
+
+  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(158, 179, 194, 0.1);
+  --roll-canvas-bg: #090e1c;
+  --roll-ruler-color: #3b4968;
+}
+
+/* ==========================================================================
+   TEMA CLARO — Corporativo Limpio y Fresco
+   ========================================================================== */
+html[data-theme="light"] {
+  --bg-page: #f4f7fb;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #eef3f8;
+  --bg-surface-glass: rgba(255, 255, 255, 0.9);
+
+  --border-color: rgba(27, 59, 111, 0.15);
+  --border-focus: var(--baltic-blue);
+
+  --text-primary: var(--space-indigo);
+  --text-secondary: var(--regal-navy);
+  --text-muted: #64748b;
+
+  --btn-primary-bg: var(--regal-navy);
+  --btn-primary-hover: var(--space-indigo);
+  --btn-primary-text: #ffffff;
+  --btn-primary-shadow: 0 4px 15px rgba(27, 59, 111, 0.25);
+
+  --btn-secondary-bg: var(--bg-surface-elevated);
+  --btn-secondary-border: rgba(27, 59, 111, 0.2);
+  --btn-secondary-text: var(--space-indigo);
+
+  --card-shadow: 0 8px 25px -5px rgba(33, 41, 92, 0.08), 0 0 0 1px rgba(27, 59, 111, 0.06);
+  --roll-canvas-bg: #e2e8f0;
+  --roll-ruler-color: #94a3b8;
+}
