@@ -201,6 +201,7 @@ kroma-lab-sales-studio/
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
 │   │       │   ├── orders-store.js     # Almacén reactivo de pedidos B2B, cobros y métricas de taller
+│   │       │   ├── clients-store.js    # Almacén reactivo de cartera de clientes B2B y métricas 360°
 │   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
 │   │       │   ├── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
 │   │       │   └── production-store.js # Almacén reactivo de Kanban y monitor de consumo de film PET
@@ -210,12 +211,14 @@ kroma-lab-sales-studio/
 │   │           ├── production-view.js  # Tablero Kanban interactivo Audley + Monitor de Bobina (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 149 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
+│   └── __tests__/                  # 175 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
 │       ├── cart-store.test.js      # 8 tests de estado reactivo y localStorage
 │       ├── orders-store.test.js    # 10 tests de almacén de pedidos, estados de pago y métricas
 │       ├── orders-ui.test.js       # 15 tests de interfaz de pedidos, Hoja de Taller y roles
+│       ├── clients-store.test.js   # 13 tests de directorio de clientes, segmentación y métricas
+│       ├── clients-ui.test.js      # 13 tests de interfaz de cartera B2B, expediente 360° y modales
 │       ├── file-uploader.test.js   # 9 tests de validación y formatos de archivo
 │       ├── cart-ui.test.js         # 12 tests de interfaz de carrito y checkout modal
 │       ├── store.test.js           # 5 tests de estado y reactividad
@@ -269,6 +272,21 @@ kroma-lab-sales-studio/
     * Tabla detallada de acomodo por fila (`stickersPerRow`, `rows`, medidas y archivos fuente).
     * Checklist de control de calidad para el operador (test de inyectores, cama blanca, lámpara UV, calandrado con Film B y rebobinado o corte).
     * Notas especiales e instrucciones de taller.
+* **Módulo de Directorio B2B y Cartera de Clientes (`clients-store.js` + `clients-view.js`):**
+  * **Objetivo Comercial Estratégico:** Seguimiento sistemático para consolidar entre 20 y 30 clientes B2B recurrentes de alto volumen (meta: 25 clientes B2B clave) en el Área Metropolitana de Guatemala.
+  * **Segmentación por Nivel / Tier:**
+    * `VIP`: Cuentas clave de maquila y alto consumo (> 15 metros acumulados).
+    * `RECURRENTE`: Clientes con 2 o más pedidos al mes.
+    * `NUEVO`: Prospectos y primeras compras asistidas.
+    * `INACTIVO`: Cuentas sin compras en más de 60 días para campañas de reactivación.
+  * **Categorización por Sector de Negocio:** Cafeterías & Restaurantes (☕), Barberías & Cuidado Personal (✂️), Artículos Promocionales & Merch (🎁), Cervecerías & Bebidas (🍺), Comercio & Retail (🏪).
+  * **Expediente 360° del Cliente (Modal):** Historial unificado que cruza datos fiscales de SAT (NIT, Razón Social) con las órdenes registradas en `ordersStore`, calculando en tiempo real:
+    * Metraje total acumulado impreso en la Audley.
+    * Facturación histórica total (Q).
+    * Saldo pendiente de cobro (cuentas por cobrar con alerta visual si > Q0.00).
+    * Historial completo de órdenes con estado de producción y pago.
+    * Enlace directo para contacto preformateado por WhatsApp.
+  * **Persistencia:** Almacenado en `localStorage['kromalab_clients']` con Pub/Sub reactivo.
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
