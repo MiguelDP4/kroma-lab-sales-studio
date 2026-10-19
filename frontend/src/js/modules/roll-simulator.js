@@ -70,6 +70,13 @@ export function drawRollCanvas(canvas, quote, isDark = true) {
   let drawnCount = 0;
   const maxDrawRows = Math.ceil(height / (stickerHeightPx + gapPx)) + 1;
 
+  // Centrado horizontal en el ancho útil de la bobina (28 cm)
+  const totalRowWidthPx = itemsPerRow > 0
+    ? (itemsPerRow * stickerWidthPx) + (Math.max(0, itemsPerRow - 1) * gapPx)
+    : 0;
+  const centerOffsetX = Math.max(0, (availableWidthPx - totalRowWidthPx) / 2);
+  const startX = paddingX + centerOffsetX;
+
   ctx.fillStyle = isDark ? 'rgba(28, 114, 147, 0.45)' : 'rgba(6, 90, 130, 0.35)';
   ctx.strokeStyle = isDark ? '#1c7293' : '#065a82';
   ctx.lineWidth = 1.5;
@@ -78,7 +85,7 @@ export function drawRollCanvas(canvas, quote, isDark = true) {
     for (let c = 0; c < itemsPerRow; c++) {
       if (drawnCount >= quote.qty) break;
 
-      const x = paddingX + (c * (stickerWidthPx + gapPx));
+      const x = startX + (c * (stickerWidthPx + gapPx));
       const y = 15 + (r * (stickerHeightPx + gapPx));
 
       roundRect(ctx, x, y, stickerWidthPx, stickerHeightPx, 4, true, true);
