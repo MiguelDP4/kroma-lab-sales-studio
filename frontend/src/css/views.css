@@ -1248,3 +1248,203 @@
   display: block;
 }
 
+/* ==========================================================================
+   VISTA DE PEDIDOS B2B & HOJA DE TALLER AUDLEY
+   ========================================================================== */
+.orders-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.orders-metric-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--card-shadow);
+}
+
+.orders-metric-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.orders-metric-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  margin-top: 0.35rem;
+}
+
+.orders-controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.orders-filters-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  flex-grow: 1;
+}
+
+.orders-search-input {
+  max-width: 320px;
+  min-width: 200px;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.orders-table th {
+  padding: 0.85rem 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--border-color);
+  text-align: left;
+}
+
+.orders-table td {
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.orders-table tr:hover {
+  background: rgba(28, 114, 147, 0.05);
+}
+
+.select-status {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 4px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.btn-action-icon {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.btn-action-icon:hover {
+  background: var(--cerulean);
+  border-color: var(--cerulean);
+  color: #fff;
+}
+
+/* Hoja de Taller Imprimible */
+.workshop-sheet-card {
+  background: #ffffff;
+  color: #111827;
+  padding: 2.5rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+}
+
+.workshop-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #111827;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.workshop-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.workshop-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.workshop-table th,
+.workshop-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.workshop-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+}
+
+.workshop-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .modal-backdrop, .modal-card {
+    position: static !important;
+    background: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .workshop-sheet-card, .workshop-sheet-card * {
+    visibility: visible !important;
+  }
+  .workshop-sheet-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+  .btn-print-hide {
+    display: none !important;
+  }
+}
+
+

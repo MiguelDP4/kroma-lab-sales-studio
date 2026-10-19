@@ -7,6 +7,7 @@ import { formatWhatsAppCartOrder } from '../modules/cart-engine.js';
 import { cartStore } from '../modules/cart-store.js';
 import { store } from '../store.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
+import { ordersStore } from '../modules/orders-store.js';
 
 export function openCheckoutModal(cartTotals) {
   let modalContainer = document.getElementById('checkoutModalContainer');
@@ -101,6 +102,14 @@ export function openCheckoutModal(cartTotals) {
         address: document.getElementById('custAddress')?.value || '',
         notes: document.getElementById('custNotes')?.value || '',
       };
+
+      ordersStore.createOrder({
+        customer,
+        cartTotals,
+        items: cartTotals.items || [],
+        workshopNotes: customer.notes || '',
+      });
+      cartStore.clearCart();
 
       const text = formatWhatsAppCartOrder(cartTotals, customer);
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
