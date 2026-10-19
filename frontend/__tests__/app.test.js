@@ -211,6 +211,29 @@ describe('App — Inicialización y DOM', () => {
       btnRemoveFile.click();
       expect(emptyState.style.display).toBe('flex');
       expect(selectedState.style.display).toBe('none');
+
+      // Simular selección de archivo no-imagen (PDF) donde currentPreviewUrl es null
+      const pdfFile = new File(['dummy-pdf'], 'documento.pdf', { type: 'application/pdf' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [pdfFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 50));
+      expect(selectedState.style.display).toBe('flex');
+
+      // Simular selección de archivo inválido (.exe)
+      btnRemoveFile.click();
+      const invalidFile = new File(['virus'], 'programa.exe', { type: 'application/x-msdownload' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [invalidFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 50));
+      const dropzoneError = document.getElementById('dropzoneError');
+      expect(dropzoneError.style.display).toBe('block');
+      expect(dropzoneError.textContent).toContain('Formato no soportado');
     });
 
     it('maneja de forma segura initQuoter si no existen inputs en el DOM', () => {

@@ -69,4 +69,20 @@ describe('Cart Store — Almacén Reactivo de Carrito', () => {
     expect(stored.length).toBe(1);
     expect(stored[0].qty).toBe(100);
   });
+
+  it('maneja datos corruptos o no-array en localStorage retornando array vacío', () => {
+    localStorage.setItem('kromalab_cart', '{"not":"an array"}');
+    expect(cartStore.loadCartFromStorage()).toEqual([]);
+
+    localStorage.setItem('kromalab_cart', 'invalid-json-{[(');
+    expect(cartStore.loadCartFromStorage()).toEqual([]);
+  });
+
+  it('tolera fallos al guardar en localStorage', () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Quota');
+    });
+    expect(() => cartStore.saveCartToStorage()).not.toThrow();
+    setItemSpy.mockRestore();
+  });
 });
