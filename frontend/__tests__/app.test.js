@@ -16,33 +16,8 @@ describe('App — Inicialización y DOM', () => {
         </button>
       </header>
 
-      <main>
-        <input type="number" id="stickerWidth" value="5">
-        <input type="number" id="stickerHeight" value="5">
-        <input type="number" id="stickerQty" value="50">
-        <input type="checkbox" id="optCutting">
+      <main id="app"></main>
 
-        <button class="btn-chip" data-w="8" data-h="5">8x5</button>
-
-        <span id="resStickersPerRow"></span>
-        <span id="resRows"></span>
-        <span id="resPhysicalLength"></span>
-        <span id="resBillableMeters"></span>
-        <span id="resTierRate"></span>
-        <span id="resCuttingCost"></span>
-        <span id="resTotalPrice"></span>
-        <span id="resUnitHint"></span>
-        <span id="canvasStats"></span>
-        <span id="cuttingBadgeRate"></span>
-        <div id="cuttingCard"></div>
-        <span id="tierTag1"></span>
-        <span id="tierTag2"></span>
-        <span id="tierTag3"></span>
-        <div id="minimumNotice"></div>
-
-        <canvas id="rollCanvas"></canvas>
-        <button id="btnQuoteWhatsApp"></button>
-      </main>
     `;
     store.setTheme('dark');
     store.clearUser();
@@ -103,6 +78,20 @@ describe('App — Inicialización y DOM', () => {
       expect(nav.innerHTML).toContain('Cotizador');
       expect(nav.innerHTML).not.toContain('Mis Pedidos');
     });
+
+    it('sincroniza reactivamente el navbar al cambiar el usuario y rol en el store', () => {
+      initApp();
+      const tag = document.getElementById('salesStudioTag');
+      expect(tag.style.display).toBe('none');
+
+      store.setUser({ id: '1', role: 'ADMIN' }, 'fake-jwt');
+      expect(tag.style.display).toBe('inline-block');
+      const nav = document.getElementById('navRoleLinks');
+      expect(nav.innerHTML).toContain('Usuarios');
+
+      store.clearUser();
+      expect(tag.style.display).toBe('none');
+    });
   });
 
   describe('Cotizador Interactivo y Cálculos en DOM', () => {
@@ -121,10 +110,17 @@ describe('App — Inicialización y DOM', () => {
 
       // Probar evento resize de ventana
       window.dispatchEvent(new Event('resize'));
+
+      // Probar clic en botón WhatsApp del formulario
+      window.open = vi.fn();
+      const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
+      btnWhatsApp.click();
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('wa.me'), '_blank');
     });
 
 
     it('renderiza resultados con corte opcional activo', () => {
+      initApp();
       const mockQuote = {
         widthCm: 5,
         heightCm: 5,
