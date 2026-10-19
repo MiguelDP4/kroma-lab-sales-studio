@@ -201,14 +201,15 @@ kroma-lab-sales-studio/
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
 │   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
-│   │       │   └── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
+│   │       │   ├── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
+│   │       │   └── production-store.js # Almacén reactivo de Kanban y monitor de consumo de film PET
 │   │       └── views/
 │   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF + Dropzone
 │   │           ├── orders-view.js      # Vista de pedidos (Staff vs Cliente)
-│   │           ├── production-view.js  # Tablero Kanban de producción Audley (Staff)
+│   │           ├── production-view.js  # Tablero Kanban interactivo Audley + Monitor de Bobina (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 97 pruebas unitarias de frontend (> 85% coverage)
+│   └── __tests__/                  # 122 pruebas unitarias de frontend (> 85% coverage)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
 │       ├── cart-store.test.js      # 6 tests de estado reactivo y localStorage
@@ -216,6 +217,8 @@ kroma-lab-sales-studio/
 │       ├── cart-ui.test.js         # 12 tests de interfaz de carrito y checkout modal
 │       ├── store.test.js           # 5 tests de estado y reactividad
 │       ├── roll-simulator.test.js  # 4 tests de Canvas 2D (centrado horizontal en bobina de 28 cm)
+│       ├── production-store.test.js # 11 tests de estado Kanban y consumo de rollo
+│       ├── production-kanban.test.js # 14 tests de integración de vistas y modales Kanban
 │       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
 │       ├── app.test.js             # 12 tests de integración, roles, dropzone y WhatsApp
