@@ -201,21 +201,21 @@ kroma-lab-sales-studio/
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
 │   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
-│   │       │   └── roll-simulator.js   # Renderizador interactivo en Canvas (28 cm)
+│   │       │   └── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
 │   │       └── views/
 │   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF + Dropzone
 │   │           ├── orders-view.js      # Vista de pedidos (Staff vs Cliente)
 │   │           ├── production-view.js  # Tablero Kanban de producción Audley (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 96 pruebas unitarias de frontend (> 85% coverage)
+│   └── __tests__/                  # 97 pruebas unitarias de frontend (> 85% coverage)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
 │       ├── cart-store.test.js      # 6 tests de estado reactivo y localStorage
 │       ├── file-uploader.test.js   # 9 tests de validación y formatos de archivo
 │       ├── cart-ui.test.js         # 12 tests de interfaz de carrito y checkout modal
 │       ├── store.test.js           # 5 tests de estado y reactividad
-│       ├── roll-simulator.test.js  # 3 tests de Canvas 2D
+│       ├── roll-simulator.test.js  # 4 tests de Canvas 2D (centrado horizontal en bobina de 28 cm)
 │       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
 │       ├── app.test.js             # 12 tests de integración, roles, dropzone y WhatsApp
