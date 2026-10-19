@@ -132,3 +132,30 @@ flowchart TD
    * **Tokens del Sistema de Diseño:** Paleta de colores (`--space-indigo`, `--regal-navy`, `--baltic-blue`, `--cerulean`, `--powder-blue`) y su comportamiento en Modo Claro y Modo Oscuro.
    * **Matriz Maestra de Roles y Permisos (RBAC):** Catálogo de permisos asignados a Visitante, Cliente, Empleado y Administrador.
 
+---
+
+## 7. Flujo de Trabajo GitFlow Obligatorio
+
+> **NORMA DE CONTROL DE VERSIONES:**
+> El desarrollo del proyecto debe seguir estrictamente la metodología **GitFlow**. Queda estrictamente prohibido realizar commits directos sobre `development` o `main`.
+
+### Estructura de Ramas:
+* **`main` (Producción):**
+  * Representa el código estable en producción.
+  * Solo recibe merges provenientes de `development` al momento de liberar una versión o entrega formal.
+* **`development` (Staging y Rama Principal por Defecto):**
+  * Es la **rama principal y predeterminada del repositorio**.
+  * Actúa como entorno de Staging y base de integración de todos los features aprobados.
+* **Ramas de Trabajo Temporales (`feature/*`, `fix/*`, `docs/*`, `test/*`):**
+  * Cada cambio, requerimiento o corrección debe desarrollarse en su propia rama creada a partir de `development`:
+    ```bash
+    git checkout -b feature/<nombre-tarea> development
+    ```
+
+### Protocolo de Integración y Aprobación:
+1. **Desarrollo y Testing en la Rama:** Se implementa el código y se garantiza el 100% de tests passing con cobertura > 85%.
+2. **Commit Atómico:** Mensajes descriptivos bajo estándar Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
+3. **Solicitud de Visto Bueno:** Al finalizar la tarea, se le presenta el avance detallado a Miguel para revisión.
+4. **Merge a `development`:** **Únicamente tras recibir el visto bueno explícito de Miguel**, se realiza el merge a `development`.
+
+
