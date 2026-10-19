@@ -236,6 +236,9 @@ class ClientsStore {
 
     const allOrders = ordersStore.getOrders();
     return allOrders.filter(o => {
+      if (o.customer && o.customer.clientId && o.customer.clientId === client.id) {
+        return true;
+      }
       const oCompany = (o.customer.company || '').trim().toLowerCase();
       const oName = (o.customer.name || '').trim().toLowerCase();
       const oPhone = (o.customer.phone || '').replace(/\D/g, '');

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ordersView } from '../src/js/views/orders-view.js';
 import { ordersStore, PAYMENT_STATUS } from '../src/js/modules/orders-store.js';
+import { clientsStore } from '../src/js/modules/clients-store.js';
 import { store } from '../src/js/store.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
 
@@ -183,6 +184,119 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
 
     btnCancel.click();
     expect(createModal.style.display).toBe('none');
+  });
+
+  it('permite a Staff autocompletar datos del cliente desde la cartera B2B y desvincularlo', () => {
+    const btnOpen = document.getElementById('btnOpenNewOrderModal');
+    btnOpen.click();
+
+    const select = document.getElementById('manualClientAutofillSelect');
+    const badgeContainer = document.getElementById('manualAutofillBadgeContainer');
+    const btnClear = document.getElementById('btnManualClearAutofill');
+
+    expect(select).not.toBeNull();
+    expect(badgeContainer.style.display).toBe('none');
+
+    // Seleccionar CLI-001 (Café San Cristóbal)
+    select.value = 'CLI-001';
+    select.dispatchEvent(new Event('change'));
+
+    expect(document.getElementById('manualCustCompany').value).toBe('Café San Cristóbal');
+    expect(document.getElementById('manualCustPhone').value).toBe('+502 5555-1234');
+    expect(document.getElementById('manualCustNit').value).toBe('7845129-4');
+    expect(badgeContainer.style.display).toBe('block');
+    expect(badgeContainer.textContent).toContain('Café San Cristóbal');
+    expect(btnClear.style.display).toBe('inline-flex');
+
+    // Desvincular cliente
+    btnClear.click();
+    expect(select.value).toBe('');
+    expect(badgeContainer.style.display).toBe('none');
+    expect(btnClear.style.display).toBe('none');
+    expect(document.getElementById('manualCustCompany').value).toBe('');
+  });
+
+  it('sincroniza y crea nuevo cliente en cartera B2B al registrar un pedido manual', () => {
+    const btnOpen = document.getElementById('btnOpenNewOrderModal');
+    btnOpen.click();
+
+    const form = document.getElementById('formStaffCreateOrder');
+    document.getElementById('manualCustName').value = 'Lucía Flores';
+    document.getElementById('manualCustCompany').value = 'Boutique Flores';
+    document.getElementById('manualCustPhone').value = '+502 4433-2211';
+    document.getElementById('manualCustNit').value = '556677-8';
+    document.getElementById('manualCustAddress').value = 'Zona 15, Vista Hermosa';
+    document.getElementById('manualItemTitle').value = 'Etiquetas Doradas';
+
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    const createdClient = clientsStore.getClientByNit('556677-8');
+    expect(createdClient).not.toBeNull();
+    expect(createdClient.company).toBe('Boutique Flores');
+
+    const orders = ordersStore.getOrders();
+    expect(orders[0].customer.clientId).toBe(createdClient.id);
+  });
+
+  it('actualiza cliente B2B existente al registrar un pedido manual con datos modificados', () => {
+    const btnOpen = document.getElementById('btnOpenNewOrderModal');
+    btnOpen.click();
+
+    const select = document.getElementById('manualClientAutofillSelect');
+    select.value = 'CLI-001';
+    select.dispatchEvent(new Event('change'));
+
+    document.getElementById('manualCustAddress').value = 'Nueva Carretera a El Salvador';
+
+    const form = document.getElementById('formStaffCreateOrder');
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    const updated = clientsStore.getClientById('CLI-001');
+    expect(updated.address).toBe('Nueva Carretera a El Salvador');
+
+    const orders = ordersStore.getOrders();
+    expect(orders[0].customer.clientId).toBe('CLI-001');
+  });
+
+  it('permite cambiar selector a opción vacía y enviar pedido manual sin sincronizar cuando el checkbox está desmarcado', () => {
+    const btnOpen = document.getElementById('btnOpenNewOrderModal');
+    btnOpen.click();
+
+    const select = document.getElementById('manualClientAutofillSelect');
+    select.value = 'CLI-001';
+    select.dispatchEvent(new Event('change'));
+    expect(document.getElementById('manualAutofillBadgeContainer').style.display).toBe('block');
+
+    // Cambiar a opción vacía
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+    expect(document.getElementById('manualAutofillBadgeContainer').style.display).toBe('none');
+
+    // Desmarcar sincronización
+    document.getElementById('manualCheckSaveClient').checked = false;
+    document.getElementById('manualCustName').value = 'Comprador Anónimo';
+    document.getElementById('manualCustPhone').value = '+502 5555-9999';
+
+    const form = document.getElementById('formStaffCreateOrder');
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    const orders = ordersStore.getOrders();
+    expect(orders[0].customer.name).toBe('Comprador Anónimo');
+  });
+
+  it('vincula automáticamente un pedido manual a un cliente existente por NIT si no se seleccionó del menú', () => {
+    const btnOpen = document.getElementById('btnOpenNewOrderModal');
+    btnOpen.click();
+
+    document.getElementById('manualCustCompany').value = 'Café San Cristóbal';
+    document.getElementById('manualCustNit').value = '7845129-4';
+    document.getElementById('manualCustPhone').value = '+502 5555-1234';
+
+    const form = document.getElementById('formStaffCreateOrder');
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    const orders = ordersStore.getOrders();
+    expect(orders[0].customer.clientId).toBe('CLI-001');
   });
 
   it('renderiza la Hoja de Taller para una orden en rollo continuo sin notas', () => {

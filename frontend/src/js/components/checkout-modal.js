@@ -1,6 +1,7 @@
 /**
  * Modal de Checkout y Confirmación de Pedido UV DTF
  * Recopila datos de facturación SAT (NIT), entrega y notas de producción.
+ * Incorpora Autocompletado Inteligente sincronizado con la Cartera de Clientes B2B.
  */
 
 import { formatWhatsAppCartOrder } from '../modules/cart-engine.js';
@@ -8,6 +9,7 @@ import { cartStore } from '../modules/cart-store.js';
 import { store } from '../store.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { ordersStore } from '../modules/orders-store.js';
+import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 
 export function openCheckoutModal(cartTotals) {
   let modalContainer = document.getElementById('checkoutModalContainer');
@@ -18,6 +20,21 @@ export function openCheckoutModal(cartTotals) {
   }
 
   const user = store.state.user || {};
+  const clients = clientsStore.getClients();
+
+  // Detección inicial de cliente registrado o perfil activo
+  let initialClient = null;
+  if (user.clientId) {
+    initialClient = clientsStore.getClientById(user.clientId);
+  } else if (user.nit && user.nit !== 'CF') {
+    initialClient = clientsStore.getClientByNit(user.nit);
+  } else if (user.phone) {
+    initialClient = clientsStore.getClientByPhone(user.phone);
+  } else if (user.email) {
+    initialClient = clients.find(c => c.email && c.email.toLowerCase() === user.email.toLowerCase()) || null;
+  }
+
+  let selectedClientId = initialClient ? initialClient.id : null;
 
   modalContainer.innerHTML = `
     <div class="modal-backdrop" id="checkoutBackdrop"></div>
@@ -29,34 +46,70 @@ export function openCheckoutModal(cartTotals) {
             Datos de Entrega y Facturación
           </h3>
         </div>
-        <button class="btn-close-modal" id="btnCloseCheckout">✕</button>
+        <button class="btn-close-modal" id="btnCloseCheckout" aria-label="Cerrar modal">✕</button>
       </div>
 
       <form id="checkoutForm" class="modal-body">
+        <!-- SECCIÓN DE AUTOCOMPLETADO INTELIGENTE B2B -->
+        <div class="client-autofill-box" id="autofillBox">
+          <div class="client-autofill-header">
+            <label class="form-label" for="clientAutofillSelect" style="margin: 0; font-weight: 700; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
+              <span>⚡</span>
+              <span>Autocompletar con Cartera B2B:</span>
+            </label>
+            <button type="button" id="btnClearAutofill" class="btn-clear-autofill" style="display: ${selectedClientId ? 'inline-flex' : 'none'};">
+              Desvincular ✕
+            </button>
+          </div>
+          <select id="clientAutofillSelect" class="input-control" aria-label="Seleccionar cliente B2B">
+            <option value="">-- Seleccionar cliente registrado o escribir nuevo --</option>
+            ${clients.map(c => `
+              <option value="${c.id}" ${c.id === selectedClientId ? 'selected' : ''}>
+                ${c.company} (${c.name}) • ${CLIENT_TIERS[c.tier]?.badge || c.tier}
+              </option>
+            `).join('')}
+          </select>
+          <div id="autofillBadgeContainer" style="display: ${selectedClientId ? 'block' : 'none'}; margin-top: 0.5rem;">
+            ${initialClient ? `
+              <div class="autofill-linked-badge" style="background: ${CLIENT_TIERS[initialClient.tier]?.bg || 'rgba(28, 114, 147, 0.15)'}; color: ${CLIENT_TIERS[initialClient.tier]?.color || 'var(--cerulean)'}; border: 1px solid ${CLIENT_TIERS[initialClient.tier]?.color || 'var(--cerulean)'};">
+                <span>🏢 Cliente Vinculado: <strong>${initialClient.company}</strong></span>
+                <span class="badge" style="background: ${CLIENT_TIERS[initialClient.tier]?.color || 'var(--cerulean)'}; color: #fff;">${CLIENT_TIERS[initialClient.tier]?.badge || initialClient.tier}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="custName">Nombre o Empresa / Marca *</label>
-          <input type="text" id="custName" class="input-control" required placeholder="Ej. Rodrigo Méndez / Café San Cristóbal" value="${user.name || ''}">
+          <input type="text" id="custName" class="input-control" required placeholder="Ej. Rodrigo Méndez / Café San Cristóbal" value="${initialClient ? (initialClient.company || initialClient.name) : (user.name || '')}">
         </div>
 
         <div class="input-row">
           <div class="form-group">
             <label class="form-label" for="custPhone">Teléfono de WhatsApp *</label>
-            <input type="tel" id="custPhone" class="input-control" required placeholder="Ej. 5555-1234" value="${user.phone || ''}">
+            <input type="tel" id="custPhone" class="input-control" required placeholder="Ej. 5555-1234" value="${initialClient ? initialClient.phone : (user.phone || '')}">
           </div>
           <div class="form-group">
             <label class="form-label" for="custNit">NIT (SAT Guatemala)</label>
-            <input type="text" id="custNit" class="input-control" placeholder="Ej. 7845129-4 o CF" value="${user.nit || 'CF'}">
+            <input type="text" id="custNit" class="input-control" placeholder="Ej. 7845129-4 o CF" value="${initialClient ? initialClient.nit : (user.nit || 'CF')}">
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="custAddress">Dirección de Entrega o Recolección *</label>
-          <textarea id="custAddress" class="input-control" rows="2" required placeholder="Zona, Municipio (ej. Zona 10, Ciudad de Guatemala) o 'Recojo en taller San José el Placer / Villa Nueva'"></textarea>
+          <textarea id="custAddress" class="input-control" rows="2" required placeholder="Zona, Municipio (ej. Zona 10, Ciudad de Guatemala) o 'Recojo en taller San José el Placer / Villa Nueva'">${initialClient ? initialClient.address : ''}</textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="custNotes">Instrucciones o Notas Especiales</label>
-          <input type="text" id="custNotes" class="input-control" placeholder="Ej. Relieve pronunciado, barniz brillante, etc.">
+          <input type="text" id="custNotes" class="input-control" placeholder="Ej. Relieve pronunciado, barniz brillante, etc." value="${initialClient ? (initialClient.notes || '') : ''}">
+        </div>
+
+        <div class="form-group" style="margin: 0.65rem 0;">
+          <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; cursor: pointer; color: var(--text-secondary);">
+            <input type="checkbox" id="checkSaveToClients" checked>
+            <span>💾 Guardar / Sincronizar en Cartera de Clientes B2B</span>
+          </label>
         </div>
 
         <div class="checkout-summary-box">
@@ -88,6 +141,68 @@ export function openCheckoutModal(cartTotals) {
   const backdrop = document.getElementById('checkoutBackdrop');
   const btnClose = document.getElementById('btnCloseCheckout');
   const form = document.getElementById('checkoutForm');
+  const autofillSelect = document.getElementById('clientAutofillSelect');
+  const btnClearAutofill = document.getElementById('btnClearAutofill');
+  const badgeContainer = document.getElementById('autofillBadgeContainer');
+
+  const nameInput = document.getElementById('custName');
+  const phoneInput = document.getElementById('custPhone');
+  const nitInput = document.getElementById('custNit');
+  const addressInput = document.getElementById('custAddress');
+  const notesInput = document.getElementById('custNotes');
+
+  function updateBadge(client) {
+    if (!badgeContainer) return;
+    if (!client) {
+      badgeContainer.style.display = 'none';
+      badgeContainer.innerHTML = '';
+      if (btnClearAutofill) btnClearAutofill.style.display = 'none';
+      return;
+    }
+    const tier = CLIENT_TIERS[client.tier] || { badge: client.tier, bg: 'rgba(28, 114, 147, 0.15)', color: 'var(--cerulean)' };
+    badgeContainer.style.display = 'block';
+    badgeContainer.innerHTML = `
+      <div class="autofill-linked-badge" style="background: ${tier.bg}; color: ${tier.color}; border: 1px solid ${tier.color};">
+        <span>🏢 Cliente Vinculado: <strong>${client.company}</strong></span>
+        <span class="badge" style="background: ${tier.color}; color: #fff;">${tier.badge}</span>
+      </div>
+    `;
+    if (btnClearAutofill) btnClearAutofill.style.display = 'inline-flex';
+  }
+
+  if (autofillSelect) {
+    autofillSelect.addEventListener('change', (e) => {
+      const id = e.target.value;
+      if (id) {
+        const c = clientsStore.getClientById(id);
+        if (c) {
+          selectedClientId = c.id;
+          if (nameInput) nameInput.value = c.company || c.name;
+          if (phoneInput) phoneInput.value = c.phone || '';
+          if (nitInput) nitInput.value = c.nit || 'CF';
+          if (addressInput) addressInput.value = c.address || '';
+          if (notesInput && c.notes) notesInput.value = c.notes;
+          updateBadge(c);
+        }
+      } else {
+        selectedClientId = null;
+        updateBadge(null);
+      }
+    });
+  }
+
+  if (btnClearAutofill) {
+    btnClearAutofill.addEventListener('click', () => {
+      selectedClientId = null;
+      if (autofillSelect) autofillSelect.value = '';
+      updateBadge(null);
+      if (nameInput) nameInput.value = user.name || '';
+      if (phoneInput) phoneInput.value = user.phone || '';
+      if (nitInput) nitInput.value = user.nit || 'CF';
+      if (addressInput) addressInput.value = '';
+      if (notesInput) notesInput.value = '';
+    });
+  }
 
   if (backdrop) backdrop.addEventListener('click', closeCheckoutModal);
   if (btnClose) btnClose.addEventListener('click', closeCheckoutModal);
@@ -95,12 +210,59 @@ export function openCheckoutModal(cartTotals) {
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      const nameVal = nameInput?.value?.trim() || '';
+      const phoneVal = phoneInput?.value?.trim() || '';
+      const nitVal = nitInput?.value?.trim() || 'CF';
+      const addressVal = addressInput?.value?.trim() || '';
+      const notesVal = notesInput?.value?.trim() || '';
+      const shouldSync = Boolean(document.getElementById('checkSaveToClients')?.checked);
+
+      let linkedClientId = selectedClientId;
+
+      if (shouldSync) {
+        if (linkedClientId) {
+          // Si ya está vinculado, sincronizamos posibles actualizaciones
+          clientsStore.updateClient(linkedClientId, {
+            phone: phoneVal || undefined,
+            nit: nitVal || undefined,
+            address: addressVal || undefined,
+          });
+        } else {
+          // Si no está seleccionado de la lista, verificamos si existe por NIT o Teléfono
+          const existing = (nitVal && nitVal !== 'CF' ? clientsStore.getClientByNit(nitVal) : null) || clientsStore.getClientByPhone(phoneVal);
+          if (existing) {
+            linkedClientId = existing.id;
+            clientsStore.updateClient(existing.id, {
+              address: addressVal || existing.address,
+              name: nameVal || existing.name,
+            });
+          } else if (nameVal) {
+            // Registrar nuevo cliente en la Cartera B2B
+            const created = clientsStore.createClient({
+              name: nameVal,
+              company: nameVal,
+              phone: phoneVal || '+502 5555-0000',
+              nit: nitVal,
+              address: addressVal || 'Ciudad de Guatemala',
+              notes: notesVal,
+              tier: 'NUEVO',
+            });
+            linkedClientId = created.id;
+          }
+        }
+      }
+
+      const linkedClient = linkedClientId ? clientsStore.getClientById(linkedClientId) : null;
+      const companyName = linkedClient ? linkedClient.company : nameVal;
+
       const customer = {
-        name: document.getElementById('custName')?.value || '',
-        phone: document.getElementById('custPhone')?.value || '',
-        nit: document.getElementById('custNit')?.value || 'CF',
-        address: document.getElementById('custAddress')?.value || '',
-        notes: document.getElementById('custNotes')?.value || '',
+        name: nameVal,
+        company: companyName,
+        phone: phoneVal,
+        nit: nitVal,
+        address: addressVal,
+        notes: notesVal,
+        clientId: linkedClientId || null,
       };
 
       ordersStore.createOrder({

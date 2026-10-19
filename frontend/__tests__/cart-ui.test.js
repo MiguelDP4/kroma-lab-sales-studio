@@ -8,6 +8,9 @@ import {
 } from '../src/js/components/cart-drawer.js';
 import { openCheckoutModal, closeCheckoutModal } from '../src/js/components/checkout-modal.js';
 import { cartStore } from '../src/js/modules/cart-store.js';
+import { clientsStore } from '../src/js/modules/clients-store.js';
+import { ordersStore } from '../src/js/modules/orders-store.js';
+import { store } from '../src/js/store.js';
 
 describe('Cart UI — Componentes de Carrito y Checkout', () => {
   beforeEach(() => {
@@ -220,6 +223,160 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const backdrop = document.getElementById('checkoutBackdrop');
       backdrop.click();
       expect(document.getElementById('checkoutModal')).toBeNull();
+    });
+
+    it('permite autocompletar campos de checkout al seleccionar un cliente B2B y desvincularlo', () => {
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const select = document.getElementById('clientAutofillSelect');
+      const badgeContainer = document.getElementById('autofillBadgeContainer');
+      const btnClear = document.getElementById('btnClearAutofill');
+
+      expect(select).not.toBeNull();
+      expect(badgeContainer.style.display).toBe('none');
+
+      // Seleccionar Café San Cristóbal (CLI-001)
+      select.value = 'CLI-001';
+      select.dispatchEvent(new Event('change'));
+
+      expect(document.getElementById('custName').value).toContain('Café San Cristóbal');
+      expect(document.getElementById('custPhone').value).toBe('+502 5555-1234');
+      expect(document.getElementById('custNit').value).toBe('7845129-4');
+      expect(document.getElementById('custAddress').value).toContain('San Cristóbal');
+      expect(badgeContainer.style.display).toBe('block');
+      expect(badgeContainer.textContent).toContain('Café San Cristóbal');
+      expect(btnClear.style.display).toBe('inline-flex');
+
+      // Desvincular cliente
+      btnClear.click();
+      expect(select.value).toBe('');
+      expect(badgeContainer.style.display).toBe('none');
+      expect(btnClear.style.display).toBe('none');
+      expect(document.getElementById('custAddress').value).toBe('');
+    });
+
+    it('sincroniza y crea nuevo cliente en clientsStore al procesar checkout', () => {
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      document.getElementById('custName').value = 'Diseños Creativos GT';
+      document.getElementById('custPhone').value = '+502 5988-7766';
+      document.getElementById('custNit').value = '9876543-2';
+      document.getElementById('custAddress').value = 'Zona 14, La Villa';
+      document.getElementById('custNotes').value = 'Entregar por la mañana';
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      // Verificar que el cliente se creó en clientsStore
+      const createdClient = clientsStore.getClientByNit('9876543-2');
+      expect(createdClient).not.toBeNull();
+      expect(createdClient.company).toBe('Diseños Creativos GT');
+
+      // Verificar que el último pedido quedó asociado al clientId
+      const orders = ordersStore.getOrders();
+      expect(orders[0].customer.clientId).toBe(createdClient.id);
+    });
+
+    it('actualiza cliente B2B existente y asocia el pedido al confirmar checkout', () => {
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const select = document.getElementById('clientAutofillSelect');
+      select.value = 'CLI-002'; // Barbería Vintage
+      select.dispatchEvent(new Event('change'));
+
+      // Modificar dirección para verificar actualización
+      document.getElementById('custAddress').value = 'Nueva Sucursal Zona 4';
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const client = clientsStore.getClientById('CLI-002');
+      expect(client.address).toBe('Nueva Sucursal Zona 4');
+
+      const orders = ordersStore.getOrders();
+      expect(orders[0].customer.clientId).toBe('CLI-002');
+    });
+
+    it('preselecciona automáticamente el cliente si el usuario en sesión tiene clientId asociado', () => {
+      store.setUser({
+        name: 'Rodrigo Méndez',
+        email: 'rodrigo@cafesancristobal.gt',
+        clientId: 'CLI-001',
+      }, 'token');
+
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const select = document.getElementById('clientAutofillSelect');
+      expect(select.value).toBe('CLI-001');
+
+      const badgeContainer = document.getElementById('autofillBadgeContainer');
+      expect(badgeContainer.style.display).toBe('block');
+      expect(badgeContainer.textContent).toContain('Café San Cristóbal');
+
+      // Reset user
+      store.clearUser();
+    });
+
+    it('preselecciona cliente si el usuario coincide por NIT, teléfono o email', () => {
+      // Coincidencia por NIT
+      store.setUser({ nit: '7845129-4' }, 'token');
+      openCheckoutModal(cartStore.getTotals());
+      expect(document.getElementById('clientAutofillSelect').value).toBe('CLI-001');
+
+      // Coincidencia por teléfono
+      store.setUser({ phone: '+502 5111-2233' }, 'token');
+      openCheckoutModal(cartStore.getTotals());
+      expect(document.getElementById('clientAutofillSelect').value).toBe('CLI-002');
+
+      // Coincidencia por email
+      store.setUser({ email: 'ventas@elinjerto.gt' }, 'token');
+      openCheckoutModal(cartStore.getTotals());
+      expect(document.getElementById('clientAutofillSelect').value).toBe('CLI-003');
+
+      store.clearUser();
+    });
+
+    it('resetea selección al cambiar select a opción vacía y procesa submit sin sincronizar cuando checkbox está desmarcado', () => {
+      openCheckoutModal(cartStore.getTotals());
+      const select = document.getElementById('clientAutofillSelect');
+      select.value = 'CLI-001';
+      select.dispatchEvent(new Event('change'));
+      expect(document.getElementById('autofillBadgeContainer').style.display).toBe('block');
+
+      // Cambiar a opción vacía
+      select.value = '';
+      select.dispatchEvent(new Event('change'));
+      expect(document.getElementById('autofillBadgeContainer').style.display).toBe('none');
+
+      // Desmarcar sincronización
+      document.getElementById('checkSaveToClients').checked = false;
+      document.getElementById('custName').value = 'Cliente Esporádico';
+      document.getElementById('custPhone').value = '55550000';
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(window.open).toHaveBeenCalled();
+    });
+
+    it('vincula automáticamente a un cliente existente por NIT si no fue seleccionado en el dropdown', () => {
+      openCheckoutModal(cartStore.getTotals());
+
+      // Ingresar manualmente datos de Café San Cristóbal sin seleccionarlo
+      document.getElementById('custName').value = 'Café San Cristóbal';
+      document.getElementById('custNit').value = '7845129-4';
+      document.getElementById('custPhone').value = '+502 5555-1234';
+      document.getElementById('custAddress').value = 'Nueva Calle 3';
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const orders = ordersStore.getOrders();
+      expect(orders[0].customer.clientId).toBe('CLI-001');
     });
   });
 });
