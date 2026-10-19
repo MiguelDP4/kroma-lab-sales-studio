@@ -103,7 +103,7 @@ export function openCheckoutModal(cartTotals) {
       };
 
       const text = formatWhatsAppCartOrder(cartTotals, customer);
-      const url = `https://wa.me/${BUSINESS_CONFIG.phoneWhatsApp}?text=${encodeURIComponent(text)}`;
+      const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
       
       closeCheckoutModal();
       window.open(url, '_blank');

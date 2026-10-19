@@ -115,7 +115,7 @@ describe('App — Inicialización y DOM', () => {
       window.open = vi.fn();
       const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
       btnWhatsApp.click();
-      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('wa.me'), '_blank');
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
     });
 
 
@@ -233,7 +233,7 @@ describe('App — Inicialización y DOM', () => {
       };
 
       sendWhatsAppQuote(mockQuote);
-      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('wa.me'), '_blank');
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
     });
   });
 });
