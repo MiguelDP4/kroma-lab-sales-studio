@@ -177,7 +177,8 @@ kroma-lab-sales-studio/
 ├── GEMINI.md                       # Reglas operativas y mandatos para el Agente IA
 ├── DOCUMENTATION.md                # Fuente Única de Verdad viva del proyecto
 ├── frontend/                       # Aplicación Web Vanilla (HTML5, CSS3, ES Modules)
-│   ├── index.html                  # Shell único con contenedor SPA #app y navbar reactivo
+│   ├── index.html                  # Shell único con contenedor SPA #app, navbar reactivo y drawer
+│   ├── favicon.svg                 # Emblema vectorial oficial Kroma Lab (arcoíris facetado 3D)
 │   ├── _redirects                  # Configuración de routing SPA para Cloudflare Pages
 │   ├── package.json                # Dependencias de testing (Vitest, JSDOM) y scripts
 │   ├── vitest.config.js            # Configuración de pruebas unitarias (>85% coverage)
@@ -185,29 +186,39 @@ kroma-lab-sales-studio/
 │   │   ├── css/
 │   │   │   ├── theme.css           # Tokens de diseño y variables CSS (Light/Dark)
 │   │   │   ├── base.css            # Reset, tipografía y utilidades
-│   │   │   └── views.css           # Estilos de vistas (cotizador, bobina, despiece)
+│   │   │   └── views.css           # Estilos de vistas, bobina, dropzone y drawer de carrito
 │   │   ├── shared/
 │   │   │   └── business-config.js  # Constantes de negocio espejadas para el cliente
 │   │   └── js/
 │   │       ├── app.js              # Punto de entrada, sincronización reactiva de rol y bootstrap
 │   │       ├── router.js           # Enrutador SPA ligero con History API y guardias RBAC
 │   │       ├── store.js            # Estado reactivo global (usuario, token, tema)
+│   │       ├── components/
+│   │       │   ├── cart-drawer.js      # Componente interactivo de carrito (drawer lateral)
+│   │       │   └── checkout-modal.js   # Modal de datos de entrega y facturación SAT
 │   │       ├── modules/
-│   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático
+│   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático de cotización
+│   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
+│   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
+│   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
 │   │       │   └── roll-simulator.js   # Renderizador interactivo en Canvas (28 cm)
 │   │       └── views/
-│   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF
+│   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF + Dropzone
 │   │           ├── orders-view.js      # Vista de pedidos (Staff vs Cliente)
 │   │           ├── production-view.js  # Tablero Kanban de producción Audley (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 53 pruebas unitarias de frontend (> 85% coverage)
+│   └── __tests__/                  # 96 pruebas unitarias de frontend (> 85% coverage)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
+│       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
+│       ├── cart-store.test.js      # 6 tests de estado reactivo y localStorage
+│       ├── file-uploader.test.js   # 9 tests de validación y formatos de archivo
+│       ├── cart-ui.test.js         # 12 tests de interfaz de carrito y checkout modal
 │       ├── store.test.js           # 5 tests de estado y reactividad
 │       ├── roll-simulator.test.js  # 3 tests de Canvas 2D
 │       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
-│       ├── app.test.js             # 10 tests de integración, roles reactivos y WhatsApp
+│       ├── app.test.js             # 12 tests de integración, roles, dropzone y WhatsApp
 │       └── setup.js                # Mock de Canvas para JSDOM
 ├── backend/                        # API REST (Node.js, Express, Prisma)
 │   ├── package.json                # Scripts y dependencias backend
@@ -223,7 +234,7 @@ kroma-lab-sales-studio/
 ## 7. Arquitectura del Frontend (Vanilla HTML5, CSS3, ES Modules)
 
 * **Sin compilación requerida en producción:** El código se ejecuta directamente como módulos ECMAScript nativos (`<script type="module" src="/src/js/app.js">`), garantizando máxima ligereza, cero dependencias de empaquetadores pesados y despliegue instantáneo en Cloudflare Pages.
-* **Shell SPA Único (`index.html`):** Contiene la cabecera persistente, el logotipo SVG oficial, selector de tema visual (Dark/Light), enlaces de navegación contextuales por rol y el contenedor de montaje dinámico `<main id="app">`.
+* **Shell SPA Único (`index.html`):** Contiene la cabecera persistente, el logotipo SVG oficial, selector de tema visual (Dark/Light), botón y contador de carrito, enlaces de navegación contextuales por rol y el contenedor de montaje dinámico `<main id="app">`.
 * **Enrutador SPA Ligero (`router.js`):**
   * Basado en la **HTML5 History API** (`pushState`, `replaceState`, `popstate`), intercepta clics en elementos `<a>` internos y con atributo `[data-link]` sin recargar la página.
   * Soporta rutas directas y comodín `*` (página 404 personalizada con enlace de retorno).
@@ -235,6 +246,16 @@ kroma-lab-sales-studio/
     * `/produccion`: `productionView` (`EMPLOYEE`, `ADMIN`)
     * `/clientes`: `clientsView` (`EMPLOYEE`, `ADMIN`)
     * `/usuarios`: `usersView` (`ADMIN`)
+* **Carrito de Compras Multidiseño (`cart-store.js` + `cart-engine.js` + `cart-drawer.js`):**
+  * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
+  * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
+  * **Drawer Lateral Interactivo:** Permite modificar cantidades en tiempo real (+ / -), eliminar ítems, ver el desglose financiero consolidado y despachar el pedido completo estructurado directamente hacia WhatsApp o hacia el modal de checkout.
+  * **Persistencia:** Almacenado en `localStorage['kromalab_cart']` para no perder los ítems al recargar o navegar entre vistas.
+* **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
+  * Valida archivos en el navegador antes de procesarlos.
+  * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
+  * Límite de tamaño: 50 MB por archivo.
+  * Genera vista previa visual inmediata (thumbnail) para archivos PNG/SVG/WebP.
 * **Redirección en Hosting (`_redirects`):** Configurado para Cloudflare Pages con regla `/* /index.html 200` para permitir navegación profunda y recarga directa en cualquier ruta sin errores 404 del servidor.
 * **Persistencia Local y Reactividad:**
   * Almacén de estado reactivo (`store.js`) basado en patrón *Publish-Subscribe*.

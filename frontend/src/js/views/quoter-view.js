@@ -94,6 +94,36 @@ export const quoterView = {
             </div>
           </div>
 
+          <!-- Zona de Carga de Archivo Gráfico -->
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <label class="form-label">
+              Diseño de Impresión
+              <span class="tip">PNG, TIFF, PDF a 300 DPI</span>
+            </label>
+            <div class="upload-dropzone" id="quoterDropzone">
+              <input type="file" id="quoterFileInput" accept=".png,.tif,.tiff,.pdf,.svg,.ai,.psd" style="display: none;">
+              <div id="dropzoneEmptyState" class="dropzone-empty">
+                <div class="dropzone-icon">📁</div>
+                <div class="dropzone-text">
+                  <strong>Arrastra tu archivo aquí</strong> o <span class="dropzone-link">haz clic para explorar</span>
+                </div>
+                <span class="dropzone-hint">Formatos: PNG transparente, TIFF, PDF, SVG, AI (Máx. 50 MB)</span>
+              </div>
+
+              <div id="dropzoneFileSelected" class="dropzone-selected" style="display: none;">
+                <div class="dropzone-thumb-wrap" id="dropzoneThumbWrap">
+                  <span id="dropzoneThumbIcon">📄</span>
+                </div>
+                <div class="dropzone-file-info">
+                  <div class="dropzone-file-name" id="dropzoneFileName">archivo.png</div>
+                  <div class="dropzone-file-size" id="dropzoneFileSize">1.2 MB</div>
+                </div>
+                <button type="button" class="btn-remove-file" id="btnRemoveFile" title="Quitar archivo">✕</button>
+              </div>
+            </div>
+            <div id="dropzoneError" class="dropzone-error-msg" style="display: none;"></div>
+          </div>
+
           <!-- Simulador Visual de Bobina Audley -->
           <div class="simulator-container">
             <div class="simulator-header">
@@ -156,6 +186,10 @@ export const quoterView = {
 
           <!-- Acciones Comerciales -->
           <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+            <button id="btnAddToCart" class="btn btn-primary" style="width: 100%;">
+              <span>+ Agregar al Carrito</span>
+              <span>🛒</span>
+            </button>
             <button id="btnQuoteWhatsApp" class="btn btn-whatsapp" style="width: 100%;">
               <span>Consultar esta Cotización por WhatsApp</span>
               <span>💬</span>
