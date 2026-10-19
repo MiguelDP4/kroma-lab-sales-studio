@@ -8,6 +8,9 @@ import { calculateQuote } from './modules/quoter-engine.js';
 import { drawRollCanvas } from './modules/roll-simulator.js';
 import { BUSINESS_CONFIG } from '../shared/business-config.js';
 import { Router } from './router.js';
+import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
+import { cartStore } from './modules/cart-store.js';
+import { validatePrintFile, readFileAsDataURL } from './modules/file-uploader.js';
 
 import { quoterView } from './views/quoter-view.js';
 import { ordersView } from './views/orders-view.js';
@@ -29,6 +32,7 @@ export const router = new Router(routes, 'app');
 export function initApp() {
   initTheme();
   initNavbarRoleSync();
+  initCartDrawer();
   router.init();
 }
 
@@ -169,6 +173,123 @@ export function initQuoter() {
   if (btnWhatsApp) {
     btnWhatsApp.addEventListener('click', () => {
       sendWhatsAppQuote(store.state.activeQuote);
+    });
+  }
+
+  // Zona de Carga de Archivos de Impresión (Dropzone)
+  let currentAttachedFile = null;
+  let currentPreviewUrl = null;
+
+  const dropzone = document.getElementById('quoterDropzone');
+  const fileInput = document.getElementById('quoterFileInput');
+  const emptyState = document.getElementById('dropzoneEmptyState');
+  const selectedState = document.getElementById('dropzoneFileSelected');
+  const fileNameEl = document.getElementById('dropzoneFileName');
+  const fileSizeEl = document.getElementById('dropzoneFileSize');
+  const thumbWrap = document.getElementById('dropzoneThumbWrap');
+  const btnRemoveFile = document.getElementById('btnRemoveFile');
+  const errorMsgEl = document.getElementById('dropzoneError');
+
+  function clearDropzoneFile() {
+    currentAttachedFile = null;
+    currentPreviewUrl = null;
+    if (fileInput) fileInput.value = '';
+    if (emptyState) emptyState.style.display = 'flex';
+    if (selectedState) selectedState.style.display = 'none';
+    if (errorMsgEl) errorMsgEl.style.display = 'none';
+  }
+
+  async function handleFileSelected(file) {
+    if (!file) return;
+    const validation = validatePrintFile(file);
+    if (!validation.valid) {
+      if (errorMsgEl) {
+        errorMsgEl.textContent = validation.error;
+        errorMsgEl.style.display = 'block';
+      }
+      return;
+    }
+
+    if (errorMsgEl) errorMsgEl.style.display = 'none';
+    currentAttachedFile = validation.fileData;
+
+    try {
+      currentPreviewUrl = await readFileAsDataURL(file);
+    } catch (_) {
+      currentPreviewUrl = null;
+    }
+
+    if (fileNameEl) fileNameEl.textContent = currentAttachedFile.name;
+    if (fileSizeEl) fileSizeEl.textContent = currentAttachedFile.sizeFormatted;
+
+    if (thumbWrap) {
+      if (currentPreviewUrl) {
+        thumbWrap.innerHTML = `<img src="${currentPreviewUrl}" alt="Preview" class="dropzone-thumb-img">`;
+      } else {
+        thumbWrap.innerHTML = `<span style="font-size: 1.5rem;">📁</span>`;
+      }
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (selectedState) selectedState.style.display = 'flex';
+  }
+
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', (e) => {
+      if (e.target.closest('#btnRemoveFile')) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleFileSelected(file);
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleFileSelected(file);
+    });
+  }
+
+  if (btnRemoveFile) {
+    btnRemoveFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearDropzoneFile();
+    });
+  }
+
+  // Botón Agregar al Carrito
+  const btnAddToCart = document.getElementById('btnAddToCart');
+  if (btnAddToCart) {
+    btnAddToCart.addEventListener('click', () => {
+      const w = parseFloat(widthInput.value) || 5;
+      const h = parseFloat(heightInput.value) || 5;
+      const q = parseInt(qtyInput.value, 10) || 50;
+      const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+      cartStore.addItem({
+        title: `Stickers ${w} × ${h} cm`,
+        widthCm: w,
+        heightCm: h,
+        qty: q,
+        includeCutting: cut,
+        fileInfo: currentAttachedFile,
+        previewUrl: currentPreviewUrl,
+      });
+
+      clearDropzoneFile();
+      openCartDrawer();
     });
   }
 
