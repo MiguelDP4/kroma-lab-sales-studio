@@ -233,3 +233,18 @@ kroma-lab-sales-studio/
 ## 9. Almacenamiento de Archivos de Impresión (Cloudflare R2)
 
 * Los archivos `.PNG` y `.TIFF` a 300 DPI se almacenan directamente en un bucket de **Cloudflare R2** mediante URLs prefirmadas (Pre-signed S3 URLs) generadas por el backend, eliminando cualquier saturación de ancho de banda en el servidor de Render y garantizando **$0 de costo de transferencia (egress)**.
+
+---
+
+## 10. Estrategia de Control de Versiones (GitFlow)
+
+El repositorio opera bajo el estándar **GitFlow**:
+
+| Rama | Propósito | Despliegue Asociado | Reglas de Merge |
+| :--- | :--- | :--- | :--- |
+| **`main`** | Código de Producción | Producción (Cloudflare Pages / Render Prod) | Solo recibe merges desde `development` al momento de releases formales. |
+| **`development`** | Staging y Rama Principal | Staging / Pruebas continuas | **Rama por defecto del repositorio**. Recibe merges de ramas `feature/*`, `fix/*` o `docs/*` **únicamente tras el visto bueno de Miguel**. |
+| **`feature/*`** | Nuevas funcionalidades | Local | Creadas desde `development`. Requieren 100% tests passing y cobertura > 85%. |
+| **`fix/*`** | Corrección de bugs | Local | Creadas desde `development`. Requieren pruebas de regresión. |
+| **`docs/*`** | Documentación y reglas | Local | Creadas desde `development`. |
+
