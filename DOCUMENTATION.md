@@ -287,6 +287,15 @@ kroma-lab-sales-studio/
     * Historial completo de órdenes con estado de producción y pago.
     * Enlace directo para contacto preformateado por WhatsApp.
   * **Persistencia:** Almacenado en `localStorage['kromalab_clients']` con Pub/Sub reactivo.
+* **Módulo de Gestión de Usuarios y Permisos RBAC (`users-store.js` + `users-view.js` + `rbac-config.js`):**
+  * **Acceso Exclusivo (`ADMIN`):** Panel de control restringido para la administración de colaboradores de taller, operadores de máquina Audley y cuentas cliente.
+  * **Matriz de Permisos Default-Deny:** 12 permisos atómicos evaluados con la función `hasPermission(role, code)`. Todo privilegio no otorgado explícitamente se deniega de forma predeterminada.
+  * **Modal Interactivo de Matriz RBAC:** Auditoría visual que contrasta los roles contra cada permiso operativo con iconografía clara (✓ / ✕).
+  * **Reglas de Seguridad y Protección:**
+    * Imposibilidad de eliminar, degradar de rol o desactivar al único Administrador Activo del sistema para prevenir bloqueos de administración.
+    * Validación estricta de unicidad y formato de correo electrónico.
+  * **Restablecimiento de Credenciales:** Generador de contraseñas temporales seguras (`Kroma!XXXX`) con copiado instantáneo al portapapeles para envío rápido por WhatsApp.
+  * **Persistencia Reactiva:** Sincronizado en `localStorage['kromalab_users']` con notificaciones automáticas Pub/Sub.
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
