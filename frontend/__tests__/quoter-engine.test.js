@@ -85,6 +85,14 @@ describe('Quoter Engine — Cálculo Integral de Pedido', () => {
     expect(quote.totalPriceQ).toBe(quote.materialPriceQ);
   });
 
+  it('asegura que materialPrice nunca sea menor al mínimo de Q140 si está entre 1.0 y 1.21 metros', () => {
+    // 6x6 cm, 4 por fila. 18 filas * 6.3cm = ~113.4cm = 1.13m -> 1.134 * 115 = Q130.41 (< 140)
+    const quote = calculateQuote({ widthCm: 6, heightCm: 6, qty: 72, includeCutting: false });
+    expect(quote.actualLinearMeters).toBeGreaterThan(1.0);
+    expect(quote.materialPriceQ).toBe(140.0);
+  });
+
+
   it('aplica la tarifa mínima de corte (Q25.00) si el costo unitario no la alcanza', () => {
     // 20 piezas * Q0.35 = Q7.00 -> debe aplicar piso mínimo de Q25.00
     const quote = calculateQuote({ widthCm: 5, heightCm: 5, qty: 20, includeCutting: true });

@@ -3,29 +3,124 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kroma Lab Sales Studio | Impresión UV DTF</title>
-  <meta name="description" content="Kroma Lab Sales Studio — Cotizador interactivo, portal B2B y sistema de pedidos de impresión UV DTF industrial en Guatemala.">
+  <title>Kroma Lab | Impresión UV DTF Industrial en Guatemala</title>
+  <meta name="description" content="Kroma Lab — Cotizador en línea de impresión UV DTF industrial por metro lineal en Guatemala. Adherencia permanente, relieve táctil y barniz brillante.">
   <link rel="stylesheet" href="./src/css/theme.css">
   <link rel="stylesheet" href="./src/css/base.css">
+  <link rel="stylesheet" href="./src/css/views.css">
 </head>
 <body>
-  <header class="navbar" style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface-glass); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50;">
-    <div class="container" style="display: flex; align-items: center; justify-content: space-between; height: 72px;">
-      <a href="/" style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--btn-primary-bg); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.1rem;">
-          KL
+  <!-- ==========================================================================
+       BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR CON CONTROL RBAC)
+       ========================================================================== -->
+  <header class="navbar" style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100;">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; height: 74px;">
+      
+      <!-- Logo Oficial Vectorial Kroma Lab -->
+      <a href="/" class="brand-logo" id="mainBrandLogo" aria-label="Kroma Lab">
+        <div class="logo-svg-wrap">
+          <svg viewBox="95 85 810 705" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="nav-top-outer" x1="305" y1="97" x2="695" y2="97" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#E12526" />
+                <stop offset="50%" stop-color="#EE6B24" />
+                <stop offset="100%" stop-color="#F5CA28" />
+              </linearGradient>
+              <linearGradient id="nav-top-inner" x1="372" y1="213" x2="695" y2="155" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#B92A25" />
+                <stop offset="55%" stop-color="#C96B1D" />
+                <stop offset="100%" stop-color="#D4941A" />
+              </linearGradient>
+              <linearGradient id="nav-tr-outer" x1="695" y1="97" x2="890" y2="435" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#EDAE1F" />
+                <stop offset="55%" stop-color="#A5C626" />
+                <stop offset="100%" stop-color="#199B49" />
+              </linearGradient>
+              <linearGradient id="nav-tr-inner" x1="628" y1="213" x2="890" y2="435" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#6B9832" />
+                <stop offset="60%" stop-color="#228640" />
+                <stop offset="100%" stop-color="#0B7B42" />
+              </linearGradient>
+              <linearGradient id="nav-br-outer" x1="890" y1="435" x2="695" y2="773" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#0C9653" />
+                <stop offset="50%" stop-color="#14A88B" />
+                <stop offset="100%" stop-color="#208AD8" />
+              </linearGradient>
+              <linearGradient id="nav-br-inner" x1="756" y1="435" x2="628" y2="657" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#1AB37C" />
+                <stop offset="55%" stop-color="#2FC6C6" />
+                <stop offset="100%" stop-color="#239FE0" />
+              </linearGradient>
+              <linearGradient id="nav-bot-inner" x1="695" y1="773" x2="372" y2="657" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#1978CE" />
+                <stop offset="60%" stop-color="#1746C4" />
+                <stop offset="100%" stop-color="#2729B8" />
+              </linearGradient>
+              <linearGradient id="nav-bot-outer" x1="695" y1="773" x2="305" y2="773" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#2994E2" />
+                <stop offset="45%" stop-color="#1B32B8" />
+                <stop offset="100%" stop-color="#5D27E1" />
+              </linearGradient>
+              <linearGradient id="nav-bl-outer" x1="305" y1="773" x2="110" y2="435" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#3C16BA" />
+                <stop offset="50%" stop-color="#8719D6" />
+                <stop offset="100%" stop-color="#D721C8" />
+              </linearGradient>
+              <linearGradient id="nav-bl-inner" x1="372" y1="657" x2="177" y2="435" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#5922DC" />
+                <stop offset="50%" stop-color="#A624E8" />
+                <stop offset="100%" stop-color="#EC2CE8" />
+              </linearGradient>
+              <linearGradient id="nav-tl-outer" x1="110" y1="435" x2="305" y2="97" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#CA1F96" />
+                <stop offset="55%" stop-color="#DF2758" />
+                <stop offset="100%" stop-color="#E52726" />
+              </linearGradient>
+              <linearGradient id="nav-tl-inner" x1="244" y1="435" x2="338" y2="155" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#9A1B64" />
+                <stop offset="55%" stop-color="#BA1F38" />
+                <stop offset="100%" stop-color="#C92123" />
+              </linearGradient>
+            </defs>
+            <!-- Anillo Hexagonal Facetado 3D -->
+            <g stroke-linejoin="bevel">
+              <polygon points="305,97.25 695,97.25 372,213.3" fill="url(#nav-top-outer)" stroke="url(#nav-top-outer)" stroke-width="1" />
+              <polygon points="372,213.3 695,97.25 628,213.3" fill="url(#nav-top-inner)" stroke="url(#nav-top-inner)" stroke-width="1" />
+              <polygon points="695,97.25 890,435 628,213.3" fill="url(#nav-tr-outer)" stroke="url(#nav-tr-outer)" stroke-width="1" />
+              <polygon points="628,213.3 890,435 756,435" fill="url(#nav-tr-inner)" stroke="url(#nav-tr-inner)" stroke-width="1" />
+              <polygon points="890,435 695,772.75 756,435" fill="url(#nav-br-outer)" stroke="url(#nav-br-outer)" stroke-width="1" />
+              <polygon points="756,435 695,772.75 628,656.7" fill="url(#nav-br-inner)" stroke="url(#nav-br-inner)" stroke-width="1" />
+              <polygon points="628,656.7 695,772.75 372,656.7" fill="url(#nav-bot-inner)" stroke="url(#nav-bot-inner)" stroke-width="1" />
+              <polygon points="695,772.75 305,772.75 372,656.7" fill="url(#nav-bot-outer)" stroke="url(#nav-bot-outer)" stroke-width="1" />
+              <polygon points="305,772.75 110,435 372,656.7" fill="url(#nav-bl-outer)" stroke="url(#nav-bl-outer)" stroke-width="1" />
+              <polygon points="372,656.7 110,435 244,435" fill="url(#nav-bl-inner)" stroke="url(#nav-bl-inner)" stroke-width="1" />
+              <polygon points="110,435 305,97.25 244,435" fill="url(#nav-tl-outer)" stroke="url(#nav-tl-outer)" stroke-width="1" />
+              <polygon points="244,435 305,97.25 372,213.3" fill="url(#nav-tl-inner)" stroke="url(#nav-tl-inner)" stroke-width="1" />
+            </g>
+            <!-- Monograma KL -->
+            <g fill="var(--logo-monogram)">
+              <path d="M 345 326 L 345 544 L 391 544 L 391 461 L 391.06055 461 L 391 460.98242 L 412.40234 418 L 391 418 L 391 326 L 345 326 z M 474 326 L 418.2832 417.5332 L 418.3457 417.57031 L 392.44336 461 L 418 461 L 475 544 L 528 544 L 452 438 L 525 326 L 474 326 z " />
+              <path d="M 542,326 H 588 V 502 L 542,541 Z" />
+              <path d="M 547,544 L 597,504 H 691 L 669,544 Z" />
+            </g>
+          </svg>
         </div>
-        <div>
-          <div style="font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1;">Kroma Lab</div>
-          <div style="font-size: 0.7rem; font-weight: 700; color: var(--cerulean); letter-spacing: 0.08em; text-transform: uppercase;">Sales Studio</div>
+
+        <!-- Nombre de Marca con 'Sales Studio' condicional por rol -->
+        <div class="brand-name">
+          <span class="brand-title">KROMA <span style="font-weight: 500;">LAB</span></span>
+          <!-- Solo visible para ADMIN y EMPLOYEE; oculto para Clientes y Visitantes -->
+          <span id="salesStudioTag" class="brand-tag" style="display: none;">Sales Studio</span>
         </div>
       </a>
 
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <nav style="display: flex; align-items: center; gap: 1.5rem;">
-          <a href="#cotizador" style="font-weight: 600; font-size: 0.95rem; color: var(--text-secondary);">Cotizador</a>
-          <a href="#pedidos" style="font-weight: 600; font-size: 0.95rem; color: var(--text-secondary);">Mis Pedidos</a>
+      <!-- Menú y Acciones -->
+      <div style="display: flex; align-items: center; gap: 1.5rem;">
+        <nav id="navRoleLinks" style="display: flex; align-items: center; gap: 1.25rem;">
+          <!-- Se inyecta dinámicamente según el rol en app.js -->
         </nav>
+
+        <!-- Botón Switch Modo Claro / Oscuro -->
         <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Cambiar tema">
           <span id="themeToggleIcon">☀️</span>
         </button>
@@ -33,19 +128,192 @@
     </div>
   </header>
 
-  <main id="app" class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
-    <!-- Vista inicial del Cotizador y bienvenida -->
-    <div style="text-align: center; max-width: 700px; margin: 2rem auto;">
-      <span class="badge">Impresión Industrial UV DTF</span>
-      <h1 style="font-size: 2.5rem; font-weight: 800; margin: 1rem 0; line-height: 1.2;">
-        Cotiza y gestiona tus pedidos en segundos
+  <!-- ==========================================================================
+       CONTENIDO PRINCIPAL: HERO + COTIZADOR EN VIVO + SIMULADOR DE BOBINA
+       ========================================================================== -->
+  <main id="app" class="container">
+    
+    <!-- Hero / Encabezado Comercial -->
+    <div style="text-align: center; max-width: 820px; margin: 2.5rem auto 1.5rem;">
+      <span class="badge">Tecnología Industrial UV DTF en Guatemala</span>
+      <h1 style="font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 800; margin: 1rem 0; line-height: 1.2; letter-spacing: -0.02em;">
+        Calcula tu tiraje por metro lineal en tiempo real
       </h1>
-      <p style="color: var(--text-secondary); font-size: 1.1rem;">
-        Tecnología directa sobre film con relieve táctil, barniz UV de alto brillo y resistencia mecánica extrema.
+      <p style="color: var(--text-secondary); font-size: clamp(1rem, 2vw, 1.15rem); line-height: 1.6;">
+        Impresión con lámpara LED UV, cama blanca fotográfica, barniz con relieve 3D y adherencia permanente sobre superficies rígidas.
       </p>
+    </div>
+
+    <!-- SECCIÓN DE CALCULADORA Y SIMULADOR -->
+    <section class="calculator-section" id="cotizador">
+      <div class="calc-layout">
+        
+        <!-- Panel 1: Parámetros del Sticker y Bobina -->
+        <div class="calc-card">
+          <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text-primary);">
+            1. Medidas de tu diseño
+          </h2>
+
+          <div class="input-row">
+            <div class="form-group">
+              <label class="form-label" for="stickerWidth">
+                Ancho (cm)
+                <span class="tip">Máx. 28 cm</span>
+              </label>
+              <input type="number" id="stickerWidth" class="input-control" value="5" min="0.5" max="28" step="0.1">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="stickerHeight">
+                Alto (cm)
+                <span class="tip">Largo libre</span>
+              </label>
+              <input type="number" id="stickerHeight" class="input-control" value="5" min="0.5" max="200" step="0.1">
+            </div>
+          </div>
+
+          <!-- Presets Rápidos -->
+          <div class="form-group">
+            <span class="form-label" style="margin-bottom: 0.35rem;">Medidas comunes de referencia:</span>
+            <div class="quick-sizes">
+              <button class="btn-chip active" data-w="5" data-h="5">5 × 5 cm (Vasos/Tazas)</button>
+              <button class="btn-chip" data-w="8" data-h="5">8 × 5 cm (Termos Stanley/Yeti)</button>
+              <button class="btn-chip" data-w="10" data-h="10">10 × 10 cm (Laptops/Autos)</button>
+              <button class="btn-chip" data-w="4" data-h="4">4 × 4 cm (Logos pequeños)</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <label class="form-label" for="stickerQty">
+              Cantidad de stickers
+              <span class="tip">Piezas totales</span>
+            </label>
+            <input type="number" id="stickerQty" class="input-control" value="50" min="1" max="10000" step="1">
+          </div>
+
+          <!-- Opción de Acabado: Despiece / Corte Recto de Precisión -->
+          <div class="cutting-option-card" id="cuttingCard">
+            <label class="checkbox-wrapper" for="optCutting">
+              <input type="checkbox" id="optCutting">
+              <div class="checkbox-content">
+                <div class="checkbox-header">
+                  <span class="checkbox-title">✂️ Entregar cortados individualmente</span>
+                  <span class="checkbox-badge" id="cuttingBadgeRate">+Q0.35 / pza</span>
+                </div>
+                <p class="checkbox-desc">
+                  Recibe tus stickers separados en recuadros listos para aplicar o entregar a tus clientes. Corte perimetral recto con máquina de precisión.
+                </p>
+              </div>
+            </label>
+
+            <div class="cutting-details">
+              <div class="cutting-tier-info">
+                <span class="tier-tag active" id="tierTag1">1 - 50 uds: Q0.35 c/u</span>
+                <span class="tier-tag" id="tierTag2">51 - 200 uds: Q0.30 c/u</span>
+                <span class="tier-tag" id="tierTag3">+200 uds: Q0.25 c/u</span>
+              </div>
+              <p class="cutting-policy-note">
+                * <strong>Nota de acabado:</strong> Si no seleccionas corte, tu pedido se entrega en <strong>rollo continuo sin cortar</strong> (estándar de maquila industrial). Tarifa mínima de servicio de corte: Q25.00.
+              </p>
+            </div>
+          </div>
+
+          <!-- Simulador Visual de Bobina Audley -->
+          <div class="simulator-container">
+            <div class="simulator-header">
+              <span>ANCHO DE BOBINA: 28 CM ÚTILES</span>
+              <span id="canvasStats">5 por fila</span>
+            </div>
+            <div class="roll-canvas-wrap">
+              <canvas id="rollCanvas" width="580" height="200"></canvas>
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.5rem;">
+              * Esquema a escala con separación técnica de 3 mm entre piezas para despiece seguro.
+            </p>
+          </div>
+        </div>
+
+        <!-- Panel 2: Desglose Técnico y Financiero -->
+        <div class="calc-card calc-results-panel">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text-primary);">
+              2. Desglose del Pedido
+            </h2>
+
+            <div class="results-breakdown">
+              <div class="breakdown-row">
+                <span>Stickers por fila:</span>
+                <strong id="resStickersPerRow">5 piezas</strong>
+              </div>
+              <div class="breakdown-row">
+                <span>Filas requeridas:</span>
+                <strong id="resRows">10 filas</strong>
+              </div>
+              <div class="breakdown-row">
+                <span>Largo físico que ocupan:</span>
+                <strong id="resPhysicalLength">51.8 cm</strong>
+              </div>
+              <div class="breakdown-row">
+                <span>Metros lineales a cobrar:</span>
+                <strong id="resBillableMeters">1.00 m (Mínimo)</strong>
+              </div>
+              <div class="breakdown-row">
+                <span>Tarifa por metro lineal:</span>
+                <strong id="resTierRate">Q140.00 / m</strong>
+              </div>
+              <div class="breakdown-row">
+                <span>Corte individual:</span>
+                <strong id="resCuttingCost">No incluido (En rollo)</strong>
+              </div>
+            </div>
+
+            <!-- Aviso de aprovechamiento de metro mínimo -->
+            <div id="minimumNotice" class="minimum-notice" style="display: none;"></div>
+
+            <!-- Caja de Total en Quetzales -->
+            <div class="total-box">
+              <div class="total-label">Total Estimado en Quetzales</div>
+              <div class="total-price" id="resTotalPrice">Q140.00</div>
+              <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q2.80 por sticker</div>
+            </div>
+          </div>
+
+          <!-- Acciones Comerciales -->
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+            <button id="btnQuoteWhatsApp" class="btn btn-whatsapp" style="width: 100%;">
+              <span>Consultar esta Cotización por WhatsApp</span>
+              <span>💬</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Barra de Simulación de Rol (Herramienta de Control / Testing de RBAC) -->
+    <div style="margin: 3rem auto 1rem; padding: 1rem 1.5rem; background: var(--bg-surface-elevated); border: 1px dashed var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div style="font-size: 0.85rem; color: var(--text-secondary);">
+        <strong>🛠️ Simulador de Roles:</strong> Cambia de rol para verificar cómo "Sales Studio" y el menú del navbar se adaptan.
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('VISITOR')">Visitante</button>
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('CUSTOMER')">Cliente</button>
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('EMPLOYEE')">Empleado</button>
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('ADMIN')">Administrador</button>
+      </div>
     </div>
   </main>
 
   <script type="module" src="./src/js/app.js"></script>
+  <script type="module">
+    import { store } from './src/js/store.js';
+    window.__simulateRole = (role) => {
+      if (role === 'VISITOR') {
+        store.clearUser();
+      } else {
+        store.setUser({ id: 'USR_TEST', name: role, role }, 'fake-jwt', []);
+      }
+    };
+  </script>
 </body>
 </html>
