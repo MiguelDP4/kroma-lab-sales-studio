@@ -121,6 +121,12 @@
           <!-- Se inyecta dinámicamente según el rol en app.js -->
         </nav>
 
+        <!-- Botón de Carrito de Compras -->
+        <button id="cartToggleBtn" class="cart-toggle-btn" aria-label="Ver Carrito de Compras">
+          <span style="font-size: 1.2rem;">🛒</span>
+          <span id="cartCountBadge" class="cart-count-badge" style="display: none;">0</span>
+        </button>
+
         <!-- Botón Switch Modo Claro / Oscuro -->
         <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Cambiar tema">
           <span id="themeToggleIcon">☀️</span>
@@ -128,6 +134,10 @@
       </div>
     </div>
   </header>
+
+  <!-- Contenedores para Modales y Drawers Globales -->
+  <div id="cartDrawerContainer"></div>
+  <div id="checkoutModalContainer"></div>
 
   <!-- ==========================================================================
        CONTENIDO PRINCIPAL: VISTAS MONTADAS POR EL ENRUTADOR SPA (#app)

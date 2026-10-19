@@ -158,6 +158,61 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('minimumNotice').style.display).toBe('block');
     });
 
+    it('agrega el diseño al carrito y abre el drawer al hacer clic en btnAddToCart', () => {
+      initApp();
+
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      expect(btnAddToCart).not.toBeNull();
+
+      btnAddToCart.click();
+
+      const drawer = document.getElementById('cartDrawer');
+      expect(drawer.classList.contains('open')).toBe(true);
+    });
+
+    it('gestiona la selección y remoción de archivos en el dropzone', async () => {
+      initApp();
+
+      const dropzone = document.getElementById('quoterDropzone');
+      const fileInput = document.getElementById('quoterFileInput');
+      const emptyState = document.getElementById('dropzoneEmptyState');
+      const selectedState = document.getElementById('dropzoneFileSelected');
+      const btnRemoveFile = document.getElementById('btnRemoveFile');
+
+      // Drag events
+      dropzone.dispatchEvent(new Event('dragover'));
+      expect(dropzone.classList.contains('dragover')).toBe(true);
+
+      dropzone.dispatchEvent(new Event('dragleave'));
+      expect(dropzone.classList.contains('dragover')).toBe(false);
+
+      fileInput.click = vi.fn();
+      dropzone.click();
+      expect(fileInput.click).toHaveBeenCalled();
+
+      const dropEvent = new Event('drop');
+      dropzone.dispatchEvent(dropEvent);
+
+      // Simular selección de archivo válido
+      const validFile = new File(['dummy'], 'logo.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+
+      await new Promise(r => setTimeout(r, 50));
+
+      // Verificar que se muestre el estado de archivo seleccionado
+      expect(emptyState.style.display).toBe('none');
+      expect(selectedState.style.display).toBe('flex');
+
+      // Quitar archivo
+      btnRemoveFile.click();
+      expect(emptyState.style.display).toBe('flex');
+      expect(selectedState.style.display).toBe('none');
+    });
+
     it('maneja de forma segura initQuoter si no existen inputs en el DOM', () => {
       document.body.innerHTML = '';
       expect(() => initApp()).not.toThrow();
