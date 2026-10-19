@@ -1,17 +1,35 @@
 /**
  * SPA Entrypoint — Kroma Lab Sales Studio
- * Manejo de logo, roles en navbar, cotizador interactivo y simulador de bobina.
+ * Manejo de logo, roles en navbar, enrutador SPA y cotizador interactivo.
  */
 
 import { store } from './store.js';
 import { calculateQuote } from './modules/quoter-engine.js';
 import { drawRollCanvas } from './modules/roll-simulator.js';
 import { BUSINESS_CONFIG } from '../shared/business-config.js';
+import { Router } from './router.js';
+
+import { quoterView } from './views/quoter-view.js';
+import { ordersView } from './views/orders-view.js';
+import { productionView } from './views/production-view.js';
+import { clientsView } from './views/clients-view.js';
+import { usersView } from './views/users-view.js';
+
+export const routes = [
+  quoterView,
+  { ...quoterView, path: '/cotizador' },
+  ordersView,
+  productionView,
+  clientsView,
+  usersView,
+];
+
+export const router = new Router(routes, 'app');
 
 export function initApp() {
   initTheme();
   initNavbarRoleSync();
-  initQuoter();
+  router.init();
 }
 
 /**
@@ -61,35 +79,43 @@ export function syncNavbarRole(role) {
   if (navLinksContainer) {
     if (isStaff) {
       navLinksContainer.innerHTML = `
-        <a href="#produccion" class="nav-link">Cola Audley</a>
-        <a href="#pedidos" class="nav-link">Pedidos</a>
-        <a href="#clientes" class="nav-link">Clientes</a>
-        <a href="#cotizador" class="nav-link active">Cotizador</a>
-        ${role === 'ADMIN' ? '<a href="#usuarios" class="nav-link">Usuarios</a>' : ''}
+        <a href="/produccion" class="nav-link" data-link>Cola Audley</a>
+        <a href="/pedidos" class="nav-link" data-link>Pedidos</a>
+        <a href="/clientes" class="nav-link" data-link>Clientes</a>
+        <a href="/" class="nav-link" data-link>Cotizador</a>
+        ${role === 'ADMIN' ? '<a href="/usuarios" class="nav-link" data-link>Usuarios</a>' : ''}
       `;
     } else if (role === 'CUSTOMER') {
       navLinksContainer.innerHTML = `
-        <a href="#cotizador" class="nav-link active">Cotizador</a>
-        <a href="#pedidos" class="nav-link">Mis Pedidos</a>
-        <a href="#disenos" class="nav-link">Mis Diseños</a>
+        <a href="/" class="nav-link" data-link>Cotizador</a>
+        <a href="/pedidos" class="nav-link" data-link>Mis Pedidos</a>
       `;
     } else {
       // Visitante no registrado
       navLinksContainer.innerHTML = `
-        <a href="#cotizador" class="nav-link active">Cotizador</a>
-        <a href="#ventajas" class="nav-link">¿Qué es UV DTF?</a>
+        <a href="/" class="nav-link" data-link>Cotizador</a>
         <a href="#contacto" class="nav-link">WhatsApp</a>
       `;
     }
   }
 }
 
+let lastSyncedRole = null;
+
 function initNavbarRoleSync() {
   store.subscribe((state) => {
     const role = state.user?.role || 'VISITOR';
-    syncNavbarRole(role);
+    if (role !== lastSyncedRole) {
+      lastSyncedRole = role;
+      syncNavbarRole(role);
+      // Re-resolver la ruta para revalidar permisos RBAC si el rol cambió
+      if (typeof window !== 'undefined' && router && router.currentRoute) {
+        router.resolve(window.location.pathname);
+      }
+    }
   });
-  syncNavbarRole(store.state.user?.role || 'VISITOR');
+  lastSyncedRole = store.state.user?.role || 'VISITOR';
+  syncNavbarRole(lastSyncedRole);
 }
 
 /**
@@ -129,7 +155,7 @@ export function initQuoter() {
   // Configurar botones de presets rápidos
   const presetChips = document.querySelectorAll('.btn-chip[data-w]');
   presetChips.forEach(chip => {
-    chip.addEventListener('click', (e) => {
+    chip.addEventListener('click', () => {
       presetChips.forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       widthInput.value = chip.dataset.w;
@@ -235,7 +261,6 @@ export function sendWhatsAppQuote(quote) {
   const cuttingText = quote.includeCutting
     ? `• *Corte / Acabado:* Sí, corte recto con máquinas de precisión ${cutDetail}\n`
     : `• *Corte / Acabado:* No (Entrega estándar en rollo continuo)\n`;
-
 
   const text = `¡Hola Kroma Lab! 🚀\n\nQuisiera consultar una cotización de impresión UV DTF:\n` +
     `• *Tamaño de sticker:* ${quote.widthCm} x ${quote.heightCm} cm\n` +
