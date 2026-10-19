@@ -256,7 +256,7 @@ function attachCartEventListeners(items, totals) {
   if (btnWhatsApp) {
     btnWhatsApp.addEventListener('click', () => {
       const text = formatWhatsAppCartOrder(totals);
-      const url = `https://wa.me/${BUSINESS_CONFIG.phoneWhatsApp}?text=${encodeURIComponent(text)}`;
+      const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
     });
   }
