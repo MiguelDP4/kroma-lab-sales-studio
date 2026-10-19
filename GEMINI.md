@@ -114,3 +114,21 @@ flowchart TD
   * Tokens de sesión JWT de corta duración + `refreshToken` seguro con hash en base de datos y cookies `httpOnly`.
   * Validación exhaustiva de payloads con esquemas `Zod`.
   * IDs legibles con prefijo identificador (`USR_`, `CUS_`, `ORD_`, `PRD_`, etc.).
+
+---
+
+## 6. Regla Obligatoria de Documentación Viva (`DOCUMENTATION.md`)
+
+> **NORMA DE MANTENIMIENTO TÉCNICO:**
+> Toda la arquitectura, mapa de archivos, esquema de base de datos, catálogo de endpoints, reglas de diseño visual y algoritmos de negocio deben mantenerse permanentemente actualizados en el archivo raíz **`DOCUMENTATION.md`**.
+
+1. **Documentación Sincronizada con el Código:**
+   * Cada vez que se agregue una nueva carpeta, vista, componente, endpoint, migración de Prisma o cambio en las fórmulas de cálculo (como las tarifas del cotizador o las variables de color), **se debe actualizar de inmediato `DOCUMENTATION.md`**.
+2. **Contenido Obligatorio de `DOCUMENTATION.md`:**
+   * **Mapa de Estructura de Archivos:** Ubicación y propósito de cada archivo del frontend, backend y shared.
+   * **Esquema de Base de Datos y Modelos:** Relaciones, enums y campos de Prisma.
+   * **Catálogo de Endpoints REST:** Métodos, rutas, roles requeridos y contratos de request/response.
+   * **Algoritmos y Reglas de Negocio:** Lógica matemática del cotizador, ancho útil de bobina, tarifas y escalas de volumen.
+   * **Tokens del Sistema de Diseño:** Paleta de colores (`--space-indigo`, `--regal-navy`, `--baltic-blue`, `--cerulean`, `--powder-blue`) y su comportamiento en Modo Claro y Modo Oscuro.
+   * **Matriz Maestra de Roles y Permisos (RBAC):** Catálogo de permisos asignados a Visitante, Cliente, Empleado y Administrador.
+

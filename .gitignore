@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Testing y Cobertura
+coverage/
+*.lcov
+
+# Entornos y Secretos
+.env
+.env.local
+.env.*.local
+
+# Compilados y Builds
+dist/
+build/
+.cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE y Sistema
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

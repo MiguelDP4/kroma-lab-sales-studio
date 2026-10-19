@@ -1,0 +1,144 @@
+// Esquema de Base de Datos para Kroma Lab Sales Studio
+// Motor: PostgreSQL en Neon Serverless
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDING_REVIEW
+  IN_AUDLEY_QUEUE
+  PRINTING
+  LAMINATING_CUTTING
+  READY_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+  CUSTOMER
+}
+
+model User {
+  id                String      @id @default(cuid())
+  email             String      @unique
+  password          String?
+  name              String?
+  phone             String?
+  isVerified        Boolean     @default(false)
+  verificationToken String?     @unique
+  refreshToken      String?     @unique
+  role              Role        @default(CUSTOMER)
+  roleId            String?
+  roleModel         RoleModel?  @relation(fields: [roleId], references: [id])
+  customerId        String?
+  customer          Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  deleted           Boolean?    @default(false)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  companyName String?
+  managerName String
+  phone       String
+  email       String   @unique
+  address     String?
+  taxId       String?  // NIT en Guatemala
+  orders      Order[]
+  users       User[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  code           String      @unique // Ej. "KL-00001"
+  status         OrderStatus @default(PENDING_REVIEW)
+  customerId     String?
+  customer       Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Metadatos de impresión UV DTF
+  widthCm        Decimal     @db.Decimal(6, 2)
+  heightCm       Decimal     @db.Decimal(6, 2)
+  qty            Int
+  linearMeters   Decimal     @db.Decimal(6, 2)
+  withCutting    Boolean     @default(false)
+
+  // Desglose financiero (Quetzales GTQ)
+  materialPriceQ Decimal     @db.Decimal(10, 2)
+  cuttingPriceQ  Decimal     @default(0.0) @db.Decimal(10, 2)
+  totalAmountQ   Decimal     @db.Decimal(10, 2)
+  amountPaidQ    Decimal     @default(0.0) @db.Decimal(10, 2)
+
+  // Archivo de diseño en Cloudflare R2
+  fileUrl        String?
+  fileName       String?
+  fileSizeBytes  Int?
+  notes          String?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Quote {
+  id             String   @id @default(cuid())
+  leadName       String?
+  leadPhone      String?
+  leadEmail      String?
+  widthCm        Decimal  @db.Decimal(6, 2)
+  heightCm       Decimal  @db.Decimal(6, 2)
+  qty            Int
+  linearMeters   Decimal  @db.Decimal(6, 2)
+  totalPriceQ    Decimal  @db.Decimal(10, 2)
+  withCutting    Boolean  @default(false)
+  source         String?  // "facebook", "tiktok", "direct", etc.
+
+  createdAt      DateTime @default(now())
+}
+
+model RoleModel {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  permissions RolePermission[]
+  users       User[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         RoleModel  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  assignedAt   DateTime   @default(now())
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
