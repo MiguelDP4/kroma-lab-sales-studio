@@ -383,17 +383,18 @@ export function sendWhatsAppQuote(quote) {
     ? `• *Corte / Acabado:* Sí, corte recto con máquinas de precisión ${cutDetail}\n`
     : `• *Corte / Acabado:* No (Entrega estándar en rollo continuo)\n`;
 
-  const text = `¡Hola Kroma Lab! 🚀\n\nQuisiera consultar una cotización de impresión UV DTF:\n` +
-    `• *Tamaño de sticker:* ${quote.widthCm} x ${quote.heightCm} cm\n` +
-    `• *Cantidad solicitada:* ${quote.qty} stickers\n` +
-    `• *Acomodo:* ${quote.stickersPerRow} stickers por fila\n` +
+  const text = `*KROMA LAB — Cotización UV DTF*\n\n` +
+    `Hola, deseo consultar la siguiente cotización:\n` +
+    `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
+    `• *Cantidad:* ${quote.qty} stickers\n` +
+    `• *Acomodo:* ${quote.stickersPerRow} stickers por fila (28 cm útiles)\n` +
     `• *Metros requeridos:* ${quote.billableMeters.toFixed(2)} m\n` +
     `• *Tarifa material:* Q${quote.tierRate.toFixed(2)} / m\n` +
     cuttingText +
-    `• *Total estimado:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
-    `¿Qué disponibilidad tienen para entrega esta semana?`;
+    `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
+    `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 
-  const url = `https://wa.me/${BUSINESS_CONFIG.phoneWhatsApp}?text=${encodeURIComponent(text)}`;
+  const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
   if (typeof window !== 'undefined') {
     window.open(url, '_blank');
   }

@@ -123,18 +123,20 @@ export function calculateCartTotals(items = []) {
 export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
   const { items, totalBillableMeters, tierRate, grandTotalQ, hasCutting, cuttingTotalQ, isUnderMin } = cartTotals;
 
-  let msg = `¡Hola Kroma Lab! 🚀\n\n`;
-  msg += `Deseo confirmar el siguiente pedido de impresión UV DTF:\n\n`;
+  let msg = `*KROMA LAB — Pedido de Impresión UV DTF*\n\n`;
+  msg += `Deseo confirmar el siguiente pedido:\n\n`;
 
   if (customer.name || customer.company) {
-    msg += `👤 *Cliente:* ${customer.name || customer.company}\n`;
-    if (customer.nit) msg += `📄 *NIT:* ${customer.nit}\n`;
+    msg += `• *Cliente:* ${customer.name || customer.company}\n`;
+    if (customer.nit) msg += `• *NIT:* ${customer.nit}\n`;
+    if (customer.phone) msg += `• *Teléfono:* ${customer.phone}\n`;
+    if (customer.address) msg += `• *Dirección:* ${customer.address}\n`;
     msg += `\n`;
   }
 
-  msg += `📦 *DETALLE DE DISEÑOS EN PEDIDO:*\n`;
+  msg += `*DETALLE DE DISEÑOS EN PEDIDO:*\n`;
   items.forEach((item, index) => {
-    const cutText = item.includeCutting ? `✂️ Cortado (Q${item.cuttingRateUnit} c/u)` : `📜 Rollo continuo`;
+    const cutText = item.includeCutting ? `Con corte individual (Q${item.cuttingRateUnit} c/u)` : `En rollo continuo`;
     const fileName = item.fileInfo?.name ? ` [Archivo: ${item.fileInfo.name}]` : ` [Sin archivo adjunto]`;
     msg += `${index + 1}. *${item.title || `Diseño #${index + 1}`}*:\n`;
     msg += `   • Medida: ${item.widthCm} × ${item.heightCm} cm\n`;
@@ -143,13 +145,16 @@ export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
     msg += `   • Acomodo: ${item.stickersPerRow}/fila (${item.rows} filas, ${(item.actualLinearMeters).toFixed(2)}m)\n\n`;
   });
 
-  msg += `📊 *CONSOLIDADO DE PRODUCCIÓN:*\n`;
+  msg += `*CONSOLIDADO DE PRODUCCIÓN:*\n`;
   msg += `• *Metros Lineales Facturables:* ${totalBillableMeters.toFixed(2)} m ${isUnderMin ? '(Mínimo 1m)' : ''}\n`;
   msg += `• *Escala de Tarifa:* Q${tierRate.toFixed(2)} / metro\n`;
   if (hasCutting) {
     msg += `• *Servicio de Corte:* +Q${cuttingTotalQ.toFixed(2)}\n`;
   }
   msg += `• *TOTAL ESTIMADO:* Q${grandTotalQ.toFixed(2)}\n\n`;
+  if (customer.notes) {
+    msg += `• *Notas:* ${customer.notes}\n\n`;
+  }
   msg += `¿Me confirman tiempos de entrega y métodos de pago (transferencia/depósito)? Gracias.`;
 
   return msg;

@@ -160,7 +160,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const btnWhatsApp = document.getElementById('btnCartWhatsApp');
       btnWhatsApp.click();
 
-      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('wa.me'), '_blank');
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
     });
   });
 
