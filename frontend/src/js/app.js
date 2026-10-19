@@ -32,6 +32,7 @@ export const router = new Router(routes, 'app');
 export function initApp() {
   initTheme();
   initNavbarRoleSync();
+  initMobileNav();
   initCartDrawer();
   router.init();
 }
@@ -62,6 +63,39 @@ function updateThemeUI(theme) {
   const canvas = document.getElementById('rollCanvas');
   if (canvas && store.state.activeQuote) {
     drawRollCanvas(canvas, store.state.activeQuote, theme === 'dark');
+  }
+}
+
+/**
+ * Control del menú hamburguesa en dispositivos móviles
+ */
+export function initMobileNav() {
+  const toggleBtn = document.getElementById('mobileNavToggle');
+  const navLinks = document.getElementById('navRoleLinks');
+  const navIcon = document.getElementById('mobileNavIcon');
+
+  if (toggleBtn && navLinks) {
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = navLinks.classList.toggle('is-open');
+      toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (navIcon) navIcon.textContent = isOpen ? '✕' : '☰';
+    });
+
+    navLinks.addEventListener('click', (e) => {
+      if (e.target.matches('a, a *')) {
+        navLinks.classList.remove('is-open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        if (navIcon) navIcon.textContent = '☰';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!navLinks.contains(e.target) && !toggleBtn.contains(e.target) && navLinks.classList.contains('is-open')) {
+        navLinks.classList.remove('is-open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        if (navIcon) navIcon.textContent = '☰';
+      }
+    });
   }
 }
 

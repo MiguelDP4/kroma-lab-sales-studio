@@ -72,7 +72,10 @@ export const clientsView = {
         </div>
 
         <!-- Tabla Principal de Clientes -->
-        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto;">
+        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <div class="mobile-scroll-hint">
+            <span>👈 Desliza horizontalmente para ver más columnas 👉</span>
+          </div>
           <table class="orders-table">
             <thead>
               <tr>
@@ -168,7 +171,7 @@ export const clientsView = {
               <textarea id="clientFormNotes" class="input-control" rows="2" placeholder="Ej. Prefiere acabado 3D, entrega por las tardes, corte individual..."></textarea>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+            <div class="modal-actions-footer">
               <button type="button" class="btn btn-secondary" id="btnCancelClientFormModal">Cancelar</button>
               <button type="submit" class="btn btn-primary" id="btnSaveClient">Guardar Cliente</button>
             </div>
@@ -504,22 +507,22 @@ export const clientsView = {
       if (contentEl) {
         contentEl.innerHTML = `
           <!-- Tarjetas Métricas del Cliente -->
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;">
-            <div style="background: var(--bg-surface-elevated); padding: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+          <div class="dossier-metrics-grid">
+            <div class="dossier-metric-card">
               <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Metraje Total:</span>
               <div style="font-size: 1.35rem; font-weight: 800; font-family: var(--font-mono); color: var(--cerulean);">
                 ${metrics.totalMetersPurchased.toFixed(2)} m
               </div>
             </div>
 
-            <div style="background: var(--bg-surface-elevated); padding: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+            <div class="dossier-metric-card">
               <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Total Facturado:</span>
               <div style="font-size: 1.35rem; font-weight: 800; font-family: var(--font-mono); color: var(--color-success);">
                 Q${metrics.totalSpentQ.toFixed(2)}
               </div>
             </div>
 
-            <div style="background: var(--bg-surface-elevated); padding: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+            <div class="dossier-metric-card">
               <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Saldo Pendiente:</span>
               <div style="font-size: 1.35rem; font-weight: 800; font-family: var(--font-mono); color: ${metrics.pendingDebtQ > 0 ? '#ef4444' : 'var(--text-muted)'};">
                 Q${metrics.pendingDebtQ.toFixed(2)}
@@ -528,7 +531,7 @@ export const clientsView = {
           </div>
 
           <!-- Ficha de Datos SAT y Contacto -->
-          <div style="background: var(--bg-surface-elevated); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 1.25rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+          <div class="dossier-info-grid">
             <div>
               <span style="color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Facturación SAT:</span>
               <div style="font-weight: 700; font-family: var(--font-mono);">NIT: ${client.nit}</div>

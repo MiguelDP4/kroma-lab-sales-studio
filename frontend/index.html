@@ -14,8 +14,8 @@
   <!-- ==========================================================================
        BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR CON CONTROL RBAC)
        ========================================================================== -->
-  <header class="navbar" style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100;">
-    <div class="container" style="display: flex; align-items: center; justify-content: space-between; height: 74px;">
+  <header class="navbar">
+    <div class="container navbar-container">
       
       <!-- Logo Oficial Vectorial Kroma Lab -->
       <a href="/" class="brand-logo" id="mainBrandLogo" aria-label="Kroma Lab" data-link>
@@ -116,8 +116,8 @@
       </a>
 
       <!-- Menú y Acciones -->
-      <div style="display: flex; align-items: center; gap: 1.5rem;">
-        <nav id="navRoleLinks" style="display: flex; align-items: center; gap: 1.25rem;">
+      <div class="navbar-actions-group">
+        <nav id="navRoleLinks" class="nav-role-links">
           <!-- Se inyecta dinámicamente según el rol en app.js -->
         </nav>
 
@@ -130,6 +130,11 @@
         <!-- Botón Switch Modo Claro / Oscuro -->
         <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Cambiar tema">
           <span id="themeToggleIcon">☀️</span>
+        </button>
+
+        <!-- Botón Hamburguesa Móvil -->
+        <button id="mobileNavToggle" class="mobile-nav-toggle" aria-label="Abrir menú de navegación" aria-expanded="false">
+          <span id="mobileNavIcon">☰</span>
         </button>
       </div>
     </div>
