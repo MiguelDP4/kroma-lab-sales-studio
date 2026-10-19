@@ -292,6 +292,19 @@ kroma-lab-sales-studio/
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
   * Límite de tamaño: 50 MB por archivo.
   * Genera vista previa visual inmediata (thumbnail) para archivos PNG/SVG/WebP.
+* **Arquitectura de Diseño y Experiencia Mobile-First:**
+  * **Norma UX/UI Obligatoria:** Toda la interfaz está concebida y desarrollada para una experiencia táctil fluida desde smartphones compactos (320px - 375px) hasta pantallas 4K.
+  * **Navegación Móvil y Menú Hamburguesa (`#mobileNavToggle` + `.nav-role-links`):**
+    * En pantallas `< 768px`, los enlaces de navegación se ocultan automáticamente en el flujo normal y se despliega un botón táctil ergonómico de 42×42px (`#mobileNavToggle`) con iconografía animada (`☰` / `✕`).
+    * Al abrirse, el menú se despliega como un panel flotante de alta elevación con fondo frosted glass (`backdrop-filter`), enlaces de ancho completo con zona táctil mínima de 44px (`.nav-link`), y autocierre inteligente al seleccionar cualquier ruta o pulsar fuera del menú.
+  * **Tablero Kanban con Desplazamiento Táctil Asistido (`scroll-snap`):**
+    * En pantallas móviles y tablets (`< 900px`), las 4 columnas de producción no se comprimen ni se apilan verticalmente de forma infinita: se transforman en un contenedor de deslizamiento horizontal con *scroll-snap* (`scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;`), permitiendo al operario en taller deslizar cómodamente entre estaciones de trabajo con una sola mano.
+  * **Tablas Adaptativas con Indicador Visual (`.mobile-scroll-hint`):**
+    * Las tablas de pedidos y cartera de clientes cuentan con envoltorios de scroll táctil suave y un indicador visual sutil (`.mobile-scroll-hint`) para guiar al usuario móvil.
+  * **Formularios e Inputs Flexibles (`.input-row`):**
+    * Los formularios de parámetros técnicos y modales colapsan a una sola columna ordenada en pantallas `< 600px`, manteniendo legibilidad y facilidad de llenado en campo.
+  * **Ergonomía Táctil Global:**
+    * Botones principales, fichas de medida (`.btn-chip`), iconos de acción (`.btn-action-icon`) y botones de cierre (`.btn-close-modal`, `.btn-close-cart`) respetan la directriz de accesibilidad de un área de contacto mínima de 44×44px (o mínimo 38-42px en chips) con `touch-action: manipulation` para eliminar retardos de toque en navegadores móviles.
 * **Redirección en Hosting (`_redirects`):** Configurado para Cloudflare Pages con regla `/* /index.html 200` para permitir navegación profunda y recarga directa en cualquier ruta sin errores 404 del servidor.
 * **Persistencia Local y Reactividad:**
   * Almacén de estado reactivo (`store.js`) basado en patrón *Publish-Subscribe*.

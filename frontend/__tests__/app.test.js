@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { initApp, syncNavbarRole, renderQuoteResults, sendWhatsAppQuote } from '../src/js/app.js';
+import { initApp, syncNavbarRole, renderQuoteResults, sendWhatsAppQuote, initMobileNav } from '../src/js/app.js';
 import { store } from '../src/js/store.js';
 
 describe('App — Inicialización y DOM', () => {
@@ -13,6 +13,9 @@ describe('App — Inicialización y DOM', () => {
         <nav id="navRoleLinks"></nav>
         <button id="themeToggleBtn">
           <span id="themeToggleIcon">☀️</span>
+        </button>
+        <button id="mobileNavToggle" aria-expanded="false">
+          <span id="mobileNavIcon">☰</span>
         </button>
       </header>
 
@@ -91,6 +94,67 @@ describe('App — Inicialización y DOM', () => {
 
       store.clearUser();
       expect(tag.style.display).toBe('none');
+    });
+  });
+
+  describe('Control de Menú Hamburguesa Móvil (Mobile-First)', () => {
+    it('alterna la clase is-open, el aria-expanded y el ícono al pulsar el botón hamburguesa', () => {
+      initApp();
+
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const nav = document.getElementById('navRoleLinks');
+      const icon = document.getElementById('mobileNavIcon');
+
+      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
+      expect(icon.textContent).toBe('☰');
+
+      toggleBtn.click();
+      expect(nav.classList.contains('is-open')).toBe('true' ? true : false);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
+      expect(icon.textContent).toBe('✕');
+
+      toggleBtn.click();
+      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
+      expect(icon.textContent).toBe('☰');
+    });
+
+    it('cierra el menú al hacer clic en un enlace de navegación', () => {
+      initApp();
+      syncNavbarRole('CUSTOMER');
+
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const nav = document.getElementById('navRoleLinks');
+      const icon = document.getElementById('mobileNavIcon');
+
+      toggleBtn.click();
+      expect(nav.classList.contains('is-open')).toBe(true);
+
+      const firstLink = nav.querySelector('a');
+      firstLink.click();
+
+      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
+      expect(icon.textContent).toBe('☰');
+    });
+
+    it('cierra el menú al hacer clic fuera del área del menú', () => {
+      initApp();
+
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const nav = document.getElementById('navRoleLinks');
+      const icon = document.getElementById('mobileNavIcon');
+
+      toggleBtn.click();
+      expect(nav.classList.contains('is-open')).toBe(true);
+
+      // Clic fuera en el body/main
+      document.getElementById('app').click();
+
+      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
+      expect(icon.textContent).toBe('☰');
     });
   });
 
