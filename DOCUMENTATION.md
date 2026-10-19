@@ -177,7 +177,7 @@ kroma-lab-sales-studio/
 ├── GEMINI.md                       # Reglas operativas y mandatos para el Agente IA
 ├── DOCUMENTATION.md                # Fuente Única de Verdad viva del proyecto
 ├── frontend/                       # Aplicación Web Vanilla (HTML5, CSS3, ES Modules)
-│   ├── index.html                  # Shell único con logo oficial SVG y cotizador
+│   ├── index.html                  # Shell único con contenedor SPA #app y navbar reactivo
 │   ├── _redirects                  # Configuración de routing SPA para Cloudflare Pages
 │   ├── package.json                # Dependencias de testing (Vitest, JSDOM) y scripts
 │   ├── vitest.config.js            # Configuración de pruebas unitarias (>85% coverage)
@@ -189,16 +189,25 @@ kroma-lab-sales-studio/
 │   │   ├── shared/
 │   │   │   └── business-config.js  # Constantes de negocio espejadas para el cliente
 │   │   └── js/
-│   │       ├── app.js              # Punto de entrada, sincronización de rol y cotizador
+│   │       ├── app.js              # Punto de entrada, sincronización reactiva de rol y bootstrap
+│   │       ├── router.js           # Enrutador SPA ligero con History API y guardias RBAC
 │   │       ├── store.js            # Estado reactivo global (usuario, token, tema)
-│   │       └── modules/
-│   │           ├── quoter-engine.js    # Motor puro de cálculo matemático
-│   │           └── roll-simulator.js   # Renderizador interactivo en Canvas (28 cm)
-│   └── __tests__/                  # 31 pruebas unitarias de frontend (> 85% coverage)
+│   │       ├── modules/
+│   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático
+│   │       │   └── roll-simulator.js   # Renderizador interactivo en Canvas (28 cm)
+│   │       └── views/
+│   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF
+│   │           ├── orders-view.js      # Vista de pedidos (Staff vs Cliente)
+│   │           ├── production-view.js  # Tablero Kanban de producción Audley (Staff)
+│   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
+│   │           └── users-view.js       # Administración y permisos RBAC (Admin)
+│   └── __tests__/                  # 53 pruebas unitarias de frontend (> 85% coverage)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── store.test.js           # 5 tests de estado y reactividad
 │       ├── roll-simulator.test.js  # 3 tests de Canvas 2D
-│       ├── app.test.js             # 9 tests de DOM, roles y WhatsApp
+│       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
+│       ├── views.test.js           # 8 tests de renderizado de vistas modulares
+│       ├── app.test.js             # 10 tests de integración, roles reactivos y WhatsApp
 │       └── setup.js                # Mock de Canvas para JSDOM
 ├── backend/                        # API REST (Node.js, Express, Prisma)
 │   ├── package.json                # Scripts y dependencias backend
@@ -209,14 +218,28 @@ kroma-lab-sales-studio/
     └── business-config.js
 ```
 
-
 ---
 
 ## 7. Arquitectura del Frontend (Vanilla HTML5, CSS3, ES Modules)
 
-* **Sin compilación requerida en producción:** El código se ejecuta directamente como módulos ECMAScript nativos (`<script type="module" src="/src/js/app.js">`).
-* **Enrutamiento SPA:** El archivo `_redirects` en Cloudflare Pages redirige todas las rutas a `/index.html 200`. El `router.js` lee `window.location.pathname`, maneja eventos `popstate` y despacha la vista adecuada.
-* **Persistencia Local:** Preferencia de tema (`localStorage['theme']`), tokens de autenticación y cotizaciones borrador.
+* **Sin compilación requerida en producción:** El código se ejecuta directamente como módulos ECMAScript nativos (`<script type="module" src="/src/js/app.js">`), garantizando máxima ligereza, cero dependencias de empaquetadores pesados y despliegue instantáneo en Cloudflare Pages.
+* **Shell SPA Único (`index.html`):** Contiene la cabecera persistente, el logotipo SVG oficial, selector de tema visual (Dark/Light), enlaces de navegación contextuales por rol y el contenedor de montaje dinámico `<main id="app">`.
+* **Enrutador SPA Ligero (`router.js`):**
+  * Basado en la **HTML5 History API** (`pushState`, `replaceState`, `popstate`), intercepta clics en elementos `<a>` internos y con atributo `[data-link]` sin recargar la página.
+  * Soporta rutas directas y comodín `*` (página 404 personalizada con enlace de retorno).
+  * **Ciclo de Vida de Vistas:** Permite a cada vista definir funciones `render()` y `onMount()`. Si `onMount()` retorna una función de limpieza (teardown), el enrutador la ejecuta automáticamente antes de desmontar la vista actual.
+  * **Guardia RBAC Automática:** Cada ruta define su lista `allowedRoles`. Si el usuario activo en `store.state.user.role` carece de permisos, el enrutador bloquea la carga de la vista y renderiza una pantalla de "Acceso Restringido" con acciones rápidas.
+  * **Tabla de Rutas Registradas:**
+    * `/` y `/cotizador`: `quoterView` (`VISITOR`, `CUSTOMER`, `EMPLOYEE`, `ADMIN`)
+    * `/pedidos`: `ordersView` (`CUSTOMER`, `EMPLOYEE`, `ADMIN`)
+    * `/produccion`: `productionView` (`EMPLOYEE`, `ADMIN`)
+    * `/clientes`: `clientsView` (`EMPLOYEE`, `ADMIN`)
+    * `/usuarios`: `usersView` (`ADMIN`)
+* **Redirección en Hosting (`_redirects`):** Configurado para Cloudflare Pages con regla `/* /index.html 200` para permitir navegación profunda y recarga directa en cualquier ruta sin errores 404 del servidor.
+* **Persistencia Local y Reactividad:**
+  * Almacén de estado reactivo (`store.js`) basado en patrón *Publish-Subscribe*.
+  * Persiste el tema preferido en `localStorage['kromalab_theme']`.
+  * Sincroniza en tiempo real la visibilidad de la insignia "Sales Studio" y los enlaces del menú al cambiar de rol (`ADMIN`, `EMPLOYEE`, `CUSTOMER`, `VISITOR`).
 
 ---
 
