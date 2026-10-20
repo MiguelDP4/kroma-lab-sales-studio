@@ -14,6 +14,7 @@ import {
 } from '../modules/dispatch-store.js';
 import { ordersStore } from '../modules/orders-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
+import { printDocument } from '../modules/print-helper.js';
 
 export const dispatchView = {
   path: '/despacho',
@@ -539,7 +540,11 @@ export const dispatchView = {
     if (btnCancelSheetModal) btnCancelSheetModal.addEventListener('click', () => toggleModal(sheetModal, false));
     if (btnPrintSheet) {
       btnPrintSheet.addEventListener('click', () => {
-        window.print();
+        if (sheetContainer && sheetContainer.innerHTML.trim()) {
+          printDocument(sheetContainer.innerHTML, 'Remisión de Despacho — Kroma Lab');
+        } else if (typeof window !== 'undefined' && window.print) {
+          window.print();
+        }
       });
     }
 

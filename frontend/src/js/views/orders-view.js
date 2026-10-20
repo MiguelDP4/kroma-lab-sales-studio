@@ -9,6 +9,7 @@ import { ordersStore, PAYMENT_STATUS, PAYMENT_STATUS_LABELS, PRODUCTION_STATUS_L
 import { ORDER_STATUS, BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 import { calculateOrderProfitability } from '../modules/profitability-engine.js';
+import { printDocument } from '../modules/print-helper.js';
 
 export const ordersView = {
   path: '/pedidos',
@@ -323,7 +324,12 @@ export const ordersView = {
     if (btnCloseWorkshopModal) btnCloseWorkshopModal.addEventListener('click', () => toggleModal(workshopModal, false));
     if (btnCancelWorkshopModal) btnCancelWorkshopModal.addEventListener('click', () => toggleModal(workshopModal, false));
     if (btnPrintWorkshopSheet) btnPrintWorkshopSheet.addEventListener('click', () => {
-      if (typeof window !== 'undefined') window.print();
+      const container = document.getElementById('workshopSheetContainer');
+      if (container && container.innerHTML.trim()) {
+        printDocument(container.innerHTML, 'Hoja de Taller Audley UV DTF — Kroma Lab');
+      } else if (typeof window !== 'undefined' && window.print) {
+        window.print();
+      }
     });
 
     let manualSelectedClientId = null;

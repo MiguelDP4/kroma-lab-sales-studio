@@ -666,13 +666,20 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Si no existe sesión previa en `localStorage`, autentica transparentemente al administrador (`miguel@kromalab.gt`) para desarrollo local.
    * Ejecuta `Promise.allSettled` sincronizando todos los stores en paralelo.
    * Si el backend se apaga o está offline, el frontend opera de forma completamente autónoma con `localStorage`, sin congelar la interfaz ni mostrar pantallas rotas.
-10. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **624 pruebas unitarias pasando al 100% en 34 suites** de Vitest.
+10. **Arquitectura de Impresión Física y Exportación a PDF (`print-helper.js`):**
+   * Módulo especializado `print-helper.js` con método `printDocument(htmlContent, documentTitle)` y listener global `initPrintListeners()`.
+   * **Resolución definitiva de hojas en blanco:** Elimina la regla obsoleta `body * { visibility: hidden; }` que provocaba 9 páginas de espacio fantasma en el motor de impresión Chromium, reemplazándola por el contenedor aislado `#printContainer` que oculta el resto de la SPA mediante `body.printing-document > *:not(#printContainer) { display: none !important; }`.
+   * Anulación de `transform: translate(-50%, -50%)`, `max-height` y `overflow-y: auto` de modales para evitar recortes y desplazamientos fuera de página.
+   * Reglas de color exacto `-webkit-print-color-adjust: exact !important` y `print-color-adjust: exact !important` para preservar el fondo de encabezados, logos SVG y badges de calidad.
+   * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
+   * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
+11. **Pruebas Unitarias y Cobertura Global del Frontend:**
+   * **632 pruebas unitarias pasando al 100% en 35 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
-     * Declaraciones (Statements): **99.55%**
-     * Ramas (Branches): **85.17%**
-     * Funciones (Functions): **99.74%**
-     * Líneas (Lines): **99.55%**
+     * Declaraciones (Statements): **99.54%**
+     * Ramas (Branches): **85.07%**
+     * Funciones (Functions): **99.75%**
+     * Líneas (Lines): **99.54%**
 
 ---
 
