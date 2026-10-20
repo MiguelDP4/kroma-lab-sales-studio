@@ -107,18 +107,34 @@ export const quoterView = {
                 <div class="dropzone-text">
                   <strong>Arrastra tu archivo aquí</strong> o <span class="dropzone-link">haz clic para explorar</span>
                 </div>
-                <span class="dropzone-hint">Formatos: PNG transparente, TIFF, PDF, SVG, AI (Máx. 50 MB)</span>
+                <span class="dropzone-hint">Formatos: PNG transparente, TIFF, PDF, SVG, AI (Máx. 100 MB)</span>
               </div>
 
-              <div id="dropzoneFileSelected" class="dropzone-selected" style="display: none;">
-                <div class="dropzone-thumb-wrap" id="dropzoneThumbWrap">
-                  <span id="dropzoneThumbIcon">📄</span>
+              <div id="dropzoneFileSelected" class="dropzone-selected" style="display: none; flex-direction: column; align-items: stretch; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%;">
+                  <div class="dropzone-thumb-wrap" id="dropzoneThumbWrap">
+                    <span id="dropzoneThumbIcon">📄</span>
+                  </div>
+                  <div class="dropzone-file-info" style="flex: 1;">
+                    <div class="dropzone-file-name" id="dropzoneFileName">archivo.png</div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.78rem;">
+                      <span id="dropzoneFileSize" style="color: var(--text-muted);">1.2 MB</span>
+                      <span id="dropzoneUploadBadge" class="badge" style="font-size: 0.7rem; display: none;">☁️ R2</span>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-remove-file" id="btnRemoveFile" title="Quitar archivo" style="min-width: 44px; min-height: 44px;">✕</button>
                 </div>
-                <div class="dropzone-file-info">
-                  <div class="dropzone-file-name" id="dropzoneFileName">archivo.png</div>
-                  <div class="dropzone-file-size" id="dropzoneFileSize">1.2 MB</div>
+
+                <!-- Barra de Progreso de Subida Real -->
+                <div id="dropzoneProgressWrap" style="display: none; width: 100%;">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                    <span id="dropzoneProgressLabel">Subiendo archivo a Cloudflare R2...</span>
+                    <span id="dropzoneProgressPercent" style="font-family: var(--font-mono); font-weight: 700;">0%</span>
+                  </div>
+                  <div style="height: 6px; background: var(--border-color); border-radius: 999px; overflow: hidden;">
+                    <div id="dropzoneProgressBar" style="height: 100%; width: 0%; background: var(--cerulean); transition: width 0.15s ease-out;"></div>
+                  </div>
                 </div>
-                <button type="button" class="btn-remove-file" id="btnRemoveFile" title="Quitar archivo">✕</button>
               </div>
             </div>
             <div id="dropzoneError" class="dropzone-error-msg" style="display: none;"></div>

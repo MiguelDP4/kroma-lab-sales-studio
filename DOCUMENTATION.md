@@ -610,15 +610,22 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
+| **Almacenamiento** | `GET /api/storage/status` | Estado operativo de almacenamiento (R2 o fallback local) y límites |
+| **Almacenamiento** | `POST /api/storage/presigned-url` | Generación de Pre-signed URL S3 (`PUT`) para subida directa cliente a R2 |
+| **Almacenamiento** | `POST /api/storage/confirm-upload` | Confirmación y vinculación de asset a `Order` o `Quote` |
+| **Almacenamiento** | `GET /api/storage/download-url` | URL temporal prefirmada de descarga para operador RIP Photoprint |
+| **Almacenamiento** | `DELETE /api/storage/:key` | Eliminación de archivo (`ADMIN` / `EMPLOYEE`) |
+| **Almacenamiento** | `PUT /api/storage/local-upload/:key` | Endpoint de subida binaria para desarrollo local offline |
+| **Almacenamiento** | `GET /api/storage/local-file/:key` | Endpoint de descarga binaria para desarrollo local offline |
 
 ### Calidad de Código y Pruebas Unitarias del Backend
 
-* **105 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 12 suites de pruebas).
+* **135 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 13 suites de pruebas).
 * **Métricas de Cobertura de Código (> 85% obligatoria):**
-  * Declaraciones (Statements): **98.27%**
-  * Ramas (Branches): **87.65%**
-  * Funciones (Functions): **100%**
-  * Líneas (Lines): **98.27%**
+  * Declaraciones (Statements): **97.54%**
+  * Ramas (Branches): **85.84%**
+  * Funciones (Functions): **100.00%**
+  * Líneas (Lines): **97.54%**
 
 ### Cliente HTTP Frontend (`api-client.js`)
 
@@ -674,18 +681,53 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
    * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
 11. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **632 pruebas unitarias pasando al 100% en 35 suites** de Vitest.
+   * **641 pruebas unitarias pasando al 100% en 35 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
-     * Declaraciones (Statements): **99.54%**
-     * Ramas (Branches): **85.07%**
-     * Funciones (Functions): **99.75%**
-     * Líneas (Lines): **99.54%**
+     * Declaraciones (Statements): **99.35%**
+     * Ramas (Branches): **85.13%**
+     * Funciones (Functions): **99.51%**
+     * Líneas (Lines): **99.35%**
 
 ---
 
-## 9. Almacenamiento de Archivos de Impresión (Cloudflare R2)
+## 9. Almacenamiento de Archivos de Impresión (Cloudflare R2 con Pre-signed URLs)
 
-* Los archivos `.PNG` y `.TIFF` a 300 DPI se almacenan directamente en un bucket de **Cloudflare R2** mediante URLs prefirmadas (Pre-signed S3 URLs) generadas por el backend, eliminando cualquier saturación de ancho de banda en el servidor de Render y garantizando **$0 de costo de transferencia (egress)**.
+### Arquitectura de Subida Directa ($0 Egress Fees)
+
+Para manejar artes pesados de impresión UV DTF (archivos TIFF, PNG transparentes a 300 DPI, PDF vectoriales, AI y PSD de hasta 100 MB) sin saturar la memoria RAM ni el ancho de banda del backend en Render, la plataforma implementa una arquitectura **Direct-to-Cloudflare R2** mediante URLs pre-firmadas S3 (AWS SDK v3 `@aws-sdk/client-s3` y `@aws-sdk/s3-request-presigner`):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Navegador / Cliente
+    participant Backend as Backend Express API
+    participant R2 as Cloudflare R2 Storage (S3 API)
+    participant RIP as Operador Taller Audley (Photoprint)
+
+    Cliente->>Backend: POST /api/storage/presigned-url (metadata: nombre, tamaño, contexto)
+    Backend->>Backend: Valida formato (.png, .tiff, .pdf, .svg, .ai, .psd) y tamaño (≤100 MB)
+    Backend->>R2: Genera PutObjectCommand pre-firmado (expira en 1 hora)
+    Backend-->>Cliente: Retorna uploadUrl (S3 PUT), publicUrl, fileKey y provider
+    Cliente->>R2: PUT directo con binario y progreso XMLHttpRequest (0% a 100%)
+    R2-->>Cliente: HTTP 200 OK
+    Cliente->>Backend: POST /api/storage/confirm-upload (vincula asset a Quote / Order)
+    Backend->>Backend: Actualiza fileUrl, fileName y fileSizeBytes en SQLite / PostgreSQL
+    RIP->>Backend: Consulta Hoja de Taller Audley
+    RIP->>R2: Descarga directa del archivo de alta resolución a 300 DPI para ripeo en Photoprint
+```
+
+### Características Técnicas del Servicio de Almacenamiento (`StorageService`)
+1. **Detección Automática de Credenciales y Fallback Local:**
+   * Si las variables `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET_NAME` están presentes en `.env`, inicializa el cliente `S3Client` apuntando al endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`.
+   * Si no están configuradas (entorno de desarrollo offline o pruebas CI), entra en modo **Fallback Local**, almacenando los archivos en la carpeta `uploads/` del backend mediante los endpoints `/api/storage/local-upload/:key` y `/api/storage/local-file/:key`.
+2. **Validación Estricta de Formatos y Seguridad:**
+   * Extensiones permitidas: `.png`, `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
+   * Límite de tamaño: **100 MB** por archivo.
+   * Sanitización de nombres de archivo y prefijos contextuales estructurados: `assets/quotes/<correlativo>/<timestamp>-<archivo>` o `assets/orders/<correlativo>/<timestamp>-<archivo>`.
+3. **Integración Frontend (`file-uploader.js` & Dropzone):**
+   * Función `uploadFileToStorage(file, options)` con barra de progreso visual en tiempo real y badge de estado `☁️ R2 Activo`.
+   * Prevención de condiciones de carrera si el usuario remueve o cambia el archivo mientras la subida está en curso.
+   * Vinculación automática con `cartStore`, `saveQuoteModal`, `quotesStore` y visualización de botón de descarga directa en `orders-view.js` (Ficha de Pedido y Hoja de Taller Audley).
 
 ---
 

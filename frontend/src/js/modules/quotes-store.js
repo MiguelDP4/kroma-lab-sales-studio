@@ -178,6 +178,9 @@ class QuotesStore {
       convertedOrderCode: q.convertedOrderCode || null,
       notes: q.notes || '',
       source: q.source || 'web',
+      fileUrl: q.fileUrl || null,
+      fileName: q.fileName || null,
+      fileSizeBytes: q.fileSizeBytes || null,
       createdAt: q.createdAt,
       updatedAt: q.updatedAt || q.createdAt,
     };
@@ -226,6 +229,9 @@ class QuotesStore {
     const source = data?.source || 'web';
 
     const projectName = data?.projectName?.trim() || `Cotización ${widthCm}×${heightCm} cm (${qty} pcs)`;
+    const fileUrl = data?.fileUrl || null;
+    const fileName = data?.fileName || null;
+    const fileSizeBytes = data?.fileSizeBytes ? Number(data.fileSizeBytes) : null;
 
     const count = this.quotes.length + 1;
     const code = `COT-2026-${String(count).padStart(3, '0')}`;
@@ -257,6 +263,9 @@ class QuotesStore {
       convertedOrderCode: null,
       notes,
       source,
+      fileUrl,
+      fileName,
+      fileSizeBytes,
       createdAt: now,
       updatedAt: now,
     };
@@ -287,6 +296,9 @@ class QuotesStore {
         finishType,
         notes,
         source,
+        fileUrl,
+        fileName,
+        fileSizeBytes,
       }).then(res => {
         if (res && res.quote) {
           newQuote.backendId = res.quote.id;

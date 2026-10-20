@@ -286,6 +286,10 @@ export function handleSaveQuoteSubmit(e) {
     companyName,
     notes,
     ...specs,
+    fileName: specs.fileName || null,
+    fileUrl: specs.fileUrl || null,
+    fileKey: specs.fileKey || null,
+    fileSizeBytes: specs.fileSizeBytes || null,
   });
 
   showSaveQuoteFeedback(`✅ ¡Cotización ${newQuote.code} guardada exitosamente!`, 'success');
