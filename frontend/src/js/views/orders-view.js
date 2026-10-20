@@ -7,6 +7,7 @@
 import { store } from '../store.js';
 import { ordersStore, PAYMENT_STATUS, PAYMENT_STATUS_LABELS, PRODUCTION_STATUS_LABELS } from '../modules/orders-store.js';
 import { ORDER_STATUS, BUSINESS_CONFIG } from '../../shared/business-config.js';
+import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 
 export const ordersView = {
   path: '/pedidos',
@@ -165,6 +166,26 @@ export const ordersView = {
           </div>
 
           <form id="formStaffCreateOrder">
+            <!-- AUTOCOMPLETADO INTELIGENTE B2B PARA STAFF -->
+            <div class="client-autofill-box" id="manualAutofillBox">
+              <div class="client-autofill-header">
+                <label class="form-label" for="manualClientAutofillSelect" style="margin: 0; font-weight: 700; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
+                  <span>⚡</span>
+                  <span>Autocompletar desde Cartera B2B:</span>
+                </label>
+                <button type="button" id="btnManualClearAutofill" class="btn-clear-autofill" style="display: none;">
+                  Desvincular ✕
+                </button>
+              </div>
+              <select id="manualClientAutofillSelect" class="input-control" aria-label="Seleccionar cliente B2B existente">
+                <option value="">-- Seleccionar cliente existente o ingresar nuevo --</option>
+                ${clientsStore.getClients().map(c => `
+                  <option value="${c.id}">${c.company} (${c.name}) • ${CLIENT_TIERS[c.tier]?.badge || c.tier}</option>
+                `).join('')}
+              </select>
+              <div id="manualAutofillBadgeContainer" style="display: none; margin-top: 0.5rem;"></div>
+            </div>
+
             <div class="input-row">
               <div class="form-group">
                 <label class="form-label" for="manualCustName">Contacto:</label>
@@ -190,6 +211,13 @@ export const ordersView = {
             <div class="form-group">
               <label class="form-label" for="manualCustAddress">Dirección de Entrega:</label>
               <input type="text" id="manualCustAddress" class="input-control" placeholder="Zona, municipio...">
+            </div>
+
+            <div class="form-group" style="margin-top: -0.25rem; margin-bottom: 0.85rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; color: var(--text-secondary);">
+                <input type="checkbox" id="manualCheckSaveClient" checked>
+                <span>💾 Vincular / Sincronizar en Cartera de Clientes B2B</span>
+              </label>
             </div>
 
             <div class="input-row">
@@ -296,7 +324,92 @@ export const ordersView = {
       if (typeof window !== 'undefined') window.print();
     });
 
-    if (btnOpenNewOrder) btnOpenNewOrder.addEventListener('click', () => toggleModal(createModal, true));
+    let manualSelectedClientId = null;
+    const manualSelect = document.getElementById('manualClientAutofillSelect');
+    const btnManualClear = document.getElementById('btnManualClearAutofill');
+    const manualBadgeContainer = document.getElementById('manualAutofillBadgeContainer');
+
+    function updateManualBadge(client) {
+      if (!manualBadgeContainer) return;
+      if (!client) {
+        manualBadgeContainer.style.display = 'none';
+        manualBadgeContainer.innerHTML = '';
+        if (btnManualClear) btnManualClear.style.display = 'none';
+        return;
+      }
+      const tier = CLIENT_TIERS[client.tier] || { badge: client.tier, bg: 'rgba(28, 114, 147, 0.15)', color: 'var(--cerulean)' };
+      manualBadgeContainer.style.display = 'block';
+      manualBadgeContainer.innerHTML = `
+        <div class="autofill-linked-badge" style="background: ${tier.bg}; color: ${tier.color}; border: 1px solid ${tier.color};">
+          <span>🏢 Cliente Vinculado: <strong>${client.company}</strong></span>
+          <span class="badge" style="background: ${tier.color}; color: #fff;">${tier.badge}</span>
+        </div>
+      `;
+      if (btnManualClear) btnManualClear.style.display = 'inline-flex';
+    }
+
+    if (manualSelect) {
+      manualSelect.addEventListener('change', (e) => {
+        const id = e.target.value;
+        if (id) {
+          const c = clientsStore.getClientById(id);
+          if (c) {
+            manualSelectedClientId = c.id;
+            const nameEl = document.getElementById('manualCustName');
+            const compEl = document.getElementById('manualCustCompany');
+            const phoneEl = document.getElementById('manualCustPhone');
+            const nitEl = document.getElementById('manualCustNit');
+            const addrEl = document.getElementById('manualCustAddress');
+            const notesEl = document.getElementById('manualNotes');
+
+            if (nameEl) nameEl.value = c.name;
+            if (compEl) compEl.value = c.company;
+            if (phoneEl) phoneEl.value = c.phone;
+            if (nitEl) nitEl.value = c.nit;
+            if (addrEl) addrEl.value = c.address;
+            if (notesEl && c.notes) notesEl.value = c.notes;
+            updateManualBadge(c);
+          }
+        } else {
+          manualSelectedClientId = null;
+          updateManualBadge(null);
+        }
+      });
+    }
+
+    if (btnManualClear) {
+      btnManualClear.addEventListener('click', () => {
+        manualSelectedClientId = null;
+        if (manualSelect) manualSelect.value = '';
+        updateManualBadge(null);
+        const nameEl = document.getElementById('manualCustName');
+        const compEl = document.getElementById('manualCustCompany');
+        const phoneEl = document.getElementById('manualCustPhone');
+        const nitEl = document.getElementById('manualCustNit');
+        const addrEl = document.getElementById('manualCustAddress');
+        if (nameEl) nameEl.value = '';
+        if (compEl) compEl.value = '';
+        if (phoneEl) phoneEl.value = '';
+        if (nitEl) nitEl.value = 'CF';
+        if (addrEl) addrEl.value = '';
+      });
+    }
+
+    if (btnOpenNewOrder) {
+      btnOpenNewOrder.addEventListener('click', () => {
+        if (manualSelect) {
+          manualSelect.innerHTML = `
+            <option value="">-- Seleccionar cliente existente o ingresar nuevo --</option>
+            ${clientsStore.getClients().map(c => `
+              <option value="${c.id}">${c.company} (${c.name}) • ${CLIENT_TIERS[c.tier]?.badge || c.tier}</option>
+            `).join('')}
+          `;
+        }
+        manualSelectedClientId = null;
+        updateManualBadge(null);
+        toggleModal(createModal, true);
+      });
+    }
     if (btnCloseCreateModal) btnCloseCreateModal.addEventListener('click', () => toggleModal(createModal, false));
     if (btnCancelCreateModal) btnCancelCreateModal.addEventListener('click', () => toggleModal(createModal, false));
 
@@ -304,11 +417,12 @@ export const ordersView = {
     if (formCreateOrder) {
       formCreateOrder.addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = document.getElementById('manualCustName')?.value || 'Cliente';
-        const company = document.getElementById('manualCustCompany')?.value || '';
-        const phone = document.getElementById('manualCustPhone')?.value || '+502 5555-0000';
-        const nit = document.getElementById('manualCustNit')?.value || 'CF';
-        const address = document.getElementById('manualCustAddress')?.value || '';
+        const name = document.getElementById('manualCustName')?.value.trim() || 'Cliente';
+        const company = document.getElementById('manualCustCompany')?.value.trim() || '';
+        const phone = document.getElementById('manualCustPhone')?.value.trim() || '+502 5555-0000';
+        const nit = document.getElementById('manualCustNit')?.value.trim() || 'CF';
+        const address = document.getElementById('manualCustAddress')?.value.trim() || '';
+        const shouldSync = Boolean(document.getElementById('manualCheckSaveClient')?.checked);
 
         const itemTitle = document.getElementById('manualItemTitle')?.value || 'Stickers';
         const itemQty = parseInt(document.getElementById('manualItemQty')?.value, 10) || 50;
@@ -318,10 +432,45 @@ export const ordersView = {
         const totalQ = parseFloat(document.getElementById('manualTotalQ')?.value) || 172.5;
         const paymentStatus = document.getElementById('manualPaymentStatus')?.value || PAYMENT_STATUS.PENDING;
         const includeCutting = Boolean(document.getElementById('manualCheckCutting')?.checked);
-        const notes = document.getElementById('manualNotes')?.value || '';
+        const notes = document.getElementById('manualNotes')?.value.trim() || '';
+
+        let linkedClientId = manualSelectedClientId;
+
+        if (shouldSync) {
+          if (linkedClientId) {
+            clientsStore.updateClient(linkedClientId, {
+              address: address || undefined,
+              phone: phone || undefined,
+              nit: nit || undefined,
+              company: company || undefined,
+              name: name || undefined,
+            });
+          } else {
+            const existing = (nit && nit !== 'CF' ? clientsStore.getClientByNit(nit) : null) || clientsStore.getClientByPhone(phone);
+            if (existing) {
+              linkedClientId = existing.id;
+              clientsStore.updateClient(existing.id, {
+                address: address || existing.address,
+                company: company || existing.company,
+                name: name || existing.name,
+              });
+            } else if (company || name) {
+              const created = clientsStore.createClient({
+                name: name || company,
+                company: company || name,
+                phone,
+                nit,
+                address: address || 'Ciudad de Guatemala',
+                notes,
+                tier: 'NUEVO',
+              });
+              linkedClientId = created.id;
+            }
+          }
+        }
 
         const newOrder = ordersStore.createOrder({
-          customer: { name, company, phone, nit, address },
+          customer: { name, company, phone, nit, address, clientId: linkedClientId || null },
           cartTotals: {
             totalBillableMeters: meters,
             tierRate: 115.0,
@@ -353,6 +502,8 @@ export const ordersView = {
         }
 
         formCreateOrder.reset();
+        manualSelectedClientId = null;
+        updateManualBadge(null);
         toggleModal(createModal, false);
       });
     }
