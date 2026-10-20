@@ -292,6 +292,32 @@ describe('Receivables Store — Almacén de Cuentas por Cobrar y Saldos B2B', ()
       expect(csv).toContain('KL-00041');
       expect(csv).toContain('Barbería Vintage');
     });
+
+    it('maneja órdenes con campos nulos o faltantes en exportReceivablesCSV sin arrojar error', () => {
+      const getSpy = vi.spyOn(receivablesStore, 'getAllReceivables').mockReturnValueOnce([
+        {
+          orderId: null,
+          createdAt: null,
+          customer: null,
+          linearMeters: null,
+          grandTotalQ: null,
+          totalPaidQ: null,
+          pendingBalanceQ: null,
+          paymentStatus: null,
+          agingDays: null,
+          agingStatus: null,
+          paymentsCount: null,
+        },
+      ]);
+
+      const csv = receivablesStore.exportReceivablesCSV();
+      expect(csv).toContain('""');
+      expect(csv).toContain('"0.00"');
+      expect(csv).toContain('"PENDING"');
+      expect(csv).toContain('"Al Día"');
+
+      getSpy.mockRestore();
+    });
   });
 
   describe('Persistencia y Manejo de Errores en localStorage', () => {

@@ -266,11 +266,42 @@ describe('Receivables View — Interfaz de Cuentas por Cobrar y Saldos B2B', () 
   });
 
   it('exporta la cartera a CSV al pulsar el botón de exportación', () => {
+    vi.useFakeTimers();
     const btnExport = document.getElementById('btnExportReceivablesCSV');
+    const toast = document.getElementById('receivablesToast');
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     btnExport.click();
     expect(clickSpy).toHaveBeenCalled();
+    expect(toast.textContent).toContain('Cartera de cuentas por cobrar exportada exitosamente');
+    expect(toast.style.display).toBe('block');
+
+    vi.advanceTimersByTime(3600);
+    expect(toast.style.display).toBe('none');
+
+    clickSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('maneja excepciones al exportar la cartera a CSV mostrando notificación de error', () => {
+    vi.useFakeTimers();
+    const btnExport = document.getElementById('btnExportReceivablesCSV');
+    const toast = document.getElementById('receivablesToast');
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const storeSpy = vi.spyOn(receivablesStore, 'exportReceivablesCSV').mockImplementation(() => {
+      throw new Error('CSV Gen Error');
+    });
+
+    btnExport.click();
+    expect(toast.textContent).toContain('Ocurrió un error al generar los datos del CSV');
+    expect(toast.style.display).toBe('block');
+
+    vi.advanceTimersByTime(3600);
+    expect(toast.style.display).toBe('none');
+
+    storeSpy.mockRestore();
+    errSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it('elimina un pago registrado tras confirmación del usuario', () => {
