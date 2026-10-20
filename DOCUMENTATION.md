@@ -253,8 +253,11 @@ kroma-lab-sales-studio/
     * `/` y `/cotizador`: `quoterView` (`VISITOR`, `CUSTOMER`, `EMPLOYEE`, `ADMIN`)
     * `/pedidos`: `ordersView` (`CUSTOMER`, `EMPLOYEE`, `ADMIN`)
     * `/produccion`: `productionView` (`EMPLOYEE`, `ADMIN`)
+    * `/inventario`: `inventoryView` (`EMPLOYEE`, `ADMIN`)
     * `/clientes`: `clientsView` (`EMPLOYEE`, `ADMIN`)
+    * `/cobranza`: `receivablesView` (`EMPLOYEE`, `ADMIN`)
     * `/reportes`: `reportsView` (`EMPLOYEE`, `ADMIN`)
+    * `/rentabilidad`: `profitabilityView` (`EMPLOYEE`, `ADMIN`)
     * `/usuarios`: `usersView` (`ADMIN`)
 * **Carrito de Compras Multidiseño (`cart-store.js` + `cart-engine.js` + `cart-drawer.js`):**
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
@@ -440,9 +443,33 @@ kroma-lab-sales-studio/
   * Genera vista previa visual inmediata (thumbnail) para archivos PNG/SVG/WebP.
 * **Arquitectura de Diseño y Experiencia Mobile-First:**
   * **Norma UX/UI Obligatoria:** Toda la interfaz está concebida y desarrollada para una experiencia táctil fluida desde smartphones compactos (320px - 375px) hasta pantallas 4K.
-  * **Navegación Móvil y Menú Hamburguesa (`#mobileNavToggle` + `.nav-role-links`):**
-    * En pantallas `< 768px`, los enlaces de navegación se ocultan automáticamente en el flujo normal y se despliega un botón táctil ergonómico de 42×42px (`#mobileNavToggle`) con iconografía animada (`☰` / `✕`).
-    * Al abrirse, el menú se despliega como un panel flotante de alta elevación con fondo frosted glass (`backdrop-filter`), enlaces de ancho completo con zona táctil mínima de 44px (`.nav-link`), y autocierre inteligente al seleccionar cualquier ruta o pulsar fuera del menú.
+  * **Menú Lateral Colapsable / Sidebar Drawer (`#appSidebar` + `#sidebarBackdrop`):**
+    * Sustituye la saturación del topbar por un cajón lateral colapsable unificado y accesible desde cualquier tamaño de pantalla mediante el botón hamburguesa (`#mobileNavToggle` `☰` / `✕`).
+    * **Categorización Modular Intuitiva (`#navRoleLinks`):**
+      * 🏭 **Producción & Taller:** Cola Audley (`/produccion`), Pedidos y Taller (`/pedidos`), Inventario de Insumos (`/inventario`).
+      * 💼 **Gestión Comercial:** Cotizador UV DTF (`/cotizador`), Clientes B2B (`/clientes`), Cobranza & Saldos (`/cobranza`).
+      * 📊 **Inteligencia & Finanzas:** Reportes Ventas (`/reportes`), Rentabilidad & Costos (`/rentabilidad`).
+      * ⚙️ **Sistema & Permisos:** Gestión de Usuarios RBAC (`/usuarios`).
+    * **Animaciones y Accesibilidad:**
+      * Desplazamiento acelerado por GPU (`transform: translateX(-100%)` a `translateX(0)`), telón con desenfoque de fondo (`#sidebarBackdrop`) y bloqueo de scroll vertical (`overflow: hidden` en `body`) mientras está activo.
+      * Soporta cierre por botón `✕` (`#sidebarCloseBtn`), clic en telón de fondo, tecla `Escape`, o selección de enlace de navegación.
+    * **Tarjeta de Usuario en Pie de Sidebar (`#sidebarUserCard`):**
+      * Muestra avatar circular con iniciales, nombre del operador y etiqueta de rol activa sincronizada (`ADMINISTRADOR`, `OPERADOR TALLER`, `CLIENTE REGISTRADO`, `COTIZADOR WEB`).
+  * **Barra Superior Limpia y Despejada (`.navbar`):**
+    * Despejada de enlaces masivos y reservada exclusivamente para acciones globales prioritarias:
+      1. Botón menú hamburguesa 44×44px (`#mobileNavToggle`).
+      2. Logotipo Kroma Lab SVG con tag dinámico `Sales Studio` (visible en roles internos).
+      3. Botón de Carrito con indicador dinámico de ítems (`#cartToggleBtn`).
+      4. Chip de Perfil de Usuario (`#userProfileChip`) adaptable (en pantallas móviles oculta el texto y mantiene el avatar circular ergonómico).
+      5. Botón de Parámetros de Taller (`#settingsBtn` ⚙️).
+      6. Interruptor de Tema Visual (`#themeToggleBtn` ☀️ / 🌙).
+  * **Modal de Parámetros y Configuración de Taller (`#settingsModalContainer`):**
+    * Desplegado interactivamente al presionar el botón ⚙️ del topbar.
+    * Expone de forma clara y accesible las especificaciones industriales activas:
+      * Equipo: Audley UV DTF Industrial (60 cm bobina, 58 cm ancho útil imprimible).
+      * Tecnología: Cabezales duales Epson i3200 con tintas UV CMYK + White + Varnish.
+      * Moneda y Tarifas: Quetzales (Q / GTQ) con desglose de mayoreo escalonado.
+      * Canales Bancarios Oficiales: Banco Industrial, BAC Credomatic y Banrural con números de cuenta y enlaces de copia rápida.
   * **Tablero Kanban con Desplazamiento Táctil Asistido (`scroll-snap`):**
     * En pantallas móviles y tablets (`< 900px`), las 4 columnas de producción no se comprimen ni se apilan verticalmente de forma infinita: se transforman en un contenedor de deslizamiento horizontal con *scroll-snap* (`scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;`), permitiendo al operario en taller deslizar cómodamente entre estaciones de trabajo con una sola mano.
   * **Tablas Adaptativas con Indicador Visual (`.mobile-scroll-hint`):**
