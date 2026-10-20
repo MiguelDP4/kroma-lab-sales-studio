@@ -74,6 +74,11 @@ export const PERMISSIONS = {
     label: 'Costos y Rentabilidad Unitaria',
     desc: 'Simular costos de consumibles, calcular margen neto y configurar precios de compra de insumos.',
   },
+  MANAGE_INVENTORY: {
+    code: 'MANAGE_INVENTORY',
+    label: 'Inventario de Insumos de Taller',
+    desc: 'Supervisar existencias de Film A/B, tintas UV y cuchillas, registrar compras y controlar mermas.',
+  },
 };
 
 export const ROLE_PERMISSIONS = {
@@ -91,10 +96,12 @@ export const ROLE_PERMISSIONS = {
     'MANAGE_ROLES_PERMS',
     'CONFIG_PRICING_TIERS',
     'VIEW_PROFITABILITY_ANALYSIS',
+    'MANAGE_INVENTORY',
     'VIEW_COMMERCIAL_REPORTS',
   ],
   EMPLOYEE: [
     'VIEW_PROFITABILITY_ANALYSIS',
+    'MANAGE_INVENTORY',
     'VIEW_COMMERCIAL_REPORTS',
     'PUBLIC_ACCESS',
     'SUBMIT_LEAD',

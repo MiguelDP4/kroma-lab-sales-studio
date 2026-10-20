@@ -51,6 +51,7 @@ describe('App — Inicialización y DOM', () => {
       expect(nav.innerHTML).toContain('Cola Audley');
       expect(nav.innerHTML).toContain('Rentabilidad');
       expect(nav.innerHTML).toContain('Usuarios');
+      expect(nav.innerHTML).toContain('Inventario');
       expect(nav.innerHTML).toContain('Reportes');
       expect(nav.innerHTML).toContain('Rentabilidad');
     });
@@ -63,6 +64,7 @@ describe('App — Inicialización y DOM', () => {
       expect(tag.style.display).toBe('inline-block');
       expect(nav.innerHTML).toContain('Cola Audley');
       expect(nav.innerHTML).toContain('Rentabilidad');
+      expect(nav.innerHTML).toContain('Inventario');
       expect(nav.innerHTML).not.toContain('Usuarios');
     });
 
@@ -95,6 +97,7 @@ describe('App — Inicialización y DOM', () => {
       expect(tag.style.display).toBe('inline-block');
       const nav = document.getElementById('navRoleLinks');
       expect(nav.innerHTML).toContain('Usuarios');
+      expect(nav.innerHTML).toContain('Inventario');
       expect(nav.innerHTML).toContain('Reportes');
       expect(nav.innerHTML).toContain('Rentabilidad');
 

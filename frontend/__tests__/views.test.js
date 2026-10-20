@@ -6,6 +6,7 @@ import { usersView } from '../src/js/views/users-view.js';
 import { reportsView } from '../src/js/views/reports-view.js';
 import { quoterView } from '../src/js/views/quoter-view.js';
 import { profitabilityView } from '../src/js/views/profitability-view.js';
+import { inventoryView } from '../src/js/views/inventory-view.js';
 import { store } from '../src/js/store.js';
 
 describe('Vistas Modulares SPA', () => {
@@ -93,6 +94,25 @@ describe('Vistas Modulares SPA', () => {
       document.body.innerHTML = profitabilityView.render();
       expect(typeof profitabilityView.onMount).toBe('function');
       const cleanup = profitabilityView.onMount();
+      expect(typeof cleanup).toBe('function');
+      cleanup();
+    });
+  });
+
+  describe('inventoryView', () => {
+    it('renderiza la interfaz de inventario de insumos de taller', () => {
+      const html = inventoryView.render();
+      expect(html).toContain('Inventario de Insumos de Taller');
+      expect(html).toContain('btnOpenRestockModal');
+      expect(html).toContain('btnExportKardexCSV');
+      expect(html).toContain('restockModal');
+      expect(html).toContain('adjustStockModal');
+    });
+
+    it('ejecuta onMount y retorna una función de limpieza (teardown)', () => {
+      document.body.innerHTML = inventoryView.render();
+      expect(typeof inventoryView.onMount).toBe('function');
+      const cleanup = inventoryView.onMount();
       expect(typeof cleanup).toBe('function');
       cleanup();
     });
