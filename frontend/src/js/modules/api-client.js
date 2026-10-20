@@ -283,6 +283,42 @@ export class ApiClient {
       });
     },
   };
+
+  // --- Cotizaciones Guardadas y Conversión a Orden ---
+  quotes = {
+    list: async (filters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.search) params.append('search', filters.search);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      return this._request(`/quotes${qs}`);
+    },
+    getById: async (id) => {
+      return this._request(`/quotes/${id}`);
+    },
+    create: async (data) => {
+      return this._request('/quotes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    update: async (id, data) => {
+      return this._request(`/quotes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    convertToOrder: async (id) => {
+      return this._request(`/quotes/${id}/convert`, {
+        method: 'POST',
+      });
+    },
+    delete: async (id) => {
+      return this._request(`/quotes/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
 }
 
 export const apiClient = new ApiClient();

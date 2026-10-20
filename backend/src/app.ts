@@ -9,6 +9,7 @@ import dispatchRoutes from './routes/dispatch.routes';
 import inventoryRoutes from './routes/inventory.routes';
 import receivablesRoutes from './routes/receivables.routes';
 import workshopRoutes from './routes/workshop.routes';
+import quotesRoutes from './routes/quotes.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { prisma } from './db/prisma';
 
@@ -72,6 +73,7 @@ export function createApp(): Express {
   app.use('/api/inventory', inventoryRoutes);
   app.use('/api/receivables', receivablesRoutes);
   app.use('/api/workshop', workshopRoutes);
+  app.use('/api/quotes', quotesRoutes);
 
   // Manejador centralizado de errores
   app.use(errorHandler);

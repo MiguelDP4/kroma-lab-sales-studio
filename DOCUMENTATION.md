@@ -602,58 +602,77 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Cobranza** | `GET /api/receivables` | Cuentas por cobrar con clasificación de antigüedad (0-7d, 8-15d, >15d) |
 | **Cobranza** | `POST /api/receivables/payments` | Registro de abono `PAY-YYYY-XXX` y amortización de deuda |
 | **Cobranza** | `DELETE /api/receivables/payments/:id` | Anulación de abono y restitución del saldo |
+| **Cotizaciones** | `GET /api/quotes` | Lista de cotizaciones con filtros por estado (`SAVED`, `CONVERTED`), texto y rol de cliente |
+| **Cotizaciones** | `GET /api/quotes/:id` | Detalle de cotización por UUID o código correlativo `COT-YYYY-XXX` |
+| **Cotizaciones** | `POST /api/quotes` | Guardado de cotización con validación de bobina (≤28 cm útiles) |
+| **Cotizaciones** | `PUT /api/quotes/:id` | Modificación de nombre de proyecto, dimensiones o notas |
+| **Cotizaciones** | `POST /api/quotes/:id/convert` | Conversión directa en 1 clic a Orden de Producción `KL-YYYY-XXX` |
+| **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
 
 ### Calidad de Código y Pruebas Unitarias del Backend
 
-* **84 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 11 suites de pruebas).
+* **105 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 12 suites de pruebas).
 * **Métricas de Cobertura de Código (> 85% obligatoria):**
-  * Declaraciones (Statements): **98.05%**
-  * Ramas (Branches): **87.57%**
+  * Declaraciones (Statements): **98.27%**
+  * Ramas (Branches): **87.65%**
   * Funciones (Functions): **100%**
-  * Líneas (Lines): **98.05%**
+  * Líneas (Lines): **98.27%**
 
 ### Cliente HTTP Frontend (`api-client.js`)
 
 * Ubicado en `frontend/src/js/modules/api-client.js`, proporciona una capa de consumo tipada con manejo automático de tokens Bearer JWT, cookies de sesión y tolerancia a fallos.
+* Incluye cliente `quotes` con métodos `list`, `getById`, `create`, `update`, `convertToOrder` y `delete`.
 * Si el backend local o remoto no está activo, entra en modo degradado elegante (offline fallback) sin bloquear la navegación de la interfaz.
-* Respaldado por 14 pruebas unitarias dedicadas en `frontend/__tests__/api-client.test.js` (100% passing).
+* Respaldado por 15 pruebas unitarias dedicadas en `frontend/__tests__/api-client.test.js` (100% passing).
 
 ### Sincronización Bidireccional de Stores Reactivos con Backend REST
 
 Se completó la migración de datos mock a persistencia real mediante una capa de sincronización distribuida entre los almacenes reactivos del frontend y los endpoints del backend Express + Prisma:
 
-1. **`ordersStore` (`orders-store.js`):**
+1. **`quotesStore` (`quotes-store.js`):**
+   * Módulo reactivo para cotizaciones guardadas con persistencia local (`kromalab_quotes`) y sincronización automática con la API REST (`/api/quotes`).
+   * Generación correlativa de códigos `COT-2026-XXX`.
+   * Conversión en 1 Clic (`convertToOrder`): crea la orden en backend `POST /api/quotes/:id/convert` o genera orden local en `ordersStore`, vinculando cliente, metadatos y marcando la cotización como `CONVERTED`.
+   * Métricas comerciales consolidadas: total cotizado, pendientes, convertidas y tasa de conversión porcentual.
+2. **`ordersStore` (`orders-store.js`):**
    * Método `syncWithApi()`: mapea órdenes del backend (`GET /api/orders`) al modelo de vista local preservando métricas de bobina Audley y metadatos de diseño.
    * `createOrder()`: despacha `POST /api/orders` en segundo plano asignando el correlativo y `backendId`.
    * `updateProductionStatus()` y `updatePaymentStatus()`: despachan `PUT /api/orders/:id/status` y `PUT /api/orders/:id/payment` actualizando el estado de máquina e inventario.
-2. **`clientsStore` (`clients-store.js`):**
+3. **`clientsStore` (`clients-store.js`):**
    * Método `syncWithApi()`: mapea clientes de cartera (`GET /api/customers`) con expediente 360°, clasificación de tiers (`VIP`, `RECURRENTE`, `NUEVO`) y sectores guatemaltecos.
    * `createClient()` y `updateClient()`: emiten mutaciones a `POST /api/customers` y `PUT /api/customers/:id`.
-3. **`inventoryStore` (`inventory-store.js`):**
+4. **`inventoryStore` (`inventory-store.js`):**
    * Método `syncWithApi()`: consulta `GET /api/inventory` para sincronizar existencias de los 7 insumos clave de la Audley (Film A, Film B, CMYK, Blanco, Barniz 3D, Navajas, Solvente).
    * `recordRestock()` y `recordManualAdjustment()`: emiten `POST /api/inventory/restock` y `POST /api/inventory/adjust` registrando movimientos formales en el Kardex.
-4. **`receivablesStore` (`receivables-store.js`):**
+5. **`receivablesStore` (`receivables-store.js`):**
    * Método `syncWithApi()`: consulta `GET /api/receivables/payments` para sincronizar cobros y abonos bancarios conciliados.
    * `recordPayment()` y `deletePayment()`: ejecutan `POST /api/receivables/payments` y `DELETE /api/receivables/payments/:id` con amortización y restitución automática de deuda de orden.
-5. **`dispatchStore` (`dispatch-store.js`):**
+6. **`dispatchStore` (`dispatch-store.js`):**
    * Método `syncWithApi()`: obtiene remisiones activas (`GET /api/dispatch`) mapeando transportistas locales (Moto Express, Cargo Expreso, Guatex, Forza Delivery, Pick-up).
    * `createDispatchNote()` y `updateDispatchStatus()`: despachan `POST /api/dispatch` y `PUT /api/dispatch/:id/status` transicionando la orden a `COMPLETED` tras la entrega.
-6. **`usersStore` (`users-store.js`):**
+7. **`usersStore` (`users-store.js`):**
    * Método `syncWithApi()`: recupera el personal de taller y clientes (`GET /api/auth/users`) manteniendo la matriz RBAC.
    * `createUser()`: despacha creación de colaborador en backend (`POST /api/auth/users`) con persistencia en BD y asignación de `backendId`.
    * `resetPassword()`: despacha restablecimiento de contraseña en backend (`PUT /api/auth/users/:id/reset-password`).
    * `deleteUser()`: despacha eliminación de usuario en backend (`DELETE /api/auth/users/:id`).
-7. **Arranque Automático y Resiliencia (`app.js` -> `initBackendSync()`):**
+8. **Interfaz Mobile-First de Cotizaciones Guardadas (`quotes-view.js` & `save-quote-modal.js`):**
+   * Vista de tarjetas Mobile-First en `#/quotes` con filtros reactivos (`Todas`, `Pendientes`, `Convertidas`), búsqueda en vivo y botón `⚡ Convertir en Orden de Producción` de 1 clic.
+   * Modal accesible y táctil `SaveQuoteModal` enlazado directamente al cotizador principal (`#/`) para guardar especificaciones de bobina con datos pre-rellenados.
+   * Integración con WhatsApp para compartir cotizaciones con formato comercial detallado en Quetzales (Q).
+9. **Arranque Automático y Resiliencia (`app.js` -> `initBackendSync()`):**
    * Al inicializar la SPA, verifica la salud del backend (`GET /api/health`).
    * Si no existe sesión previa en `localStorage`, autentica transparentemente al administrador (`miguel@kromalab.gt`) para desarrollo local.
    * Ejecuta `Promise.allSettled` sincronizando todos los stores en paralelo.
    * Si el backend se apaga o está offline, el frontend opera de forma completamente autónoma con `localStorage`, sin congelar la interfaz ni mostrar pantallas rotas.
-8. **Pruebas de Integración Frontend-Backend y Autenticación Real:**
-   * Suite dedicada en `frontend/__tests__/frontend-api-integration.test.js` con 30 pruebas unitarias e integración que validan el flujo completo de sincronización, tolerancia a fallos y mutaciones.
-   * Suite del modal de autenticación `frontend/__tests__/user-profile-modal.test.js` con 37 pruebas cubriendo inicio de sesión real, registro de clientes B2B, cambio de pestañas, actualización de perfil y cierre de sesión.
-   * Cobertura global del frontend: **99.70% declaraciones**, **85.55% ramas**, **99.72% funciones**, **99.70% líneas** en 31 suites (**578 pruebas pasando al 100%**).
+10. **Pruebas Unitarias y Cobertura Global del Frontend:**
+   * **624 pruebas unitarias pasando al 100% en 34 suites** de Vitest.
+   * **Cobertura de Código (> 85% obligatoria):**
+     * Declaraciones (Statements): **99.55%**
+     * Ramas (Branches): **85.17%**
+     * Funciones (Functions): **99.74%**
+     * Líneas (Lines): **99.55%**
 
 ---
 
