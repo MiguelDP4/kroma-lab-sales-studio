@@ -20,6 +20,7 @@ import { cartStore } from './modules/cart-store.js';
 import { validatePrintFile, readFileAsDataURL } from './modules/file-uploader.js';
 import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
+import { initPrintListeners, printDocument } from './modules/print-helper.js';
 import { quotesStore } from './modules/quotes-store.js';
 
 import { quoterView } from './views/quoter-view.js';
@@ -86,6 +87,7 @@ export function initApp() {
   initCartDrawer();
   initUserProfileModal();
   initSaveQuoteModal();
+  initPrintListeners();
   router.init();
   initBackendSync();
 }
@@ -684,4 +686,4 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
 
-export { openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal };
+export { openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };

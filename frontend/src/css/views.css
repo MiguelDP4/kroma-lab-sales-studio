@@ -2411,30 +2411,152 @@
   }
 }
 
+#printContainer {
+  display: none;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  /* 1. Configuración de página física: Carta, márgenes de 10mm */
+  @page {
+    size: letter portrait;
+    margin: 10mm 10mm 10mm 10mm;
   }
-  .modal-backdrop, .modal-card {
+
+  /* 2. Respetar colores de fondo, badges, bordes y SVGs exactos */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* 3. Resetear html y body en modo impresión */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    font-size: 11pt !important;
+  }
+
+  /* 4. MODO IMPRESIÓN OFICIAL AISLADO (body.printing-document) */
+  body.printing-document > *:not(#printContainer) {
+    display: none !important;
+  }
+
+  body.printing-document #printContainer {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+  }
+
+  body.printing-document #printContainer .workshop-sheet-card,
+  body.printing-document #printContainer .dispatch-sheet-card {
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  /* 5. RESPALDO: Impresión directa desde modal abierto */
+  body:not(.printing-document) .navbar,
+  body:not(.printing-document) .sidebar-drawer,
+  body:not(.printing-document) .sidebar-backdrop,
+  body:not(.printing-document) header,
+  body:not(.printing-document) nav,
+  body:not(.printing-document) aside,
+  body:not(.printing-document) footer,
+  body:not(.printing-document) .btn-print-hide,
+  body:not(.printing-document) .btn-close-modal,
+  body:not(.printing-document) button {
+    display: none !important;
+  }
+
+  .modal-backdrop {
     position: static !important;
     background: none !important;
-    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .modal-card {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
     width: 100% !important;
     max-width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    border: none !important;
   }
-  .workshop-sheet-card, .workshop-sheet-card *,
-  .dispatch-sheet-card, .dispatch-sheet-card * {
-    visibility: visible !important;
+
+  .workshop-sheet-card,
+  .dispatch-sheet-card {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
   }
-  .workshop-sheet-card, .dispatch-sheet-card {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
+
+  .workshop-sheet-header {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
   }
-  .btn-print-hide {
-    display: none !important;
+
+  .workshop-meta-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .workshop-checklist {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* 6. Saltos de página y tablas */
+  table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
   }
 }
 
