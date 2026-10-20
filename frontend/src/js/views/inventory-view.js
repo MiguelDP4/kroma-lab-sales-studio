@@ -11,6 +11,7 @@ import {
   STOCK_STATUS_META,
   MOVEMENT_TYPES,
 } from '../modules/inventory-store.js';
+import { downloadCSV } from '../modules/reports-engine.js';
 
 export const inventoryView = {
   path: '/inventario',
@@ -21,8 +22,8 @@ export const inventoryView = {
     return `
       <div style="padding: 2rem 0 4rem;">
         <!-- Cabecera de la Vista -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1.25rem;">
-          <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.25rem;">
+          <div style="flex: 1 1 340px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
               <span class="badge">Operación & Bodega</span>
               <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981;">
@@ -37,17 +38,20 @@ export const inventoryView = {
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button id="btnOpenRestockModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; flex-shrink: 0;">
+            <button id="btnOpenRestockModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
               <span>➕</span>
               <span>Registrar Compra / Entrada</span>
             </button>
-            <button id="btnExportKardexCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <button id="btnExportKardexCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
               <span>📥</span>
               <span>Exportar Kardex CSV</span>
             </button>
           </div>
         </div>
+
+        <!-- Toast de Notificación de Bodega (No afecta la posición ni el tamaño de los botones) -->
+        <div id="inventoryToast" class="reports-notification" style="display: none; margin-bottom: 1.5rem;"></div>
 
         <!-- Tarjetas de Resumen KPI de Bodega -->
         <div id="inventorySummaryContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
@@ -344,19 +348,29 @@ export const inventoryView = {
       });
     }
 
-    // Exportación a CSV
+    // Toast de Notificación de Inventario
+    const inventoryToastEl = document.getElementById('inventoryToast');
+    function showInventoryToast(message) {
+      if (!inventoryToastEl) return;
+      inventoryToastEl.textContent = message;
+      inventoryToastEl.style.display = 'block';
+      setTimeout(() => {
+        if (inventoryToastEl) inventoryToastEl.style.display = 'none';
+      }, 3500);
+    }
+
+    // Exportación a CSV (Sin alterar dimensiones ni texto de los botones para evitar saltos visuales)
     if (btnExportCSV) {
       btnExportCSV.addEventListener('click', () => {
-        const csvContent = inventoryStore.exportKardexCSV();
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `kardex_inventario_audley_${new Date().toISOString().slice(0, 10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        try {
+          const csvContent = inventoryStore.exportKardexCSV();
+          const filename = `kardex_inventario_audley_${new Date().toISOString().slice(0, 10)}.csv`;
+          downloadCSV(filename, csvContent);
+          showInventoryToast('✅ Kardex de inventario exportado exitosamente en CSV.');
+        } catch (err) {
+          console.error('Error al exportar Kardex CSV:', err);
+          showInventoryToast('❌ Ocurrió un error al generar el Kardex en CSV.');
+        }
       });
     }
 

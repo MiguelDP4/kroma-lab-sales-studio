@@ -454,14 +454,19 @@ export function downloadCSV(filename, csvContent) {
   }
 
   try {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = window.URL?.createObjectURL ? window.URL.createObjectURL(blob) : null;
 
     if (url) {
       const link = document.createElement('a');
       link.setAttribute('href', url);
       link.setAttribute('download', filename);
-      link.style.display = 'none';
+      link.style.position = 'fixed';
+      link.style.top = '-9999px';
+      link.style.left = '-9999px';
+      link.style.opacity = '0';
+      link.style.pointerEvents = 'none';
+      link.addEventListener('click', (e) => e.stopPropagation());
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

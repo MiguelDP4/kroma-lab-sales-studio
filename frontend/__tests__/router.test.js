@@ -178,6 +178,40 @@ describe('SPA Router — Enrutamiento y Guardias RBAC', () => {
       expect(navigateSpy).not.toHaveBeenCalled();
     });
 
+    it('ignora enlaces con atributo download o esquemas blob:, data: y javascript:', () => {
+      router.init();
+      const navigateSpy = vi.spyOn(router, 'navigate');
+
+      // Enlace con atributo download
+      const downloadLink = document.createElement('a');
+      downloadLink.setAttribute('href', '/descarga.csv');
+      downloadLink.setAttribute('download', 'archivo.csv');
+      document.body.appendChild(downloadLink);
+      downloadLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      expect(navigateSpy).not.toHaveBeenCalled();
+
+      // Enlace con esquema blob:
+      const blobLink = document.createElement('a');
+      blobLink.setAttribute('href', 'blob:http://localhost:3000/test-uuid');
+      document.body.appendChild(blobLink);
+      blobLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      expect(navigateSpy).not.toHaveBeenCalled();
+
+      // Enlace con esquema data:
+      const dataLink = document.createElement('a');
+      dataLink.setAttribute('href', 'data:text/csv;charset=utf-8,col1,col2');
+      document.body.appendChild(dataLink);
+      dataLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      expect(navigateSpy).not.toHaveBeenCalled();
+
+      // Enlace con esquema javascript:
+      const jsLink = document.createElement('a');
+      jsLink.setAttribute('href', 'javascript:void(0);');
+      document.body.appendChild(jsLink);
+      jsLink.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
     it('reacciona a eventos popstate de la ventana', () => {
       router.init();
       const resolveSpy = vi.spyOn(router, 'resolve');
