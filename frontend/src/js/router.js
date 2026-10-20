@@ -43,13 +43,21 @@ export class Router {
     const link = e.target.closest('a');
     if (!link) return;
 
+    // Ignorar enlaces de descarga directa
+    if (link.hasAttribute('download')) {
+      return;
+    }
+
     const href = link.getAttribute('href');
     if (!href) return;
 
-    // Ignorar enlaces externos, hashes de scroll (#cotizador) o clicks con teclas modificadoras
+    // Ignorar enlaces externos, esquemas especiales, hashes de scroll (#cotizador) o clicks con teclas modificadoras
     if (
       href.startsWith('http://') ||
       href.startsWith('https://') ||
+      href.startsWith('blob:') ||
+      href.startsWith('data:') ||
+      href.startsWith('javascript:') ||
       href.startsWith('mailto:') ||
       href.startsWith('tel:') ||
       href.startsWith('#') ||

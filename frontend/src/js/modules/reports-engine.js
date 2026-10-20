@@ -466,6 +466,7 @@ export function downloadCSV(filename, csvContent) {
       link.style.left = '-9999px';
       link.style.opacity = '0';
       link.style.pointerEvents = 'none';
+      link.addEventListener('click', (e) => e.stopPropagation());
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
