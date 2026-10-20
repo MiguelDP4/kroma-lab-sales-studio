@@ -327,6 +327,36 @@ kroma-lab-sales-studio/
     * `Exportar Pedidos Detallados (.csv)`: reporte fila por fila con número de orden, cliente, NIT, dirección, metros, tarifas, estado de producción y pago.
     * `Exportar Cartera B2B (.csv)`: directorio comercial con contactos, NIT, metraje acumulado, facturación total y cuentas por cobrar.
     * `Exportar Consumo de Bobina (.csv)`: desglose técnico por orden con metraje de bobina, Film A, Film B, mililitros de tinta UV y tipo de acabado (corte perimetral vs rollo continuo).
+* **Módulo de Costos Industriales y Rentabilidad Unitaria UV DTF (`profitability-view.js` + `profitability-engine.js`):**
+  * **Acceso y Roles (`ADMIN` y `EMPLOYEE`):** Módulo financiero y de taller accesible vía ruta `/rentabilidad`.
+  * **Modelo de Costos Paramétrico para Bobina Audley (28 cm útiles):**
+    * **Film A (PET Imprimible Base):** Q6.00/metro lineal + 5% de excedente técnico por arrastre y tracción en carga = Q6.30/m.
+    * **Film B (Transfer Calandrado):** Q4.00/metro lineal + 2% de excedente técnico en calandra térmica = Q4.08/m.
+    * **Tintas UV Industriales de Alta Densidad (Q550/Litro = Q0.55/ml):**
+      * Color CMYK: consumo promedio 4.0 ml/m (Q2.20/m).
+      * Base Blanca Fotográfica: consumo promedio 6.0 ml/m (Q3.30/m).
+      * Barniz Táctil 3D (Relieve y Brillo): consumo promedio 5.0 ml/m (Q2.75/m).
+      * Consumo total combinado de tinta UV: 15 ml/m = Q8.25/m (o Q5.50/m si se selecciona acabado Mate / Sin Barniz).
+    * **Energía Eléctrica y Lámparas UV LED:** Q1.20/m (lámparas UV LED refrigeradas por agua + motor de tracción y calandra).
+    * **Depreciación de Cabezales Epson i3200-U1 y Mantenimiento:** Q2.00/m (amortización por metro impreso, wipers, dampers y estación de capping).
+    * **Mano de Obra Operativa en Taller:** Q4.00/m (supervisión de impresión y rebobinado).
+    * **Desgaste de Navaja y Despiece de Corte Perimetral:** Q0.08 por sticker/pieza cortada individualmente.
+    * **Costo Base de Producción por Metro:** ~Q25.83/metro lineal (con barniz 3D) o ~Q23.08/m (mate).
+  * **Simulador de Tirajes en Tiempo Real:**
+    * Controles reactivos: metros lineales (slider táctil y campo numérico sincronizados), cantidad de stickers, selector de acabado (Barniz 3D, Barniz Estándar, Sin Barniz/Mate), y selector de corte perimetral de precisión.
+    * Cálculo automático contra la escala de precios de Kroma Lab (Q140 para 1m, Q115 para 1-5m, Q105 para 5-10m, Q95 para 10-20m, Q85 para 20m+) con opción de sobreescritura manual y botón para restablecer a la escala oficial.
+    * Indicadores Financieros en Vivo: Costo Total de Producción (Q y Q/m), Precio de Venta (Q), Utilidad Neta (Q), Margen (%) y Ganancia Neta por Sticker (Q/pieza).
+    * Barra visual de distribución porcentual (Costo vs Margen) e insignia dinámica de salud de rentabilidad: 🟢 Excelente (>70%), 🟡 Saludable (50-70%) o 🔴 Margen Ajustado (<50%).
+    * Tabla desglosada rubro por rubro con detalle de consumo, costos unitarios de referencia y porcentaje sobre el costo total.
+  * **Monitoreo de Meta Estratégica Mensual (Q20,000 netos):**
+    * Tarjeta de avance hacia el flujo de caja neto mensual objetivo de Miguel (Q19,000 - Q22,000, con base de Q20,000/mes).
+    * Cálculo de metros faltantes necesarios para alcanzar la meta en función del margen promedio del taller.
+    * Mensaje de felicitación al alcanzar o superar el objetivo de ganancia mensual.
+  * **Historial de Rentabilidad de Pedidos en Taller:**
+    * Tabla consolidada que evalúa el costo exacto y la utilidad neta de cada orden activa en `ordersStore`, permitiendo auditoría continua del margen comercial.
+  * **Modal de Configuración de Precios de Insumos (`#costsConfigModal`):**
+    * Permite a los administradores actualizar en tiempo real los costos de compra locales en Quetzales (precio del rollo de Film A, rollo de Film B, litro de tinta UV, electricidad, depreciación, mano de obra y meta mensual).
+    * Botón de restauración rápida a *Valores de Fábrica* y persistencia local en `localStorage['kromalab_costs_config']`.
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
