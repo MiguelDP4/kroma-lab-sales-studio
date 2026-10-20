@@ -82,40 +82,106 @@ export function initMobileNav() {
   const toggleBtn = document.getElementById('mobileNavToggle');
   const navLinks = document.getElementById('navRoleLinks');
   const navIcon = document.getElementById('mobileNavIcon');
+  const sidebar = document.getElementById('appSidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const closeBtn = document.getElementById('sidebarCloseBtn');
 
-  if (toggleBtn && navLinks) {
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = navLinks.classList.toggle('is-open');
-      toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      if (navIcon) navIcon.textContent = isOpen ? '✕' : '☰';
-    });
+  function openSidebar() {
+    if (navLinks) navLinks.classList.add('is-open');
+    if (sidebar) {
+      sidebar.classList.add('is-open');
+      sidebar.setAttribute('aria-hidden', 'false');
+    }
+    if (backdrop) {
+      backdrop.classList.add('is-open');
+      backdrop.setAttribute('aria-hidden', 'false');
+    }
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+    if (navIcon) navIcon.textContent = '✕';
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.style.overflow = 'hidden';
+    }
+  }
 
+  function closeSidebar() {
+    if (navLinks) navLinks.classList.remove('is-open');
+    if (sidebar) {
+      sidebar.classList.remove('is-open');
+      sidebar.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) {
+      backdrop.classList.remove('is-open');
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+    if (navIcon) navIcon.textContent = '☰';
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.style.overflow = '';
+    }
+  }
+
+  function toggleSidebar() {
+    const isOpen = (sidebar && sidebar.classList.contains('is-open')) || (navLinks && navLinks.classList.contains('is-open'));
+    if (isOpen) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleSidebar);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeSidebar);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeSidebar);
+  }
+
+  if (navLinks) {
     navLinks.addEventListener('click', (e) => {
       if (e.target.matches('a, a *')) {
-        navLinks.classList.remove('is-open');
-        toggleBtn.setAttribute('aria-expanded', 'false');
-        if (navIcon) navIcon.textContent = '☰';
+        closeSidebar();
+      }
+    });
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeSidebar();
       }
     });
 
     document.addEventListener('click', (e) => {
-      if (!navLinks.contains(e.target) && !toggleBtn.contains(e.target) && navLinks.classList.contains('is-open')) {
-        navLinks.classList.remove('is-open');
-        toggleBtn.setAttribute('aria-expanded', 'false');
-        if (navIcon) navIcon.textContent = '☰';
+      const isNavOpen = (sidebar && sidebar.classList.contains('is-open')) || (navLinks && navLinks.classList.contains('is-open'));
+      if (
+        isNavOpen &&
+        (!sidebar || !sidebar.contains(e.target)) &&
+        (!navLinks || !navLinks.contains(e.target)) &&
+        (!toggleBtn || !toggleBtn.contains(e.target)) &&
+        (!backdrop || !backdrop.contains(e.target))
+      ) {
+        closeSidebar();
       }
     });
   }
 }
 
 /**
- * Control dinámico del Navbar según el rol del usuario:
- * - "Sales Studio" SOLO se muestra para ADMIN y EMPLOYEE.
- * - Clientes y visitantes sin registrar SOLO ven "Kroma Lab".
+ * Control dinámico del Navbar y Sidebar Drawer según el rol del usuario (RBAC)
  */
 export function syncNavbarRole(role) {
   const salesStudioTag = document.getElementById('salesStudioTag');
   const navLinksContainer = document.getElementById('navRoleLinks');
+  const userChipName = document.getElementById('userChipName');
+  const userChipAvatar = document.getElementById('userChipAvatar');
+  const sidebarUserName = document.getElementById('sidebarUserName');
+  const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
+  const sidebarUserRole = document.getElementById('sidebarUserRole');
 
   const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
 
@@ -123,29 +189,106 @@ export function syncNavbarRole(role) {
     salesStudioTag.style.display = isStaff ? 'inline-block' : 'none';
   }
 
+  // Actualizar tarjeta de usuario y chip
+  if (role === 'ADMIN') {
+    if (userChipName) userChipName.textContent = 'Miguel Dubois (Admin)';
+    if (userChipAvatar) userChipAvatar.textContent = '👑';
+    if (sidebarUserName) sidebarUserName.textContent = 'Miguel Dubois';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'M';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'ADMINISTRADOR';
+  } else if (role === 'EMPLOYEE') {
+    if (userChipName) userChipName.textContent = 'Operador Taller';
+    if (userChipAvatar) userChipAvatar.textContent = '🛠️';
+    if (sidebarUserName) sidebarUserName.textContent = 'Operador Audley';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'O';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'OPERADOR TALLER';
+  } else if (role === 'CUSTOMER') {
+    if (userChipName) userChipName.textContent = 'Cliente B2B';
+    if (userChipAvatar) userChipAvatar.textContent = '🏢';
+    if (sidebarUserName) sidebarUserName.textContent = 'Cliente B2B';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'C';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
+  } else {
+    if (userChipName) userChipName.textContent = 'Visitante';
+    if (userChipAvatar) userChipAvatar.textContent = '👤';
+    if (sidebarUserName) sidebarUserName.textContent = 'Visitante';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'V';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'COTIZADOR WEB';
+  }
+
   if (navLinksContainer) {
     if (isStaff) {
       navLinksContainer.innerHTML = `
-        <a href="/produccion" class="nav-link" data-link>Cola Audley</a>
-        <a href="/pedidos" class="nav-link" data-link>Pedidos</a>
-        <a href="/clientes" class="nav-link" data-link>Clientes</a>
-        <a href="/cobranza" class="nav-link" data-link>Cobranza</a>
-        <a href="/reportes" class="nav-link" data-link>Reportes</a>
-        <a href="/rentabilidad" class="nav-link" data-link>Rentabilidad</a>
-        <a href="/inventario" class="nav-link" data-link>Inventario</a>
-        <a href="/" class="nav-link" data-link>Cotizador</a>
-        ${role === 'ADMIN' ? '<a href="/usuarios" class="nav-link" data-link>Usuarios</a>' : ''}
+        <div class="sidebar-section-title">🏭 Producción & Taller</div>
+        <a href="/produccion" class="nav-link" data-link>
+          <span class="nav-link-icon">🖨️</span>
+          <span>Cola Audley</span>
+        </a>
+        <a href="/pedidos" class="nav-link" data-link>
+          <span class="nav-link-icon">📋</span>
+          <span>Pedidos</span>
+        </a>
+        <a href="/inventario" class="nav-link" data-link>
+          <span class="nav-link-icon">📦</span>
+          <span>Inventario</span>
+        </a>
+
+        <div class="sidebar-section-title">💼 Gestión Comercial</div>
+        <a href="/" class="nav-link" data-link>
+          <span class="nav-link-icon">🧮</span>
+          <span>Cotizador</span>
+        </a>
+        <a href="/clientes" class="nav-link" data-link>
+          <span class="nav-link-icon">👥</span>
+          <span>Clientes</span>
+        </a>
+        <a href="/cobranza" class="nav-link" data-link>
+          <span class="nav-link-icon">💰</span>
+          <span>Cobranza</span>
+        </a>
+
+        <div class="sidebar-section-title">📊 Inteligencia & Finanzas</div>
+        <a href="/reportes" class="nav-link" data-link>
+          <span class="nav-link-icon">📈</span>
+          <span>Reportes</span>
+        </a>
+        <a href="/rentabilidad" class="nav-link" data-link>
+          <span class="nav-link-icon">💵</span>
+          <span>Rentabilidad</span>
+        </a>
+
+        ${role === 'ADMIN' ? `
+        <div class="sidebar-section-title">⚙️ Sistema & Permisos</div>
+        <a href="/usuarios" class="nav-link" data-link>
+          <span class="nav-link-icon">👤</span>
+          <span>Usuarios</span>
+        </a>
+        ` : ''}
       `;
     } else if (role === 'CUSTOMER') {
       navLinksContainer.innerHTML = `
-        <a href="/" class="nav-link" data-link>Cotizador</a>
-        <a href="/pedidos" class="nav-link" data-link>Mis Pedidos</a>
+        <div class="sidebar-section-title">🛍️ Autoservicio</div>
+        <a href="/" class="nav-link" data-link>
+          <span class="nav-link-icon">🧮</span>
+          <span>Cotizador</span>
+        </a>
+        <a href="/pedidos" class="nav-link" data-link>
+          <span class="nav-link-icon">📦</span>
+          <span>Mis Pedidos</span>
+        </a>
       `;
     } else {
       // Visitante no registrado
       navLinksContainer.innerHTML = `
-        <a href="/" class="nav-link" data-link>Cotizador</a>
-        <a href="#contacto" class="nav-link">WhatsApp</a>
+        <div class="sidebar-section-title">🎨 Kroma Lab</div>
+        <a href="/" class="nav-link" data-link>
+          <span class="nav-link-icon">🧮</span>
+          <span>Cotizador</span>
+        </a>
+        <a href="#contacto" class="nav-link">
+          <span class="nav-link-icon">💬</span>
+          <span>WhatsApp</span>
+        </a>
       `;
     }
   }
@@ -169,9 +312,7 @@ function initNavbarRoleSync() {
   syncNavbarRole(lastSyncedRole);
 }
 
-/**
- * Inicialización de la interfaz del cotizador interactivo
- */
+
 export function initQuoter() {
   const widthInput = document.getElementById('stickerWidth');
   const heightInput = document.getElementById('stickerHeight');
