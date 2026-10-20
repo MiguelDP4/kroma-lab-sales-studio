@@ -292,6 +292,7 @@ export const receivablesView = {
   },
 
   onMount: () => {
+    receivablesStore.syncWithApi().catch(() => {});
     // Modales y Controles
     const recordModal = document.getElementById('recordPaymentModal');
     const viewModal = document.getElementById('viewPaymentsModal');

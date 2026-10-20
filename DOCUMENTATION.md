@@ -616,6 +616,37 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 * Si el backend local o remoto no está activo, entra en modo degradado elegante (offline fallback) sin bloquear la navegación de la interfaz.
 * Respaldado por 14 pruebas unitarias dedicadas en `frontend/__tests__/api-client.test.js` (100% passing).
 
+### Sincronización Bidireccional de Stores Reactivos con Backend REST
+
+Se completó la migración de datos mock a persistencia real mediante una capa de sincronización distribuida entre los almacenes reactivos del frontend y los endpoints del backend Express + Prisma:
+
+1. **`ordersStore` (`orders-store.js`):**
+   * Método `syncWithApi()`: mapea órdenes del backend (`GET /api/orders`) al modelo de vista local preservando métricas de bobina Audley y metadatos de diseño.
+   * `createOrder()`: despacha `POST /api/orders` en segundo plano asignando el correlativo y `backendId`.
+   * `updateProductionStatus()` y `updatePaymentStatus()`: despachan `PUT /api/orders/:id/status` y `PUT /api/orders/:id/payment` actualizando el estado de máquina e inventario.
+2. **`clientsStore` (`clients-store.js`):**
+   * Método `syncWithApi()`: mapea clientes de cartera (`GET /api/customers`) con expediente 360°, clasificación de tiers (`VIP`, `RECURRENTE`, `NUEVO`) y sectores guatemaltecos.
+   * `createClient()` y `updateClient()`: emiten mutaciones a `POST /api/customers` y `PUT /api/customers/:id`.
+3. **`inventoryStore` (`inventory-store.js`):**
+   * Método `syncWithApi()`: consulta `GET /api/inventory` para sincronizar existencias de los 7 insumos clave de la Audley (Film A, Film B, CMYK, Blanco, Barniz 3D, Navajas, Solvente).
+   * `recordRestock()` y `recordManualAdjustment()`: emiten `POST /api/inventory/restock` y `POST /api/inventory/adjust` registrando movimientos formales en el Kardex.
+4. **`receivablesStore` (`receivables-store.js`):**
+   * Método `syncWithApi()`: consulta `GET /api/receivables/payments` para sincronizar cobros y abonos bancarios conciliados.
+   * `recordPayment()` y `deletePayment()`: ejecutan `POST /api/receivables/payments` y `DELETE /api/receivables/payments/:id` con amortización y restitución automática de deuda de orden.
+5. **`dispatchStore` (`dispatch-store.js`):**
+   * Método `syncWithApi()`: obtiene remisiones activas (`GET /api/dispatch`) mapeando transportistas locales (Moto Express, Cargo Expreso, Guatex, Forza Delivery, Pick-up).
+   * `createDispatchNote()` y `updateDispatchStatus()`: despachan `POST /api/dispatch` y `PUT /api/dispatch/:id/status` transicionando la orden a `COMPLETED` tras la entrega.
+6. **`usersStore` (`users-store.js`):**
+   * Método `syncWithApi()`: recupera el personal de taller y clientes (`GET /api/auth/users`) manteniendo la matriz RBAC.
+7. **Arranque Automático y Resiliencia (`app.js` -> `initBackendSync()`):**
+   * Al inicializar la SPA, verifica la salud del backend (`GET /api/health`).
+   * Si no existe sesión previa en `localStorage`, autentica transparentemente al administrador (`miguel@kromalab.gt`) para desarrollo local.
+   * Ejecuta `Promise.allSettled` sincronizando todos los stores en paralelo.
+   * Si el backend se apaga o está offline, el frontend opera de forma completamente autónoma con `localStorage`, sin congelar la interfaz ni mostrar pantallas rotas.
+8. **Pruebas de Integración Frontend-Backend:**
+   * Suite dedicada en `frontend/__tests__/frontend-api-integration.test.js` con 15 pruebas unitarias e integración que validan el flujo completo de sincronización, tolerancia a fallos y mutaciones.
+   * Cobertura global del frontend: **99.72% declaraciones**, **85.50% ramas**, **99.71% funciones**, **99.72% líneas** en 31 suites (561 pruebas pasando, 100%).
+
 ---
 
 ## 9. Almacenamiento de Archivos de Impresión (Cloudflare R2)

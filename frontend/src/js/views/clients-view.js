@@ -210,6 +210,7 @@ export const clientsView = {
   },
 
   onMount: () => {
+    clientsStore.syncWithApi().catch(() => {});
     const metricsContainer = document.getElementById('clientsMetricsContainer');
     const tableBody = document.getElementById('clientsTableBody');
     const emptyState = document.getElementById('clientsEmptyState');

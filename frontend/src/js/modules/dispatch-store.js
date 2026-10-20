@@ -7,6 +7,7 @@
 
 import { ordersStore } from './orders-store.js';
 import { ORDER_STATUS } from '../../shared/business-config.js';
+import { apiClient } from './api-client.js';
 
 export const STORAGE_KEY_DISPATCH = 'kromalab_dispatch_notes';
 
@@ -260,6 +261,70 @@ export class DispatchStore {
     }
   }
 
+
+  _mapBackendDispatch(d) {
+    let method = 'MOTO_LOCAL';
+    if (d.deliveryMethod === 'FORZA_EXPRESS') method = 'FORZAGRO';
+    else if (d.deliveryMethod === 'PICKUP') method = 'PICKUP_TALLER';
+    else if (DELIVERY_METHODS[d.deliveryMethod]) method = d.deliveryMethod;
+
+    return {
+      id: d.folio || d.id,
+      backendId: d.id,
+      orderId: d.order?.code || d.orderId,
+      clientId: 'CLI-B2B',
+      clientName: d.customerName,
+      clientPhone: d.customerPhone,
+      deliveryAddress: d.customerAddress,
+      deliveryMethod: method,
+      courierName: (DELIVERY_METHODS[method] || DELIVERY_METHODS.MOTO_LOCAL).defaultCourier,
+      trackingNumber: d.trackingNumber || '',
+      packagesCount: d.packagesCount || 1,
+      packageType: 'RIGID_TUBE',
+      shippingCostQ: 0.00,
+      shippingPaidBy: method === 'PICKUP_TALLER' ? 'INCLUDED' : 'CLIENT',
+      status: d.status,
+      dispatchedAt: d.createdAt,
+      deliveredAt: d.status === 'DELIVERED' ? d.updatedAt : null,
+      dispatchedBy: 'Operador Audley',
+      receivedBy: d.deliveryRecipientName || '',
+      receiverIdDoc: d.deliveryRecipientDpi || '',
+      qualityChecklist: {
+        curadoAdherencia: true,
+        capasBarniz: true,
+        formatoAcabado: true,
+        conteoMedidas: true,
+        empaqueProtector: true,
+      },
+      notes: d.notes || '',
+      totalOrderMeters: Number(d.linearMeters),
+      totalOrderAmountQ: Number(d.totalAmountQ),
+      pendingBalanceQ: Number(d.balanceDueQ || 0.0),
+    };
+  }
+
+  async syncWithApi() {
+    try {
+      if (typeof apiClient !== 'undefined' && apiClient.dispatch) {
+        const res = await apiClient.dispatch.list();
+        if (res && res.success && Array.isArray(res.dispatchNotes)) {
+          if (res.dispatchNotes.length > 0) {
+            const apiNotes = res.dispatchNotes.map(d => this._mapBackendDispatch(d));
+            const apiIds = new Set(apiNotes.map(n => n.id));
+            const localOnly = this.dispatchNotes.filter(n => !apiIds.has(n.id) && !n.backendId);
+            this.dispatchNotes = [...apiNotes, ...localOnly];
+            this._save();
+            this._notify();
+          }
+          return this.getDispatchNotes();
+        }
+      }
+    } catch (err) {
+      console.warn('[DispatchStore] Sincronización API no disponible:', err.message);
+    }
+    return this.getDispatchNotes();
+  }
+
   _saveNotes(notes) {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
@@ -404,6 +469,38 @@ export class DispatchStore {
     this.dispatchNotes.unshift(newNote);
     this._save();
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.dispatch) {
+      const targetOrderId = order.backendId || order.id;
+      let backendMethod = 'MOTO_LOCAL';
+      if (newNote.deliveryMethod === 'FORZAGRO') backendMethod = 'FORZA_EXPRESS';
+      else if (newNote.deliveryMethod === 'PICKUP_TALLER') backendMethod = 'PICKUP';
+      else if (['MOTO_LOCAL', 'CARGO_EXPRESO', 'GUATEX'].includes(newNote.deliveryMethod)) {
+        backendMethod = newNote.deliveryMethod;
+      }
+
+      apiClient.dispatch.create({
+        orderId: targetOrderId,
+        customerName: newNote.clientName,
+        customerPhone: newNote.clientPhone,
+        customerAddress: newNote.deliveryAddress,
+        deliveryMethod: backendMethod,
+        trackingNumber: newNote.trackingNumber,
+        packagesCount: newNote.packagesCount,
+        linearMeters: newNote.totalOrderMeters,
+        totalAmountQ: newNote.totalOrderAmountQ,
+        balanceDueQ: newNote.pendingBalanceQ,
+        checklistPassed: true,
+        notes: newNote.notes,
+      }).then(res => {
+        if (res && res.dispatchNote) {
+          newNote.backendId = res.dispatchNote.id;
+          if (res.dispatchNote.folio) newNote.id = res.dispatchNote.folio;
+          this._save();
+        }
+      }).catch(() => {});
+    }
+
     return newNote;
   }
 
@@ -440,6 +537,17 @@ export class DispatchStore {
 
     this._save();
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.dispatch) {
+      const targetId = note.backendId || note.id;
+      apiClient.dispatch.updateStatus(targetId, {
+        status: newStatus,
+        deliveryRecipientName: note.receivedBy || undefined,
+        deliveryRecipientDpi: note.receiverIdDoc || undefined,
+        trackingNumber: note.trackingNumber || undefined,
+      }).catch(() => {});
+    }
+
     return note;
   }
 
@@ -562,6 +670,12 @@ ${balanceLine}
   /**
    * Exportación de remisiones a archivo CSV con formato UTF-8 BOM
    */
+  resetToInitial() {
+    this.dispatchNotes = JSON.parse(JSON.stringify(INITIAL_SEED_DISPATCH));
+    this._save();
+    this._notify();
+  }
+
   exportToCsv() {
     const BOM = '\uFEFF';
     const headers = [

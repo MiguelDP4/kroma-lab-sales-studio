@@ -286,6 +286,7 @@ export const ordersView = {
   },
 
   onMount: () => {
+    ordersStore.syncWithApi().catch(() => {});
     const role = store.state.user?.role || 'CUSTOMER';
     const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
 
