@@ -195,7 +195,8 @@ kroma-lab-sales-studio/
 │   │       ├── store.js            # Estado reactivo global (usuario, token, tema)
 │   │       ├── components/
 │   │       │   ├── cart-drawer.js      # Componente interactivo de carrito (drawer lateral)
-│   │       │   └── checkout-modal.js   # Modal de datos de entrega y facturación SAT
+│   │       │   ├── checkout-modal.js   # Modal de datos de entrega y facturación SAT
+│   │       │   └── user-profile-modal.js # Modal de autogestión de perfil de usuario y conmutador de cuentas
 │   │       ├── modules/
 │   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático de cotización
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
@@ -211,7 +212,7 @@ kroma-lab-sales-studio/
 │   │           ├── production-view.js  # Tablero Kanban interactivo Audley + Monitor de Bobina (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 175 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
+│   └── __tests__/                  # 518 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
 │       ├── cart-store.test.js      # 8 tests de estado reactivo y localStorage
@@ -486,11 +487,26 @@ kroma-lab-sales-studio/
       3. Botón de Carrito con indicador dinámico de ítems (`#cartToggleBtn`).
       4. Chip de Perfil de Usuario (`#userProfileChip`) adaptable (en pantallas móviles oculta el texto y mantiene el avatar circular ergonómico).
       5. Interruptor de Tema Visual (`#themeToggleBtn` ☀️ / 🌙).
-  * **Especificación y Roadmap Técnico para Módulos de Ajustes y Perfil:**
-    * **1. Configuración de Cuenta de Usuario (vinculado a `#userProfileChip`):**
-      * Al hacer clic en el chip de usuario (que muestra el rol activo: Administrador, Operador Taller, Cliente B2B, Visitante), se desplegará el panel interactivo de autogestión de perfil.
-      * Permitirá a cada usuario consultar y actualizar su información personal: Nombre completo, número de WhatsApp para notificaciones de taller, correo electrónico de acceso, empresa/razón social, NIT de facturación y cambio seguro de contraseña.
-    * **2. Botón de Configuración de Taller (⚙️) — Roles STAFF (`ADMIN` y `EMPLOYEE`):**
+* **Módulo de Configuración y Autogestión de Cuenta de Usuario (`user-profile-modal.js` + `users-store.js` + `#userProfileChip` + `#sidebarUserCard`):**
+  * **Acceso y Activación Ergonómica:**
+    * Accesible desde cualquier vista mediante clic en el chip de usuario en la barra superior (`#userProfileChip`) o en la tarjeta de perfil en el pie del sidebar drawer (`#sidebarUserCard`).
+    * Disponible para todos los roles (`ADMIN`, `EMPLOYEE`, `CUSTOMER`, `VISITOR`).
+  * **Campos de Perfil y Datos Fiscales SAT:**
+    * Permite consultar y actualizar en tiempo real: Nombre completo, correo electrónico, teléfono/WhatsApp de contacto, empresa / razón social, NIT de facturación SAT (con validación de formato), dirección física de entrega o taller, y departamento asignado (para staff de taller).
+  * **Conmutador Rápido de Cuentas Demo (Simulador de Sesión):**
+    * Panel de cambio rápido con un solo clic entre las cuentas clave preconfiguradas:
+      * **Miguel Dubois:** Administrador General (`ADMIN`) con control absoluto del sistema.
+      * **Carlos Méndez:** Operador de Taller Audley (`EMPLOYEE`) con acceso a producción, pedidos, inventario, despacho y cobranza.
+      * **Rodrigo Castillo (PromoGuate):** Cliente B2B VIP (`CUSTOMER`) con portal de autoservicio y seguimiento de pedidos.
+      * **Visitante Anónimo:** Modo público (`VISITOR`) para cotizador y landing page comercial.
+  * **Cierre de Sesión Seguro (`store.clearUser()`):**
+    * Botón de cierre de sesión que restablece el estado a `VISITOR`, limpiando tokens y sincronizando de forma reactiva el topbar, el sidebar y las rutas protegidas.
+  * **Persistencia Reactiva y Notificaciones:**
+    * Sincronizado bidireccionalmente con `usersStore` y `store.setUser()`. Al guardar, actualiza instantáneamente el chip visual, el avatar con iniciales y los datos en memoria/localStorage.
+  * **Respaldo de Pruebas Unitarias:**
+    * Cubierto con 21 pruebas unitarias dedicadas en `frontend/__tests__/user-profile-modal.test.js` (100% pass rate).
+* **Especificación y Roadmap Técnico para Botón de Configuración de Taller (⚙️):**
+  * **Botón de Configuración de Taller (⚙️) — Roles STAFF (`ADMIN` y `EMPLOYEE`):**
       * Retirado temporalmente del topbar para mantener la barra superior limpia mientras se concluye la maqueta frontend sin backend.
       * Se integrará formalmente como un módulo de control exclusivo para `ADMIN` y `EMPLOYEE` (oculto estrictamente para `CUSTOMER` y `VISITOR`).
       * Permitirá la gestión operativa en vivo de:
