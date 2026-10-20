@@ -574,11 +574,15 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | Módulo | Método y Ruta | Descripción y Acceso RBAC |
 | :--- | :--- | :--- |
 | **Salud** | `GET /api/health` | Estado del servicio y prueba de conectividad a la BD |
-| **Autenticación** | `POST /api/auth/login` | Inicio de sesión, verificación bcrypt y emisión de JWT en cookie/body |
-| **Autenticación** | `POST /api/auth/logout` | Cierre de sesión y limpieza de cookie de sesión |
-| **Autenticación** | `GET /api/auth/me` | Perfil del usuario activo (requiere JWT) |
-| **Autenticación** | `PUT /api/auth/profile` | Actualización de datos de perfil y contacto |
-| **Usuarios** | `GET /api/auth/users` | Listado de colaboradores y clientes (`ADMIN`) |
+| **Autenticación** | `POST /api/auth/register` | Registro público de nuevos clientes B2B (crea usuario con bcrypt y ficha comercial de cliente con JWT) |
+| **Autenticación** | `POST /api/auth/login` | Inicio de sesión real con correo y contraseña, verificación bcrypt y emisión de JWT |
+| **Autenticación** | `POST /api/auth/logout` | Cierre de sesión y limpieza de cookie y almacenamiento JWT |
+| **Autenticación** | `GET /api/auth/me` | Perfil del usuario activo autenticado (requiere Bearer JWT) |
+| **Autenticación** | `PUT /api/auth/profile` | Actualización de datos de perfil, empresa y contacto del usuario activo |
+| **Usuarios (RBAC)** | `GET /api/auth/users` | Listado de colaboradores y cuentas registradas (`ADMIN`) |
+| **Usuarios (RBAC)** | `POST /api/auth/users` | Creación de nuevos colaboradores y usuarios por Administrador con hash bcrypt (`ADMIN`) |
+| **Usuarios (RBAC)** | `PUT /api/auth/users/:id/reset-password` | Restablecimiento de contraseña de usuarios con hash bcrypt (`ADMIN`) |
+| **Usuarios (RBAC)** | `DELETE /api/auth/users/:id` | Eliminación de usuario con protección contra autoeliminación del administrador activo (`ADMIN`) |
 | **Pedidos** | `GET /api/orders` | Listado y filtrado por estado, pago y búsqueda de pedidos |
 | **Pedidos** | `GET /api/orders/:id` | Detalle de pedido y trazabilidad |
 | **Pedidos** | `POST /api/orders` | Creación de pedido con folio `KL-YYYY-XXX` (público / auth) |
@@ -603,12 +607,12 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 
 ### Calidad de Código y Pruebas Unitarias del Backend
 
-* **80 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 11 suites de pruebas).
+* **84 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 11 suites de pruebas).
 * **Métricas de Cobertura de Código (> 85% obligatoria):**
-  * Declaraciones (Statements): **98.43%**
-  * Ramas (Branches): **89.93%**
+  * Declaraciones (Statements): **98.05%**
+  * Ramas (Branches): **87.57%**
   * Funciones (Functions): **100%**
-  * Líneas (Lines): **98.43%**
+  * Líneas (Lines): **98.05%**
 
 ### Cliente HTTP Frontend (`api-client.js`)
 
@@ -638,14 +642,18 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * `createDispatchNote()` y `updateDispatchStatus()`: despachan `POST /api/dispatch` y `PUT /api/dispatch/:id/status` transicionando la orden a `COMPLETED` tras la entrega.
 6. **`usersStore` (`users-store.js`):**
    * Método `syncWithApi()`: recupera el personal de taller y clientes (`GET /api/auth/users`) manteniendo la matriz RBAC.
+   * `createUser()`: despacha creación de colaborador en backend (`POST /api/auth/users`) con persistencia en BD y asignación de `backendId`.
+   * `resetPassword()`: despacha restablecimiento de contraseña en backend (`PUT /api/auth/users/:id/reset-password`).
+   * `deleteUser()`: despacha eliminación de usuario en backend (`DELETE /api/auth/users/:id`).
 7. **Arranque Automático y Resiliencia (`app.js` -> `initBackendSync()`):**
    * Al inicializar la SPA, verifica la salud del backend (`GET /api/health`).
    * Si no existe sesión previa en `localStorage`, autentica transparentemente al administrador (`miguel@kromalab.gt`) para desarrollo local.
    * Ejecuta `Promise.allSettled` sincronizando todos los stores en paralelo.
    * Si el backend se apaga o está offline, el frontend opera de forma completamente autónoma con `localStorage`, sin congelar la interfaz ni mostrar pantallas rotas.
-8. **Pruebas de Integración Frontend-Backend:**
-   * Suite dedicada en `frontend/__tests__/frontend-api-integration.test.js` con 15 pruebas unitarias e integración que validan el flujo completo de sincronización, tolerancia a fallos y mutaciones.
-   * Cobertura global del frontend: **99.72% declaraciones**, **85.50% ramas**, **99.71% funciones**, **99.72% líneas** en 31 suites (561 pruebas pasando, 100%).
+8. **Pruebas de Integración Frontend-Backend y Autenticación Real:**
+   * Suite dedicada en `frontend/__tests__/frontend-api-integration.test.js` con 30 pruebas unitarias e integración que validan el flujo completo de sincronización, tolerancia a fallos y mutaciones.
+   * Suite del modal de autenticación `frontend/__tests__/user-profile-modal.test.js` con 37 pruebas cubriendo inicio de sesión real, registro de clientes B2B, cambio de pestañas, actualización de perfil y cierre de sesión.
+   * Cobertura global del frontend: **99.70% declaraciones**, **85.55% ramas**, **99.72% funciones**, **99.70% líneas** en 31 suites (**578 pruebas pasando al 100%**).
 
 ---
 

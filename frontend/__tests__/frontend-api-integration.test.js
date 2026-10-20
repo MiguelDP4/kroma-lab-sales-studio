@@ -539,6 +539,38 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
       const users = await usersStore.syncWithApi();
       expect(users.length).toBeGreaterThanOrEqual(1);
     });
+
+    it('despacha createUser, resetPassword y deleteUser a la API de autenticación', async () => {
+      const createSpy = vi.spyOn(apiClient.auth, 'createUser').mockResolvedValueOnce({
+        success: true,
+        user: { id: 'usr-backend-created-99' },
+      });
+      const resetSpy = vi.spyOn(apiClient.auth, 'resetPassword').mockResolvedValueOnce({ success: true });
+      const deleteSpy = vi.spyOn(apiClient.auth, 'deleteUser').mockResolvedValueOnce({ success: true });
+
+      const newUser = usersStore.createUser({
+        name: 'Nuevo Operador Taller',
+        email: 'nuevo.operador@kromalab.gt',
+        phone: '+502 5555-7777',
+        role: 'EMPLOYEE',
+      });
+
+      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Nuevo Operador Taller',
+        email: 'nuevo.operador@kromalab.gt',
+      }));
+
+      // Dar tiempo para la asignación de backendId
+      await vi.waitFor(() => {
+        expect(newUser.backendId).toBe('usr-backend-created-99');
+      });
+
+      usersStore.resetPassword(newUser.id, 'NuevaClave2026!');
+      expect(resetSpy).toHaveBeenCalledWith('usr-backend-created-99', 'NuevaClave2026!');
+
+      usersStore.deleteUser(newUser.id);
+      expect(deleteSpy).toHaveBeenCalledWith('usr-backend-created-99');
+    });
   });
 
   describe('App initBackendSync bootstrap', () => {

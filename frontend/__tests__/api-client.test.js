@@ -100,16 +100,22 @@ describe('ApiClient — Cliente HTTP Frontend', () => {
     expect(client.token).toBeNull();
   });
 
-  it('auth invoca me, updateProfile y listUsers correctamente', async () => {
+  it('auth invoca me, updateProfile, listUsers, createUser, resetPassword y deleteUser correctamente', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true }),
+      json: async () => ({ success: true, token: 'token-reg-123' }),
     });
+
+    await client.auth.register({ name: 'Nuevo', email: 'n@k.gt', password: '123' });
+    expect(client.token).toBe('token-reg-123');
 
     await client.auth.me();
     await client.auth.updateProfile({ name: 'Miguel' });
     await client.auth.listUsers();
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    await client.auth.createUser({ name: 'Operador' });
+    await client.auth.resetPassword('u1', 'nuevaClave');
+    await client.auth.deleteUser('u1');
+    expect(global.fetch).toHaveBeenCalledTimes(7);
   });
 
   it('orders gestiona list (con y sin query params), getById, create, updateStatus, updatePayment, getStats', async () => {

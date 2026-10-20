@@ -237,6 +237,29 @@ class UsersStore {
     this.users.unshift(newUser);
     this.saveToStorage();
     this.notify();
+
+    // Sincronizar creación de usuario en backend API si está disponible
+    if (typeof apiClient !== 'undefined' && apiClient.auth) {
+      apiClient.auth.createUser({
+        name,
+        email,
+        phone,
+        department,
+        role,
+        password: userData?.password || 'Kroma2026!',
+        company,
+        taxId: nit,
+        address,
+      }).then(res => {
+        if (res && res.user && res.user.id) {
+          newUser.backendId = res.user.id;
+          this.saveToStorage();
+        }
+      }).catch(err => {
+        console.warn('[UsersStore] Registro API backend no disponible:', err?.message || err);
+      });
+    }
+
     return newUser;
   }
 
@@ -313,6 +336,14 @@ class UsersStore {
     this.users = this.users.filter(u => u.id !== id);
     this.saveToStorage();
     this.notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.auth) {
+      const targetId = user.backendId || user.id;
+      apiClient.auth.deleteUser(targetId).catch(err => {
+        console.warn('[UsersStore] Eliminación API backend no disponible:', err?.message || err);
+      });
+    }
+
     return true;
   }
 
@@ -340,6 +371,13 @@ class UsersStore {
       passwordLastReset: new Date().toISOString(),
       mustChangePassword: true,
     });
+
+    if (typeof apiClient !== 'undefined' && apiClient.auth) {
+      const targetId = user.backendId || user.id;
+      apiClient.auth.resetPassword(targetId, tempPassword).catch(err => {
+        console.warn('[UsersStore] Reseteo contraseña API backend no disponible:', err?.message || err);
+      });
+    }
 
     return {
       user: updated,
