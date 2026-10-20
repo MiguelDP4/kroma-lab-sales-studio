@@ -49,6 +49,7 @@ describe('App — Inicialización y DOM', () => {
 
       expect(tag.style.display).toBe('inline-block');
       expect(nav.innerHTML).toContain('Cola Audley');
+      expect(nav.innerHTML).toContain('Despacho');
       expect(nav.innerHTML).toContain('Rentabilidad');
       expect(nav.innerHTML).toContain('Usuarios');
       expect(nav.innerHTML).toContain('Inventario');
@@ -64,6 +65,7 @@ describe('App — Inicialización y DOM', () => {
 
       expect(tag.style.display).toBe('inline-block');
       expect(nav.innerHTML).toContain('Cola Audley');
+      expect(nav.innerHTML).toContain('Despacho');
       expect(nav.innerHTML).toContain('Rentabilidad');
       expect(nav.innerHTML).toContain('Inventario');
       expect(nav.innerHTML).not.toContain('Usuarios');

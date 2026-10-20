@@ -21,6 +21,7 @@ import { reportsView } from './views/reports-view.js';
 import { profitabilityView } from './views/profitability-view.js';
 import { inventoryView } from './views/inventory-view.js';
 import { receivablesView } from './views/receivables-view.js';
+import { dispatchView } from './views/dispatch-view.js';
 
 export const routes = [
   quoterView,
@@ -33,6 +34,8 @@ export const routes = [
   inventoryView,
   receivablesView,
   { ...receivablesView, path: '/cuentas-por-cobrar' },
+  dispatchView,
+  { ...dispatchView, path: '/remisiones' },
   usersView,
 ];
 
@@ -227,6 +230,10 @@ export function syncNavbarRole(role) {
         <a href="/pedidos" class="nav-link" data-link>
           <span class="nav-link-icon">📋</span>
           <span>Pedidos</span>
+        </a>
+        <a href="/despacho" class="nav-link" data-link>
+          <span class="nav-link-icon">🚚</span>
+          <span>Despacho</span>
         </a>
         <a href="/inventario" class="nav-link" data-link>
           <span class="nav-link-icon">📦</span>
