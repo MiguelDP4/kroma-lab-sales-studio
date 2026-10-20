@@ -8,6 +8,7 @@ import { quoterView } from '../src/js/views/quoter-view.js';
 import { profitabilityView } from '../src/js/views/profitability-view.js';
 import { inventoryView } from '../src/js/views/inventory-view.js';
 import { receivablesView } from '../src/js/views/receivables-view.js';
+import { dispatchView } from '../src/js/views/dispatch-view.js';
 import { store } from '../src/js/store.js';
 
 describe('Vistas Modulares SPA', () => {
@@ -133,6 +134,25 @@ describe('Vistas Modulares SPA', () => {
       document.body.innerHTML = receivablesView.render();
       expect(typeof receivablesView.onMount).toBe('function');
       const cleanup = receivablesView.onMount();
+      expect(typeof cleanup).toBe('function');
+      cleanup();
+    });
+  });
+
+  describe('dispatchView', () => {
+    it('renderiza la interfaz de remisiones y guías de entrega', () => {
+      const html = dispatchView.render();
+      expect(html).toContain('Remisiones y Guías de Entrega');
+      expect(html).toContain('btnOpenCreateDispatchModal');
+      expect(html).toContain('btnExportDispatchCSV');
+      expect(html).toContain('createDispatchModal');
+      expect(html).toContain('dispatchSheetModal');
+    });
+
+    it('ejecuta onMount y retorna una función de limpieza (teardown)', () => {
+      document.body.innerHTML = dispatchView.render();
+      expect(typeof dispatchView.onMount).toBe('function');
+      const cleanup = dispatchView.onMount();
       expect(typeof cleanup).toBe('function');
       cleanup();
     });

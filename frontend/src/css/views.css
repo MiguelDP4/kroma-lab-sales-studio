@@ -2287,10 +2287,11 @@
     width: 100% !important;
     max-width: 100% !important;
   }
-  .workshop-sheet-card, .workshop-sheet-card * {
+  .workshop-sheet-card, .workshop-sheet-card *,
+  .dispatch-sheet-card, .dispatch-sheet-card * {
     visibility: visible !important;
   }
-  .workshop-sheet-card {
+  .workshop-sheet-card, .dispatch-sheet-card {
     position: absolute;
     left: 0;
     top: 0;

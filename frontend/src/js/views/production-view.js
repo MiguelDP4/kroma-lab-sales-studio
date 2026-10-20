@@ -417,6 +417,9 @@ export const productionView = {
                         <button class="btn-kanban-nav btn-regress" data-order-id="${order.id}" title="Regresar a etapa previa">◀</button>
                       ` : ''}
                       <button class="btn-kanban-nav btn-detail" data-order-id="${order.id}" title="Ver ficha técnica">🔍 Ficha</button>
+                      ${stageIndex === KANBAN_STAGES.length - 1 ? `
+                        <a href="/despacho" data-link class="btn-kanban-nav" title="Emitir Guía de Despacho" style="text-decoration: none; display: inline-flex; align-items: center;">🚚 Guía</a>
+                      ` : ''}
                     </div>
 
                     <button class="btn-kanban-nav ${stageIndex === KANBAN_STAGES.length - 1 ? 'success' : ''} btn-advance" data-order-id="${order.id}" title="Avanzar etapa">
