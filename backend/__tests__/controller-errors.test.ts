@@ -192,4 +192,54 @@ describe('Controller Error Handlers & Catch Blocks', () => {
       .send({ rateTier1: 135.0 });
     expect(res.status).toBe(500);
   });
+
+  it('captura error de base de datos en listQuotes', async () => {
+    vi.spyOn(prisma.quote, 'findMany').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app).get('/api/quotes');
+    expect(res.status).toBe(500);
+  });
+
+  it('captura error de base de datos en getQuoteById', async () => {
+    vi.spyOn(prisma.quote, 'findFirst').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app).get('/api/quotes/cot_test');
+    expect(res.status).toBe(500);
+  });
+
+  it('captura error de base de datos en createQuote', async () => {
+    vi.spyOn(prisma.quote, 'create').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app)
+      .post('/api/quotes')
+      .send({
+        leadName: 'Lead Test',
+        leadPhone: '+502 5555-0000',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 10,
+        linearMeters: 1,
+        unitRateQ: 140,
+        materialPriceQ: 140,
+        totalPriceQ: 140,
+      });
+    expect(res.status).toBe(500);
+  });
+
+  it('captura error de base de datos en updateQuote', async () => {
+    vi.spyOn(prisma.quote, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app)
+      .put('/api/quotes/cot_test')
+      .send({ projectName: 'Error' });
+    expect(res.status).toBe(500);
+  });
+
+  it('captura error de base de datos en convertToOrder', async () => {
+    vi.spyOn(prisma.quote, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app).post('/api/quotes/cot_test/convert');
+    expect(res.status).toBe(500);
+  });
+
+  it('captura error de base de datos en deleteQuote', async () => {
+    vi.spyOn(prisma.quote, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app).delete('/api/quotes/cot_test');
+    expect(res.status).toBe(500);
+  });
 });

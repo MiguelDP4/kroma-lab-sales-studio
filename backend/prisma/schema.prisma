@@ -120,23 +120,33 @@ model Order {
 }
 
 model Quote {
-  id             String   @id @default(cuid())
-  leadName       String?
-  leadPhone      String?
-  leadEmail      String?
-  widthCm        Decimal  @db.Decimal(6, 2)
-  heightCm       Decimal  @db.Decimal(6, 2)
-  qty            Int
-  linearMeters   Decimal  @db.Decimal(6, 2)
-  unitRateQ      Decimal  @db.Decimal(10, 2)
-  materialPriceQ Decimal  @db.Decimal(10, 2)
-  cuttingPriceQ  Decimal  @default(0.0) @db.Decimal(10, 2)
-  totalPriceQ    Decimal  @db.Decimal(10, 2)
-  withCutting    Boolean  @default(false)
-  finishType     String   @default("GLOSSY_VARNISH")
-  source         String?
+  id                 String   @id @default(cuid())
+  code               String?  @unique
+  projectName        String?
+  leadName           String?
+  leadPhone          String?
+  leadEmail          String?
+  companyName        String?
+  widthCm            Decimal  @db.Decimal(6, 2)
+  heightCm           Decimal  @db.Decimal(6, 2)
+  qty                Int
+  linearMeters       Decimal  @db.Decimal(6, 2)
+  stickersPerRow     Int      @default(1)
+  rows               Int      @default(1)
+  unitRateQ          Decimal  @db.Decimal(10, 2)
+  materialPriceQ     Decimal  @db.Decimal(10, 2)
+  cuttingPriceQ      Decimal  @default(0.0) @db.Decimal(10, 2)
+  totalPriceQ        Decimal  @db.Decimal(10, 2)
+  withCutting        Boolean  @default(false)
+  finishType         String   @default("GLOSSY_VARNISH")
+  status             String   @default("SAVED")
+  convertedOrderId   String?
+  convertedOrderCode String?
+  notes              String?
+  source             String?
 
-  createdAt      DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model DispatchNote {
