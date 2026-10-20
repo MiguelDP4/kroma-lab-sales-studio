@@ -367,6 +367,41 @@ kroma-lab-sales-studio/
   * **Modal de Configuración de Precios de Insumos (`#costsConfigModal`):**
     * Permite a los administradores actualizar en tiempo real los costos de compra locales en Quetzales (precio del rollo de Film A, rollo de Film B, litro de tinta UV, electricidad, depreciación, mano de obra y meta mensual).
     * Botón de restauración rápida a *Valores de Fábrica* y persistencia local en `localStorage['kromalab_costs_config']`.
+* **Módulo de Inventario de Insumos en Taller (`inventory-store.js` + `inventory-view.js`):**
+  * **Acceso y Roles (`ADMIN` y `EMPLOYEE`):** Módulo operativo de bodega y control físico de insumos de taller accesible en la ruta `/inventario`, protegido bajo el permiso RBAC `MANAGE_INVENTORY`.
+  * **Catálogo de 7 Insumos Clave para la Impresora Audley UV DTF (28 cm útiles):**
+    1. **Film A Base PET (30cm/28cm útiles):** Bobinas de 100 m; umbral mínimo de seguridad: 30 m; costo de referencia: Q6.00/m.
+    2. **Film B Transfer Calandrado:** Bobinas de 100 m; umbral mínimo: 30 m; costo: Q4.00/m.
+    3. **Tinta UV Industrial CMYK:** Depósito presurizado de 1,000 ml; umbral mínimo: 500 ml; costo: Q0.55/ml (Q550/L).
+    4. **Tinta UV Blanca (Cama Fotográfica):** Depósito con agitador de 1,000 ml; umbral mínimo: 600 ml; costo: Q0.55/ml.
+    5. **Barniz UV Glossy 3D (Relieve Táctil):** Depósito en cabezal 2 de 1,000 ml; umbral mínimo: 400 ml; costo: Q0.55/ml.
+    6. **Navajas de Corte de Precisión:** Cuchillas para despiece perimetral (paquetes de 5 unidades); umbral mínimo: 2 unidades; costo: Q25.00/ud.
+    7. **Líquido Solvente UV Flush:** Solución para capping y purga de cabezales (envase de 1,000 ml); umbral mínimo: 300 ml; costo: Q0.20/ml.
+  * **Semáforo y Estados de Salud de Existencias:**
+    * 🟢 **Óptimo:** Stock superior al 150% del umbral mínimo de seguridad.
+    * 🟡 **Stock Bajo (Reordenar):** Stock entre el 100% y 150% del umbral mínimo.
+    * 🔴 **Nivel Crítico (Agotándose):** Stock por debajo del umbral mínimo de seguridad.
+    * Barra visual de porcentaje de llenado y valorización monetaria total del inventario en bodega (Q).
+  * **Deducción Automática por Tiraje de Producción (`deductOrderConsumption`):**
+    * Integración directa con `ordersStore`: al transicionar una orden al estado de impresión (`PRINTING`) o completada (`COMPLETED`), se deducen automáticamente los consumibles con sus márgenes técnicos de merma:
+      * **Film A:** Metros de orden × 1.05 (5% de tracción y carga).
+      * **Film B:** Metros de orden × 1.02 (2% de arrastre en calandra térmica).
+      * **Tinta CMYK:** 4.0 ml por metro lineal.
+      * **Tinta Blanca:** 6.0 ml por metro lineal.
+      * **Barniz 3D:** 5.0 ml por metro lineal (si la orden incluye barniz/glossy).
+    * Protección de deducción única: registro de IDs de orden procesadas en `localStorage['kromalab_inventory_deducted_orders']` para evitar deducciones duplicadas en reintentos o transiciones de estado.
+  * **Registro de Compras y Reabastecimiento (`#restockModal`):**
+    * Modal táctil para registrar ingresos de insumos indicando cantidad, costo total en Quetzales, proveedor, número de factura/recibo y notas.
+    * Actualiza el stock de forma atómica y genera automáticamente una entrada de tipo `IN_PURCHASE` en el Kardex.
+  * **Ajuste Físico y Mermas de Taller (`#adjustStockModal`):**
+    * Modal para conciliar el stock físico tras conteos periódicos, calibraciones de tracción, purgas o atascos en cabezal.
+    * Calcula la diferencia neta (positiva o negativa) y registra un movimiento de tipo `ADJUSTMENT` en el Kardex.
+  * **Kardex Completo y Trazabilidad de Movimientos:**
+    * Tabla cronológica con identificador único (`MOV-XXXX`), timestamp legible, insumo, tipo de movimiento con badge visual, cantidad neta con signo (`+` / `-`), nuevo saldo de stock, costo total y referencia de orden / factura.
+    * Filtro en tiempo real por búsqueda de texto y selector por tipo de movimiento (`IN_PURCHASE`, `OUT_PRODUCTION`, `ADJUSTMENT`).
+    * **Exportación a CSV:** Botón para descarga de Kardex estructurado bajo el estándar RFC 4180 con UTF-8 BOM para apertura nativa e inmediata en Excel en español.
+  * **Persistencia Reactiva:**
+    * Almacenado en `localStorage['kromalab_inventory']` y `localStorage['kromalab_inventory_kardex']` con suscripción Pub/Sub en tiempo real.
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
