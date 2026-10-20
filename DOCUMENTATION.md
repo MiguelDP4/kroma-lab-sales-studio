@@ -256,6 +256,7 @@ kroma-lab-sales-studio/
     * `/inventario`: `inventoryView` (`EMPLOYEE`, `ADMIN`)
     * `/clientes`: `clientsView` (`EMPLOYEE`, `ADMIN`)
     * `/cobranza`: `receivablesView` (`EMPLOYEE`, `ADMIN`)
+    * `/despacho` y `/remisiones`: `dispatchView` (`EMPLOYEE`, `ADMIN`)
     * `/reportes`: `reportsView` (`EMPLOYEE`, `ADMIN`)
     * `/rentabilidad`: `profitabilityView` (`EMPLOYEE`, `ADMIN`)
     * `/usuarios`: `usersView` (`ADMIN`)
@@ -275,6 +276,25 @@ kroma-lab-sales-studio/
   * **Distintivo Visual de Vinculación y Tier:** Presenta una insignia destacada con el nombre de la empresa y su nivel comercial (`VIP`, `Recurrente`, `Nuevo`), acompañada de un botón ergonómico de desvinculación rápida (`Desvincular ✕`) con área táctil >= 44px para alternar con compras de nuevos prospectos.
   * **Reconocimiento Automático de Sesión:** Si el usuario tiene una sesión activa con cliente B2B vinculado (`user.clientId`, o coincidencia por NIT/teléfono/correo), el checkout preselecciona su perfil automáticamente sin intervención manual.
   * **Sincronización Bidireccional (`checkSaveToClients` / `manualCheckSaveClient`):** Permite registrar clientes nuevos directamente al confirmar pedidos o actualizar datos modificados (dirección, teléfono, NIT), asignando automáticamente el `clientId` a la orden para alimentar en tiempo real el expediente 360° en `/clientes`.
+* **Módulo de Remisiones de Taller y Guías de Entrega (Hojas de Despacho) (`dispatch-store.js` + `dispatch-view.js`):**
+  * **Control Integral de Entrega y Logística B2B:** Administra la salida física de pliegos y bobinas de film UV DTF terminadas desde el taller en San José el Placer hacia clientes y couriers.
+  * **Correlativo Oficial Numerado:** Generación automática de folios correlativos anuales (`REM-YYYY-XXX`, ej. `REM-2026-001`) persistentes en `localStorage['kromalab_dispatch_notes']`.
+  * **Soporte para Métodos de Entrega en Guatemala:**
+    * **Moto Local:** Mensajería express para el Área Metropolitana de Guatemala y Villa Nueva (2-4 hrs).
+    * **Cargo Expreso (Nacional):** Envíos departamentales con registro de número de guía / tracking (`CX-XXXXX`).
+    * **Guatex & Forza Express:** Paquetería y carga con control de bultos y condición de flete.
+    * **Retiro en Taller (Pick-up):** Entrega presencial en el taller Audley sin costo de flete.
+  * **Checklist Técnico Obligatorio de Control de Calidad (Audley UV DTF):**
+    1. Curado UV y adherencia probada en muestra testigo (sin desprendimientos).
+    2. Alineación de capas: Blanco fotográfico + CMYK + Barniz 3D con relieve al tacto.
+    3. Bobina continua limpia con film B / o Corte perimetral recto verificado.
+    4. Metraje lineal y conteo de piezas auditado vs orden de trabajo.
+    5. Sellado impermeable contra polvo y humedad ambiental en tubo rígido o sobre plano.
+  * **Hoja Oficial de Despacho Imprimible (`@media print`):** Documento formal con logotipo de Kroma Lab UV DTF, metadatos, datos fiscales del cliente, resumen logístico, tabla de piezas y metraje, checklist técnico auditado, aviso financiero de cobro contraentrega (si aplica), términos de garantía (48 hrs) y cajas de firma legal (Taller vs Recibido Conforme con DPI).
+  * **Notificación y Notificación Automática por WhatsApp:** Genera texto enriquecido con formato profesional para enviar al cliente o mensajero con detalles de guía, bultos y saldo adeudado.
+  * **Sincronización Bidireccional de Estados:** Al marcar una remisión como `DELIVERED`, la orden vinculada en `ordersStore` se actualiza automáticamente a `COMPLETED`.
+  * **Exportación a CSV:** Descarga del histórico de despachos con formato UTF-8 BOM compatible nativamente con Excel en español.
+
 * **Módulo de Gestión de Pedidos y Hoja de Taller Audley (`orders-store.js` + `orders-view.js`):**
   * **Vistas Contextuales por Rol:**
     * **Staff (`ADMIN` / `EMPLOYEE`):** Monitor integral con 4 KPIs en tiempo real (Pedidos Activos, Metros en Taller, Total Facturación y Saldo Pendiente de Cobro), tabla de pedidos con selector dinámico de estado de producción y estado de pago, botón para generar Hoja de Taller Audley y modal de registro manual para ventas en mostrador.
