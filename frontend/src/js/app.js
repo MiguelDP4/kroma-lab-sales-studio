@@ -17,7 +17,7 @@ import { BUSINESS_CONFIG } from '../shared/business-config.js';
 import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
-import { validatePrintFile, readFileAsDataURL } from './modules/file-uploader.js';
+import { validatePrintFile, readFileAsDataURL, uploadFileToStorage } from './modules/file-uploader.js';
 import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
@@ -444,6 +444,11 @@ export function initQuoter() {
   const thumbWrap = document.getElementById('dropzoneThumbWrap');
   const btnRemoveFile = document.getElementById('btnRemoveFile');
   const errorMsgEl = document.getElementById('dropzoneError');
+  const progressWrap = document.getElementById('dropzoneProgressWrap');
+  const progressBar = document.getElementById('dropzoneProgressBar');
+  const progressPercent = document.getElementById('dropzoneProgressPercent');
+  const progressLabel = document.getElementById('dropzoneProgressLabel');
+  const uploadBadge = document.getElementById('dropzoneUploadBadge');
 
   function clearDropzoneFile() {
     currentAttachedFile = null;
@@ -452,6 +457,8 @@ export function initQuoter() {
     if (emptyState) emptyState.style.display = 'flex';
     if (selectedState) selectedState.style.display = 'none';
     if (errorMsgEl) errorMsgEl.style.display = 'none';
+    if (progressWrap) progressWrap.style.display = 'none';
+    if (uploadBadge) uploadBadge.style.display = 'none';
   }
 
   async function handleFileSelected(file) {
@@ -466,7 +473,7 @@ export function initQuoter() {
     }
 
     if (errorMsgEl) errorMsgEl.style.display = 'none';
-    currentAttachedFile = validation.fileData;
+    currentAttachedFile = { ...validation.fileData };
 
     try {
       currentPreviewUrl = await readFileAsDataURL(file);
@@ -487,6 +494,53 @@ export function initQuoter() {
 
     if (emptyState) emptyState.style.display = 'none';
     if (selectedState) selectedState.style.display = 'flex';
+
+    // Iniciar subida directa a Cloudflare R2
+    if (progressWrap && progressBar && progressPercent) {
+      progressWrap.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressPercent.textContent = '0%';
+      if (progressLabel) progressLabel.textContent = 'Subiendo a Cloudflare R2...';
+    }
+
+    try {
+      const uploadRes = await uploadFileToStorage(file, {
+        context: 'quotes',
+        onProgress: ({ percent }) => {
+          if (progressBar) progressBar.style.width = `${percent}%`;
+          if (progressPercent) progressPercent.textContent = `${percent}%`;
+        },
+      });
+
+      if (!currentAttachedFile || currentAttachedFile.name !== file.name) {
+        return;
+      }
+
+      currentAttachedFile.fileKey = uploadRes.fileKey;
+      currentAttachedFile.fileUrl = uploadRes.fileUrl;
+      currentAttachedFile.provider = uploadRes.provider;
+
+      if (progressLabel) progressLabel.textContent = '✅ Subida completada';
+      if (uploadBadge) {
+        uploadBadge.style.display = 'inline-block';
+        uploadBadge.textContent = uploadRes.provider === 'cloudflare-r2' ? '☁️ R2 Activo' : '💾 Local';
+        uploadBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        uploadBadge.style.color = '#10b981';
+      }
+      setTimeout(() => {
+        if (progressWrap) progressWrap.style.display = 'none';
+      }, 1500);
+    } catch (uploadErr) {
+      if (!currentAttachedFile || currentAttachedFile.name !== file.name) {
+        return;
+      }
+      console.warn('[Storage] Error al subir archivo a R2:', uploadErr);
+      if (errorMsgEl) {
+        errorMsgEl.textContent = `Aviso: El archivo se adjuntó localmente (${uploadErr.message}). Podrás reenviarlo por WhatsApp.`;
+        errorMsgEl.style.display = 'block';
+      }
+      if (progressWrap) progressWrap.style.display = 'none';
+    }
   }
 
   if (dropzone && fileInput) {
@@ -571,6 +625,9 @@ export function initQuoter() {
         cuttingPriceQ: calculated.cuttingPriceQ,
         totalPriceQ: calculated.totalPriceQ,
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
+        fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
+        fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
       });
     });
   }

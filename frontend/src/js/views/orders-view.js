@@ -829,7 +829,14 @@ export const ordersView = {
                     <td style="font-weight: 800; font-family: monospace;">${it.qty} pcs</td>
                     <td>${it.stickersPerRow} / fila (${it.rows} filas)</td>
                     <td style="font-family: monospace; font-weight: 700;">${it.actualLinearMeters.toFixed(2)}m</td>
-                    <td style="font-size: 0.8rem; color: #475569;">${it.fileInfo ? it.fileInfo.name : 'Archivo RIP directo'}</td>
+                    <td style="font-size: 0.8rem; color: #475569;">
+    ${(it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl) ? `
+      <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; background: rgba(2, 132, 199, 0.1); color: #0284c7; font-weight: 600; text-decoration: none;">
+        <span>⬇️</span>
+        <span>${it.fileInfo?.name || it.fileName || order.fileName || 'Descargar Arte R2'}</span>
+      </a>
+    ` : (it.fileInfo ? it.fileInfo.name : 'Archivo RIP directo')}
+  </td>
                   </tr>
                 `).join('')}
               </tbody>

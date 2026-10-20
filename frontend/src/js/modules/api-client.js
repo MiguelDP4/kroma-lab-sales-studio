@@ -319,6 +319,34 @@ export class ApiClient {
       });
     },
   };
+  // --- Almacenamiento y Subida de Archivos (Cloudflare R2 / Fallback Local) ---
+  storage = {
+    getStatus: async () => {
+      return this._request('/storage/status');
+    },
+    getPresignedUrl: async (payload) => {
+      return this._request('/storage/presigned-url', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    confirmUpload: async (payload) => {
+      return this._request('/storage/confirm-upload', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    getDownloadUrl: async (fileKey) => {
+      const qs = new URLSearchParams({ fileKey });
+      return this._request(`/storage/download-url?${qs.toString()}`);
+    },
+    deleteAsset: async (fileKey) => {
+      return this._request(`/storage/${encodeURIComponent(fileKey)}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
 }
 
 export const apiClient = new ApiClient();

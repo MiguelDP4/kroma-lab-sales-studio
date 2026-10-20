@@ -219,4 +219,19 @@ describe('ApiClient — Cliente HTTP Frontend', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(7);
   });
+  it('storage gestiona getStatus, getPresignedUrl, confirmUpload, getDownloadUrl y deleteAsset', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    await client.storage.getStatus();
+    await client.storage.getPresignedUrl({ fileName: 'logo.png', fileType: 'image/png', fileSizeBytes: 1024 });
+    await client.storage.confirmUpload({ fileKey: 'assets/quotes/1.png', fileUrl: 'https://pub-r2.dev/1.png', fileName: '1.png', fileSizeBytes: 1024 });
+    await client.storage.getDownloadUrl('assets/orders/1.png');
+    await client.storage.deleteAsset('assets/quotes/1.png');
+
+    expect(global.fetch).toHaveBeenCalledTimes(5);
+  });
+
 });
