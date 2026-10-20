@@ -343,6 +343,7 @@ export const dispatchView = {
   },
 
   onMount: () => {
+    dispatchStore.syncWithApi().catch(() => {});
     // Referencias al DOM
     const searchInput = document.getElementById('dispatchSearchInput');
     const statusFilter = document.getElementById('dispatchStatusFilter');

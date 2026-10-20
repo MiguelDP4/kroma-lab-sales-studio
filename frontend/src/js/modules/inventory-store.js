@@ -1,3 +1,4 @@
+import { apiClient } from './api-client.js';
 /**
  * Almacén Reactivo de Inventario de Insumos de Taller UV DTF (Kroma Lab).
  * Administra existencias de Film A, Film B, Tintas UV (CMYK, Blanco, Barniz),
@@ -237,6 +238,40 @@ class InventoryStore {
     return new Set(['KL-00039']);
   }
 
+
+  async syncWithApi() {
+    try {
+      if (typeof apiClient !== 'undefined' && apiClient.inventory) {
+        const res = await apiClient.inventory.list();
+        if (res && res.success && Array.isArray(res.items)) {
+          if (res.items.length > 0) {
+            res.items.forEach(backendItem => {
+              const codeLower = (backendItem.code || '').toLowerCase();
+              const local = this.items.find(i => 
+                i.id.toLowerCase() === codeLower || 
+                i.backendId === backendItem.id ||
+                codeLower.includes(i.id.toLowerCase()) ||
+                i.id.toLowerCase().includes(codeLower.replace(/_/g, ''))
+              );
+              if (local) {
+                local.backendId = backendItem.id;
+                local.currentStock = Number(backendItem.currentStock);
+                local.costPerUnitQ = Number(backendItem.unitCostQ);
+                local.minThreshold = Number(backendItem.minStockThreshold);
+              }
+            });
+            this._save();
+            this._notify();
+          }
+          return this.getItems();
+        }
+      }
+    } catch (err) {
+      console.warn('[InventoryStore] Sincronización API no disponible:', err.message);
+    }
+    return this.getItems();
+  }
+
   _save() {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
@@ -338,6 +373,17 @@ class InventoryStore {
 
     this.kardex.unshift(movement);
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.inventory && item.backendId) {
+      apiClient.inventory.recordRestock({
+        itemId: item.backendId,
+        quantity: qty,
+        unitCostQ: item.costPerUnitQ,
+        reference: invoiceNumber || supplier || 'S/N',
+        notes: notes || 'Reabastecimiento de insumo en taller',
+      }).catch(() => {});
+    }
+
     return movement;
   }
 
@@ -378,6 +424,16 @@ class InventoryStore {
 
     this.kardex.unshift(movement);
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.inventory && item.backendId) {
+      apiClient.inventory.adjustStock({
+        itemId: item.backendId,
+        newStock: stock,
+        reason: reason || 'Conteo físico de taller',
+        notes: notes || undefined,
+      }).catch(() => {});
+    }
+
     return movement;
   }
 

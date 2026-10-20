@@ -5,6 +5,7 @@
  */
 
 import { ordersStore, PAYMENT_STATUS } from './orders-store.js';
+import { apiClient } from './api-client.js';
 
 export const STORAGE_KEY_PAYMENTS = 'kromalab_payments';
 
@@ -133,6 +134,46 @@ class ReceivablesStore {
       }
     }
     return JSON.parse(JSON.stringify(INITIAL_SEED_PAYMENTS));
+  }
+
+
+  _mapBackendPayment(p) {
+    return {
+      id: p.paymentCode || p.id,
+      backendId: p.id,
+      timestamp: p.createdAt,
+      orderId: p.order?.code || p.orderId,
+      clientId: null,
+      clientName: p.customerName || p.order?.customerName || 'Cliente B2B',
+      clientPhone: p.order?.customerPhone || '',
+      amountQ: Number(p.amountPaidQ),
+      method: p.method || 'TRANSFER',
+      reference: p.bankReference || p.reference || 'Sin referencia',
+      notes: p.notes || '',
+      recordedBy: p.registeredBy?.name || 'Operador de Taller',
+    };
+  }
+
+  async syncWithApi() {
+    try {
+      if (typeof apiClient !== 'undefined' && apiClient.receivables) {
+        const res = await apiClient.receivables.listPayments();
+        if (res && res.success && Array.isArray(res.payments)) {
+          if (res.payments.length > 0) {
+            const apiPayments = res.payments.map(p => this._mapBackendPayment(p));
+            const apiIds = new Set(apiPayments.map(p => p.id));
+            const localOnly = this.payments.filter(p => !apiIds.has(p.id) && !p.backendId);
+            this.payments = [...apiPayments, ...localOnly];
+            this._savePayments();
+            this._notify();
+          }
+          return this.payments;
+        }
+      }
+    } catch (err) {
+      console.warn('[ReceivablesStore] Sincronización API no disponible:', err.message);
+    }
+    return this.payments;
   }
 
   _savePayments() {
@@ -300,6 +341,23 @@ class ReceivablesStore {
 
     this._notify();
 
+    if (typeof apiClient !== 'undefined' && apiClient.receivables) {
+      const targetOrderId = order.backendId || order.id;
+      apiClient.receivables.recordPayment({
+        orderId: targetOrderId,
+        amountPaidQ: parsedAmount,
+        method: newPayment.method === 'CHEQUE' ? 'CHEQUE' : (newPayment.method || 'TRANSFER'),
+        bankReference: newPayment.reference,
+        notes: newPayment.notes,
+      }).then(res => {
+        if (res && res.payment) {
+          newPayment.backendId = res.payment.id;
+          if (res.payment.paymentCode) newPayment.id = res.payment.paymentCode;
+          this._savePayments();
+        }
+      }).catch(() => {});
+    }
+
     return {
       payment: newPayment,
       detail: updatedDetail,
@@ -320,6 +378,11 @@ class ReceivablesStore {
     }
 
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.receivables && removed.backendId) {
+      apiClient.receivables.voidPayment(removed.backendId).catch(() => {});
+    }
+
     return true;
   }
 
