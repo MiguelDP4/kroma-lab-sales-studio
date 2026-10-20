@@ -69,6 +69,11 @@ export const PERMISSIONS = {
     label: 'Configuración de Tarifas',
     desc: 'Modificar escalas de precios por volumen por metro lineal y costos unitarios de despiece/corte.',
   },
+  VIEW_PROFITABILITY_ANALYSIS: {
+    code: 'VIEW_PROFITABILITY_ANALYSIS',
+    label: 'Costos y Rentabilidad Unitaria',
+    desc: 'Simular costos de consumibles, calcular margen neto y configurar precios de compra de insumos.',
+  },
 };
 
 export const ROLE_PERMISSIONS = {
@@ -85,9 +90,11 @@ export const ROLE_PERMISSIONS = {
     'MANAGE_USERS',
     'MANAGE_ROLES_PERMS',
     'CONFIG_PRICING_TIERS',
+    'VIEW_PROFITABILITY_ANALYSIS',
     'VIEW_COMMERCIAL_REPORTS',
   ],
   EMPLOYEE: [
+    'VIEW_PROFITABILITY_ANALYSIS',
     'VIEW_COMMERCIAL_REPORTS',
     'PUBLIC_ACCESS',
     'SUBMIT_LEAD',

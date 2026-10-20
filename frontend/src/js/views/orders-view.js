@@ -8,6 +8,7 @@ import { store } from '../store.js';
 import { ordersStore, PAYMENT_STATUS, PAYMENT_STATUS_LABELS, PRODUCTION_STATUS_LABELS } from '../modules/orders-store.js';
 import { ORDER_STATUS, BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
+import { calculateOrderProfitability } from '../modules/profitability-engine.js';
 
 export const ordersView = {
   path: '/pedidos',
@@ -717,6 +718,25 @@ export const ordersView = {
               <span>Q${order.metrics.grandTotalQ.toFixed(2)}</span>
             </div>
           </div>
+
+          ${isStaff ? (() => {
+            const prof = calculateOrderProfitability(order);
+            return `
+              <div style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 4px; font-size: 0.82rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                  <strong style="color: #10b981;">Rentabilidad Staff Audley:</strong>
+                  <span class="badge" style="font-size: 0.72rem; background: ${prof.profitability.badgeColor}22; color: ${prof.profitability.badgeColor}; border-color: ${prof.profitability.badgeColor};">
+                    ${prof.profitability.profitMarginPercent.toFixed(1)}% Margen
+                  </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); color: var(--text-secondary); flex-wrap: wrap; gap: 0.4rem;">
+                  <span>Costo Prod: Q${prof.costs.totalProductionCostQ.toFixed(2)}</span>
+                  <span>Utilidad Neta: <strong style="color: #10b981;">Q${prof.profitability.netProfitQ.toFixed(2)}</strong></span>
+                  <span>Q${prof.profitability.profitPerMeterQ.toFixed(2)}/m</span>
+                </div>
+              </div>
+            `;
+          })() : ''}
 
           ${order.workshopNotes ? `
             <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(28, 114, 147, 0.1); border-left: 3px solid var(--cerulean); border-radius: 4px; font-size: 0.88rem;">

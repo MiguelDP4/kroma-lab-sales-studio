@@ -5,6 +5,7 @@ import { clientsView } from '../src/js/views/clients-view.js';
 import { usersView } from '../src/js/views/users-view.js';
 import { reportsView } from '../src/js/views/reports-view.js';
 import { quoterView } from '../src/js/views/quoter-view.js';
+import { profitabilityView } from '../src/js/views/profitability-view.js';
 import { store } from '../src/js/store.js';
 
 describe('Vistas Modulares SPA', () => {
@@ -76,6 +77,24 @@ describe('Vistas Modulares SPA', () => {
       expect(html).toContain('btnExportOrdersCSV');
       expect(html).toContain('btnExportClientsCSV');
       expect(html).toContain('btnExportRollCSV');
+    });
+  });
+
+  describe('profitabilityView', () => {
+    it('renderiza la interfaz de costos industriales y rentabilidad unitaria', () => {
+      const html = profitabilityView.render();
+      expect(html).toContain('Costos y Rentabilidad Unitaria');
+      expect(html).toContain('Simulador de Costo y Margen por Tiraje');
+      expect(html).toContain('btnOpenCostsConfigModal');
+      expect(html).toContain('costsConfigModal');
+    });
+
+    it('ejecuta onMount y retorna una función de limpieza (teardown)', () => {
+      document.body.innerHTML = profitabilityView.render();
+      expect(typeof profitabilityView.onMount).toBe('function');
+      const cleanup = profitabilityView.onMount();
+      expect(typeof cleanup).toBe('function');
+      cleanup();
     });
   });
 

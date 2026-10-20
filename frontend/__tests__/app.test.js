@@ -49,8 +49,10 @@ describe('App — Inicialización y DOM', () => {
 
       expect(tag.style.display).toBe('inline-block');
       expect(nav.innerHTML).toContain('Cola Audley');
+      expect(nav.innerHTML).toContain('Rentabilidad');
       expect(nav.innerHTML).toContain('Usuarios');
       expect(nav.innerHTML).toContain('Reportes');
+      expect(nav.innerHTML).toContain('Rentabilidad');
     });
 
     it('muestra "Sales Studio" y enlaces de producción cuando el rol es EMPLOYEE', () => {
@@ -60,6 +62,7 @@ describe('App — Inicialización y DOM', () => {
 
       expect(tag.style.display).toBe('inline-block');
       expect(nav.innerHTML).toContain('Cola Audley');
+      expect(nav.innerHTML).toContain('Rentabilidad');
       expect(nav.innerHTML).not.toContain('Usuarios');
     });
 
@@ -93,6 +96,7 @@ describe('App — Inicialización y DOM', () => {
       const nav = document.getElementById('navRoleLinks');
       expect(nav.innerHTML).toContain('Usuarios');
       expect(nav.innerHTML).toContain('Reportes');
+      expect(nav.innerHTML).toContain('Rentabilidad');
 
       store.clearUser();
       expect(tag.style.display).toBe('none');
