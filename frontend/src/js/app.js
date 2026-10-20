@@ -19,6 +19,7 @@ import { clientsView } from './views/clients-view.js';
 import { usersView } from './views/users-view.js';
 import { reportsView } from './views/reports-view.js';
 import { profitabilityView } from './views/profitability-view.js';
+import { inventoryView } from './views/inventory-view.js';
 
 export const routes = [
   quoterView,
@@ -28,6 +29,7 @@ export const routes = [
   clientsView,
   reportsView,
   profitabilityView,
+  inventoryView,
   usersView,
 ];
 
@@ -126,6 +128,7 @@ export function syncNavbarRole(role) {
         <a href="/clientes" class="nav-link" data-link>Clientes</a>
         <a href="/reportes" class="nav-link" data-link>Reportes</a>
         <a href="/rentabilidad" class="nav-link" data-link>Rentabilidad</a>
+        <a href="/inventario" class="nav-link" data-link>Inventario</a>
         <a href="/" class="nav-link" data-link>Cotizador</a>
         ${role === 'ADMIN' ? '<a href="/usuarios" class="nav-link" data-link>Usuarios</a>' : ''}
       `;
