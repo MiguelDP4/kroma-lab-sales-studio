@@ -17,6 +17,9 @@ export const INITIAL_SEED_USERS = [
     role: USER_ROLES.ADMIN,
     department: 'Dirección General',
     status: USER_STATUS.ACTIVE.id,
+    company: 'Kroma Lab / Arte Modelo Dubois',
+    nit: '4829102-3',
+    address: 'Colonia San José el Placer, Villa Nueva',
     createdAt: '2026-01-15T08:00:00.000Z',
     updatedAt: '2026-01-15T08:00:00.000Z',
     lastLogin: '2026-10-19T14:30:00.000Z',
@@ -56,6 +59,9 @@ export const INITIAL_SEED_USERS = [
     role: USER_ROLES.CUSTOMER,
     department: 'Cliente B2B',
     status: USER_STATUS.ACTIVE.id,
+    company: 'Café San Cristóbal',
+    nit: '7829102-1',
+    address: '12 Calle 4-55 Zona 10, Edificio Reforma Plaza, Of. 302',
     createdAt: '2026-03-01T14:30:00.000Z',
     updatedAt: '2026-03-01T14:30:00.000Z',
     lastLogin: '2026-10-17T11:20:00.000Z',
@@ -141,6 +147,9 @@ class UsersStore {
     const role = userData?.role || USER_ROLES.EMPLOYEE;
     const phone = userData?.phone?.trim() || '';
     const department = userData?.department?.trim() || 'Operador Audley & Taller';
+    const company = userData?.company?.trim() || '';
+    const nit = userData?.nit?.trim() || '';
+    const address = userData?.address?.trim() || '';
     const status = userData?.status || USER_STATUS.ACTIVE.id;
     const notes = userData?.notes?.trim() || '';
 
@@ -171,6 +180,9 @@ class UsersStore {
       phone,
       role,
       department,
+      company,
+      nit,
+      address,
       status: status === USER_STATUS.INACTIVE.id ? USER_STATUS.INACTIVE.id : USER_STATUS.ACTIVE.id,
       notes,
       createdAt: now,
@@ -229,6 +241,9 @@ class UsersStore {
     if (updates.email) updatedUser.email = updates.email.trim().toLowerCase();
     if (updates.phone) updatedUser.phone = updates.phone.trim();
     if (updates.department) updatedUser.department = updates.department.trim();
+    if (updates.company !== undefined) updatedUser.company = updates.company.trim();
+    if (updates.nit !== undefined) updatedUser.nit = updates.nit.trim();
+    if (updates.address !== undefined) updatedUser.address = updates.address.trim();
     if (updates.notes !== undefined) updatedUser.notes = updates.notes.trim();
 
     this.users[index] = updatedUser;
