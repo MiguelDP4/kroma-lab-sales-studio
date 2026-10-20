@@ -346,7 +346,6 @@ describe('App — Inicialización y DOM', () => {
             <span id="userChipAvatar">👤</span>
             <span id="userChipName">Admin</span>
           </div>
-          <button id="settingsBtn">⚙️</button>
           <button id="themeToggleBtn"><span id="themeToggleIcon">☀️</span></button>
         </header>
 
@@ -361,7 +360,6 @@ describe('App — Inicialización y DOM', () => {
           </div>
         </aside>
 
-        <div id="settingsModalContainer"></div>
         <main id="app"></main>
       `;
       initApp();
@@ -423,35 +421,41 @@ describe('App — Inicialización y DOM', () => {
       expect(sidebar.classList.contains('is-open')).toBe(false);
     });
 
-    it('abre el modal de configuración de taller y lo cierra mediante botón o backdrop', () => {
-      const settingsBtn = document.getElementById('settingsBtn');
-      const container = document.getElementById('settingsModalContainer');
+    it('cierra el sidebar drawer automáticamente al hacer clic en un enlace de navegación', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
+      const navLinks = document.getElementById('navRoleLinks');
 
-      settingsBtn.click();
-      expect(container.innerHTML).toContain('Configuración de Taller UV DTF');
-      expect(container.innerHTML).toContain('Audley UV DTF Industrial (30 cm)');
-      expect(container.innerHTML).toContain('28.00 cm');
+      navLinks.innerHTML = '<a href="/cotizador" class="nav-link" data-link>Cotizador</a>';
+      const link = navLinks.querySelector('a');
 
-      const dismissBtn = document.getElementById('btnDismissSettings');
-      dismissBtn.click();
-      expect(container.innerHTML).toBe('');
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
 
-      // Re-abrir y cerrar con botón ✕
-      settingsBtn.click();
-      const closeBtn = document.getElementById('closeSettingsModalBtn');
-      closeBtn.click();
-      expect(container.innerHTML).toBe('');
+      link.click();
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+    });
 
-      // Re-abrir y cerrar con backdrop
-      settingsBtn.click();
-      const backdrop = document.getElementById('settingsModalBackdrop');
-      backdrop.click();
-      expect(container.innerHTML).toBe('');
+    it('cierra el sidebar drawer al hacer clic fuera del sidebar y del toggle', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
 
-      // Re-abrir y cerrar con tecla Escape
-      settingsBtn.click();
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      expect(container.innerHTML).toBe('');
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
+
+      document.getElementById('app').click();
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+    });
+
+    it('no cierra el sidebar drawer si se hace clic dentro del sidebar en un área sin enlace', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
+
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
+
+      sidebar.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
     });
 
     it('actualiza el chip de perfil y tarjeta del sidebar al cambiar de rol', () => {

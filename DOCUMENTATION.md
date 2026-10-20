@@ -459,21 +459,24 @@ kroma-lab-sales-studio/
     * Configurada con posicionamiento fijo (`position: fixed; top: 0; left: 0; right: 0; z-index: 950;`), permaneciendo permanentemente visible durante el scroll vertical en cualquier vista.
     * El cuerpo de la página incluye compensación automática (`padding-top: 70px;` en escritorio, `64px` en móviles) evitando solapamientos de contenido.
     * Integra efecto de cristal esmerilado translúcido (`backdrop-filter: blur(16px)` con `--bg-surface-glass`) permitiendo ver el paso sutil de los elementos subyacentes.
-    * Reservada exclusivamente para acciones globales prioritarias:
+    * Reservada exclusivamente para acciones globales prioritarias (ultra limpia y minimalista):
       1. Botón menú hamburguesa 44×44px (`#mobileNavToggle`).
       2. Logotipo Kroma Lab SVG con tag dinámico `Sales Studio` (visible en roles internos).
       3. Botón de Carrito con indicador dinámico de ítems (`#cartToggleBtn`).
       4. Chip de Perfil de Usuario (`#userProfileChip`) adaptable (en pantallas móviles oculta el texto y mantiene el avatar circular ergonómico).
-      5. Botón de Parámetros de Taller (`#settingsBtn` ⚙️).
-      6. Interruptor de Tema Visual (`#themeToggleBtn` ☀️ / 🌙).
-  * **Modal de Parámetros y Configuración de Taller (`#settingsModalContainer`):**
-    * Desplegado interactivamente al presionar el botón ⚙️ del topbar con jerarquía de capas optimizada (`z-index: 1060` para la tarjeta frente a `1050` del backdrop), garantizando lectura 100% nítida sin desenfoques indeseados sobre el texto.
-    * Incorpora bloqueo de scroll en fondo (`overflow: hidden` en `body`) y soporte de cierre mediante botón `✕`, botón "Entendido", clic en telón o pulsación de la tecla `Escape`.
-    * Expone de forma clara y accesible las especificaciones industriales activas:
-      * Equipo: Audley UV DTF Industrial (30 cm bobina, 28 cm ancho útil imprimible).
-      * Tecnología: Cabezales duales Epson i3200 con tintas UV CMYK + White + Varnish.
-      * Moneda y Tarifas: Quetzales (Q / GTQ) con desglose de mayoreo escalonado.
-      * Canales Bancarios Oficiales: Banco Industrial, BAC Credomatic y Banrural con números de cuenta y enlaces de copia rápida.
+      5. Interruptor de Tema Visual (`#themeToggleBtn` ☀️ / 🌙).
+  * **Especificación y Roadmap Técnico para Módulos de Ajustes y Perfil:**
+    * **1. Configuración de Cuenta de Usuario (vinculado a `#userProfileChip`):**
+      * Al hacer clic en el chip de usuario (que muestra el rol activo: Administrador, Operador Taller, Cliente B2B, Visitante), se desplegará el panel interactivo de autogestión de perfil.
+      * Permitirá a cada usuario consultar y actualizar su información personal: Nombre completo, número de WhatsApp para notificaciones de taller, correo electrónico de acceso, empresa/razón social, NIT de facturación y cambio seguro de contraseña.
+    * **2. Botón de Configuración de Taller (⚙️) — Roles STAFF (`ADMIN` y `EMPLOYEE`):**
+      * Retirado temporalmente del topbar para mantener la barra superior limpia mientras se concluye la maqueta frontend sin backend.
+      * Se integrará formalmente como un módulo de control exclusivo para `ADMIN` y `EMPLOYEE` (oculto estrictamente para `CUSTOMER` y `VISITOR`).
+      * Permitirá la gestión operativa en vivo de:
+        * Escalas de tarifas de impresión UV DTF por metro lineal (actualización de precios preferenciales de mayoreo).
+        * Cuentas bancarias de recepción de fondos del taller (Banco Industrial, BAC Credomatic, Banrural).
+        * Número oficial de WhatsApp de despacho para recepción de pedidos y comprobantes.
+        * Parámetros de taller: ancho de bobina útil (28 cm), velocidad de impresión y alertas de mantenimiento preventivo de cabezales.
   * **Tablero Kanban con Desplazamiento Táctil Asistido (`scroll-snap`):**
     * En pantallas móviles y tablets (`< 900px`), las 4 columnas de producción no se comprimen ni se apilan verticalmente de forma infinita: se transforman en un contenedor de deslizamiento horizontal con *scroll-snap* (`scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;`), permitiendo al operario en taller deslizar cómodamente entre estaciones de trabajo con una sola mano.
   * **Tablas Adaptativas con Indicador Visual (`.mobile-scroll-hint`):**
