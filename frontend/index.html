@@ -12,13 +12,19 @@
 </head>
 <body>
   <!-- ==========================================================================
-       BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR CON CONTROL RBAC)
+       BARRA DE NAVEGACIÓN SUPERIOR (TOPBAR DESPEJADA CON ACCIONES GLOBALES)
        ========================================================================== -->
   <header class="navbar">
     <div class="container navbar-container">
       
-      <!-- Logo Oficial Vectorial Kroma Lab -->
-      <a href="/" class="brand-logo" id="mainBrandLogo" aria-label="Kroma Lab" data-link>
+      <!-- Lado Izquierdo: Botón Hamburguesa + Logo Oficial Vectorial Kroma Lab -->
+      <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <!-- Botón para alternar el Menú Lateral (Sidebar Drawer) -->
+        <button id="mobileNavToggle" class="sidebar-toggle-btn" aria-label="Abrir menú de navegación" aria-expanded="false" title="Menú de Navegación">
+          <span id="mobileNavIcon">☰</span>
+        </button>
+
+        <a href="/" class="brand-logo" id="mainBrandLogo" aria-label="Kroma Lab" data-link>
         <div class="logo-svg-wrap">
           <svg viewBox="95 85 810 705" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -114,31 +120,62 @@
           <span id="salesStudioTag" class="brand-tag" style="display: none;">Sales Studio</span>
         </div>
       </a>
+      </div>
 
-      <!-- Menú y Acciones -->
+      <!-- Lado Derecho: Acciones Globales del Topbar -->
       <div class="navbar-actions-group">
-        <nav id="navRoleLinks" class="nav-role-links">
-          <!-- Se inyecta dinámicamente según el rol en app.js -->
-        </nav>
-
         <!-- Botón de Carrito de Compras -->
-        <button id="cartToggleBtn" class="cart-toggle-btn" aria-label="Ver Carrito de Compras">
+        <button id="cartToggleBtn" class="cart-toggle-btn" aria-label="Ver Carrito de Compras" title="Carrito de Compras">
           <span style="font-size: 1.2rem;">🛒</span>
           <span id="cartCountBadge" class="cart-count-badge" style="display: none;">0</span>
         </button>
 
-        <!-- Botón Switch Modo Claro / Oscuro -->
-        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Cambiar tema">
-          <span id="themeToggleIcon">☀️</span>
-        </button>
+        <!-- Chip de Perfil de Usuario -->
+        <div id="userProfileChip" class="user-profile-chip" title="Perfil y Rol Activo">
+          <span class="user-chip-avatar" id="userChipAvatar">👤</span>
+          <span class="user-chip-name" id="userChipName">Admin</span>
+        </div>
 
-        <!-- Botón Hamburguesa Móvil -->
-        <button id="mobileNavToggle" class="mobile-nav-toggle" aria-label="Abrir menú de navegación" aria-expanded="false">
-          <span id="mobileNavIcon">☰</span>
+        <!-- Botón Switch Modo Claro / Oscuro -->
+        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Cambiar tema" title="Modo Claro / Oscuro">
+          <span id="themeToggleIcon">☀️</span>
         </button>
       </div>
     </div>
   </header>
+
+  <!-- ==========================================================================
+       SIDEBAR DRAWER: MENÚ LATERAL COLAPSABLE CATEGORIZADO
+       ========================================================================== -->
+  <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+  <aside id="appSidebar" class="app-sidebar" aria-label="Navegación Principal" aria-hidden="true">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-title">KROMA <strong>LAB</strong></span>
+        <span class="sidebar-brand-badge">Sales Studio UV DTF</span>
+      </div>
+      <button id="sidebarCloseBtn" class="sidebar-close-btn" aria-label="Cerrar menú lateral" title="Cerrar menú">
+        ✕
+      </button>
+    </div>
+
+    <!-- Contenedor Reactivo de Enlaces por Rol (#navRoleLinks) -->
+    <nav id="navRoleLinks" class="nav-role-links">
+      <!-- Se inyecta dinámicamente según el rol en app.js -->
+    </nav>
+
+    <!-- Footer del Sidebar con información de usuario -->
+    <div class="sidebar-footer">
+      <div class="sidebar-user-card" id="sidebarUserCard">
+        <div class="sidebar-user-avatar" id="sidebarUserAvatar">M</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebarUserName">Miguel Dubois</div>
+          <div class="sidebar-user-role" id="sidebarUserRole">ADMINISTRADOR</div>
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <!-- Contenedores para Modales y Drawers Globales -->
   <div id="cartDrawerContainer"></div>
