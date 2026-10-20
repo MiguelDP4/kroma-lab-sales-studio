@@ -52,6 +52,7 @@ describe('App — Inicialización y DOM', () => {
       expect(nav.innerHTML).toContain('Rentabilidad');
       expect(nav.innerHTML).toContain('Usuarios');
       expect(nav.innerHTML).toContain('Inventario');
+      expect(nav.innerHTML).toContain('Cobranza');
       expect(nav.innerHTML).toContain('Reportes');
       expect(nav.innerHTML).toContain('Rentabilidad');
     });
@@ -274,7 +275,7 @@ describe('App — Inicialización y DOM', () => {
       });
       fileInput.dispatchEvent(new Event('change'));
 
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise(r => setTimeout(r, 200));
 
       // Verificar que se muestre el estado de archivo seleccionado
       expect(emptyState.style.display).toBe('none');
@@ -292,7 +293,7 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise(r => setTimeout(r, 200));
       expect(selectedState.style.display).toBe('flex');
 
       // Simular selección de archivo inválido (.exe)

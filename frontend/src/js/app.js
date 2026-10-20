@@ -20,6 +20,7 @@ import { usersView } from './views/users-view.js';
 import { reportsView } from './views/reports-view.js';
 import { profitabilityView } from './views/profitability-view.js';
 import { inventoryView } from './views/inventory-view.js';
+import { receivablesView } from './views/receivables-view.js';
 
 export const routes = [
   quoterView,
@@ -30,6 +31,8 @@ export const routes = [
   reportsView,
   profitabilityView,
   inventoryView,
+  receivablesView,
+  { ...receivablesView, path: '/cuentas-por-cobrar' },
   usersView,
 ];
 
@@ -126,6 +129,7 @@ export function syncNavbarRole(role) {
         <a href="/produccion" class="nav-link" data-link>Cola Audley</a>
         <a href="/pedidos" class="nav-link" data-link>Pedidos</a>
         <a href="/clientes" class="nav-link" data-link>Clientes</a>
+        <a href="/cobranza" class="nav-link" data-link>Cobranza</a>
         <a href="/reportes" class="nav-link" data-link>Reportes</a>
         <a href="/rentabilidad" class="nav-link" data-link>Rentabilidad</a>
         <a href="/inventario" class="nav-link" data-link>Inventario</a>

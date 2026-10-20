@@ -190,6 +190,46 @@ const INITIAL_SEED_ORDERS = [
     paymentMethod: 'TRANSFER',
     workshopNotes: 'Entregado y recibido a conformidad.',
   },
+  {
+    id: 'KL-00038',
+    createdAt: new Date(Date.now() - 3600000 * 24 * 18).toISOString(),
+    customer: {
+      clientId: 'CLI-003',
+      name: 'Daniel Estrada',
+      company: 'Cervecería El Injerto',
+      phone: '+502 5999-8877',
+      nit: '6549871-2',
+      address: 'Km 14.5 Carretera a El Salvador',
+      email: 'ventas@elinjerto.gt',
+    },
+    items: [
+      {
+        title: 'Etiquetas Growlers 10 × 6 cm',
+        widthCm: 10,
+        heightCm: 6,
+        qty: 120,
+        actualLinearMeters: 4.20,
+        stickersPerRow: 2,
+        rows: 60,
+        includeCutting: true,
+        cuttingRateUnit: 0.30,
+        finishType: 'Barniz con Relieve 3D',
+        fileInfo: { name: 'injerto_growlers.pdf', sizeFormatted: '5.2 MB' },
+      }
+    ],
+    metrics: {
+      totalBillableMeters: 4.20,
+      tierRate: 115.0,
+      materialTotalQ: 483.00,
+      cuttingTotalQ: 25.0,
+      grandTotalQ: 508.00,
+      hasCutting: true,
+    },
+    productionStatus: ORDER_STATUS.COMPLETED,
+    paymentStatus: PAYMENT_STATUS.PENDING,
+    paymentMethod: 'TRANSFER',
+    workshopNotes: 'Crédito B2B de 15 días acordado. Saldo vencido pendiente de cobro.',
+  },
 ];
 
 class OrdersStore {
