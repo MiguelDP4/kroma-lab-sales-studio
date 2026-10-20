@@ -8,6 +8,7 @@ import {
   getSuggestedCuttingRate,
   calculatePrintRunCost,
   calculateOrderProfitability,
+  calculateStickerProfitability,
   calculatePortfolioProfitability,
 } from '../src/js/modules/profitability-engine.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
@@ -276,6 +277,80 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       const res = calculateOrderProfitability(mockOrderNoItems);
       expect(res.meters).toBe(2.0);
       expect(res.stickersCount).toBe(50);
+    });
+  });
+
+  describe('calculateStickerProfitability — Simulación por Dimensiones de Sticker y Descuento', () => {
+    it('calcula metros en bobina de 28cm y márgenes a precio de lista oficial', () => {
+      const res = calculateStickerProfitability({
+        widthCm: 5.0,
+        heightCm: 5.0,
+        qty: 100,
+        finishType: 'Barniz con Relieve 3D',
+        includeCutting: false,
+      });
+
+      expect(res.quote.actualLinearMeters).toBeCloseTo(1.06, 2);
+      expect(res.quote.stickersPerRow).toBe(5);
+      expect(res.quote.rows).toBe(20);
+      expect(res.pricingComparison.listPriceTotalQ).toBe(140.0);
+      expect(res.pricingComparison.isDiscountApplied).toBe(false);
+      expect(res.pricingComparison.discountAmountQ).toBe(0);
+      expect(res.pricingComparison.discountAdvice).toContain('Precio de lista oficial');
+      expect(res.netProfitQ).toBeGreaterThan(100.0);
+      expect(res.profitMarginPercent).toBeGreaterThan(70.0);
+    });
+
+    it('evalúa impacto de un descuento seguro (margen superior a 70%)', () => {
+      const res = calculateStickerProfitability({
+        widthCm: 5.0,
+        heightCm: 5.0,
+        qty: 100,
+        includeCutting: true,
+        customSellingPriceQ: 140.0, // Lista: 140 + 30 = 170. Descuento: Q30 (-17.6%)
+      });
+
+      expect(res.pricingComparison.isDiscountApplied).toBe(true);
+      expect(res.pricingComparison.discountAmountQ).toBe(30.0);
+      expect(res.pricingComparison.discountPercent).toBeCloseTo(17.6, 1);
+      expect(res.profitMarginPercent).toBeGreaterThanOrEqual(70.0);
+      expect(res.pricingComparison.discountAdvice).toContain('Descuento seguro');
+    });
+
+    it('evalúa descuento moderado con margen saludable (entre 50% y 70%)', () => {
+      const res = calculateStickerProfitability({
+        widthCm: 5.0,
+        heightCm: 5.0,
+        qty: 100,
+        includeCutting: false,
+        customSellingPriceQ: 75.0, // Costo base ~Q27.4. Utilidad ~Q47.6 (63.4%)
+      });
+
+      expect(res.pricingComparison.isDiscountApplied).toBe(true);
+      expect(res.profitMarginPercent).toBeGreaterThanOrEqual(50.0);
+      expect(res.profitMarginPercent).toBeLessThan(70.0);
+      expect(res.pricingComparison.discountAdvice).toContain('Descuento aceptable');
+    });
+
+    it('emite alerta cuando el descuento reduce el margen a menos del 50%', () => {
+      const res = calculateStickerProfitability({
+        widthCm: 5.0,
+        heightCm: 5.0,
+        qty: 100,
+        includeCutting: false,
+        customSellingPriceQ: 40.0, // Costo base ~Q27.4. Utilidad ~Q12.6 (31.5%)
+      });
+
+      expect(res.pricingComparison.isDiscountApplied).toBe(true);
+      expect(res.profitMarginPercent).toBeLessThan(50.0);
+      expect(res.pricingComparison.discountAdvice).toContain('Alerta: este descuento reduce el margen a menos del 50%');
+    });
+
+    it('maneja ejecución con parámetros por defecto de manera segura', () => {
+      const res = calculateStickerProfitability({});
+      expect(res.quote.qty).toBe(100);
+      expect(res.productionMeters).toBeGreaterThan(0);
+      expect(res.pricingComparison.listPriceTotalQ).toBeGreaterThan(0);
     });
   });
 

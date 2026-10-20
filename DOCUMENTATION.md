@@ -342,12 +342,22 @@ kroma-lab-sales-studio/
     * **Mano de Obra Operativa en Taller:** Q4.00/m (supervisión de impresión y rebobinado).
     * **Desgaste de Navaja y Despiece de Corte Perimetral:** Q0.08 por sticker/pieza cortada individualmente.
     * **Costo Base de Producción por Metro:** ~Q25.83/metro lineal (con barniz 3D) o ~Q23.08/m (mate).
-  * **Simulador de Tirajes en Tiempo Real:**
-    * Controles reactivos: metros lineales (slider táctil y campo numérico sincronizados), cantidad de stickers, selector de acabado (Barniz 3D, Barniz Estándar, Sin Barniz/Mate), y selector de corte perimetral de precisión.
-    * Cálculo automático contra la escala de precios de Kroma Lab (Q140 para 1m, Q115 para 1-5m, Q105 para 5-10m, Q95 para 10-20m, Q85 para 20m+) con opción de sobreescritura manual y botón para restablecer a la escala oficial.
-    * Indicadores Financieros en Vivo: Costo Total de Producción (Q y Q/m), Precio de Venta (Q), Utilidad Neta (Q), Margen (%) y Ganancia Neta por Sticker (Q/pieza).
-    * Barra visual de distribución porcentual (Costo vs Margen) e insignia dinámica de salud de rentabilidad: 🟢 Excelente (>70%), 🟡 Saludable (50-70%) o 🔴 Margen Ajustado (<50%).
-    * Tabla desglosada rubro por rubro con detalle de consumo, costos unitarios de referencia y porcentaje sobre el costo total.
+  * **Doble Modo de Simulación en Tiempo Real (Mobile-First):**
+    * **Modo 1: Calculadora por Medidas de Sticker y Negociador de Descuentos:**
+      * Ingreso de ancho (cm), alto (cm), cantidad de piezas (Uds), tipo de acabado y opción de corte.
+      * Cálculo automático de metros lineales en la bobina Audley de 28 cm útiles (piezas por fila y filas en rollo) mediante `calculateQuote()`.
+      * Muestra el precio de lista oficial de Kroma Lab como referencia de partida.
+      * Campo para ingresar un **Precio Ofrecido / Negociado al Cliente (Q)** para evaluar en tiempo real el nuevo margen de ganancia si se decide otorgar un descuento.
+      * Muestra el descuento aplicado en Quetzales y porcentaje (ej. `Q40.00 (-28.6%)`), la nueva utilidad neta (Q), el nuevo margen (%) y la ganancia neta por sticker (Q/pieza).
+      * Caja de consejo y salud de negociación comercial:
+        * 🟢 **Descuento seguro:** margen resultante $> 70\%$.
+        * 🟡 **Descuento aceptable:** margen resultante entre $50\%$ y $70\%$ (ideal para clientes B2B recurrentes de volumen).
+        * 🔴 **Alerta de margen ajustado:** margen $< 50\%$ (alerta de riesgo que compromete la rentabilidad del taller).
+      * Botón para restablecer instantáneamente al precio de lista oficial.
+      * Tabla técnica desglosada con el costo de Film A, Film B, tintas, operativos y corte para este tiraje exacto.
+    * **Modo 2: Simulador Directo por Metros Lineales de Bobina:**
+      * Controles directos: slider y campo de metros lineales (0.1m a 100m), cantidad de stickers, selector de acabado y corte perimetral.
+      * Proyección automática contra la escala de volumen de Kroma Lab o precio manual, con desglose de costos y barra visual de distribución.
   * **Monitoreo de Meta Estratégica Mensual (Q20,000 netos):**
     * Tarjeta de avance hacia el flujo de caja neto mensual objetivo de Miguel (Q19,000 - Q22,000, con base de Q20,000/mes).
     * Cálculo de metros faltantes necesarios para alcanzar la meta en función del margen promedio del taller.

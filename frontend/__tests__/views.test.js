@@ -84,7 +84,7 @@ describe('Vistas Modulares SPA', () => {
     it('renderiza la interfaz de costos industriales y rentabilidad unitaria', () => {
       const html = profitabilityView.render();
       expect(html).toContain('Costos y Rentabilidad Unitaria');
-      expect(html).toContain('Simulador de Costo y Margen por Tiraje');
+      expect(html).toContain('Calculadora de Tiraje por Medidas y Negociador de Descuentos');
       expect(html).toContain('btnOpenCostsConfigModal');
       expect(html).toContain('costsConfigModal');
     });

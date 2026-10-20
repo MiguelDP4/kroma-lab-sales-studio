@@ -300,4 +300,107 @@ describe('Profitability View — Interfaz de Costos Industriales y Rentabilidad 
     expect(saved.filmARoll100mQ).toBe(600.0);
     expect(saved.monthlyTargetNetProfitQ).toBe(20000.0);
   });
+
+  describe('Modo de Simulación por Dimensiones de Sticker y Negociación de Descuento', () => {
+    it('permite alternar entre pestañas de modo sticker y modo directo', () => {
+      const btnModeSticker = document.getElementById('btnModeSticker');
+      const btnModeDirect = document.getElementById('btnModeDirect');
+      const panelSticker = document.getElementById('panelModeSticker');
+      const panelDirect = document.getElementById('panelModeDirect');
+
+      // Por defecto el modo sticker está visible
+      expect(panelSticker.style.display).not.toBe('none');
+      expect(panelDirect.style.display).toBe('none');
+      expect(btnModeSticker.className).toContain('btn-primary');
+
+      // Alternar a modo directo
+      btnModeDirect.click();
+      expect(panelSticker.style.display).toBe('none');
+      expect(panelDirect.style.display).toBe('block');
+      expect(btnModeDirect.className).toContain('btn-primary');
+      expect(btnModeSticker.className).toContain('btn-secondary');
+
+      // Regresar a modo sticker
+      btnModeSticker.click();
+      expect(panelSticker.style.display).toBe('block');
+      expect(panelDirect.style.display).toBe('none');
+    });
+
+    it('calcula automáticamente los metros lineales a partir del ancho, alto y cantidad', () => {
+      const wInput = document.getElementById('stkWidth');
+      const hInput = document.getElementById('stkHeight');
+      const qInput = document.getElementById('stkQty');
+      const metersText = document.getElementById('stkCalculatedMetersText');
+      const distText = document.getElementById('stkDistributionText');
+      const listDisplay = document.getElementById('stkListPriceDisplay');
+
+      // 10 × 10 cm, 50 piezas
+      wInput.value = '10';
+      wInput.dispatchEvent(new Event('input'));
+      hInput.value = '10';
+      hInput.dispatchEvent(new Event('input'));
+      qInput.value = '50';
+      qInput.dispatchEvent(new Event('input'));
+
+      // Ancho útil 28cm -> 2 stickers por fila (10cm + 0.3cm = 10.3cm * 2 = 20.6cm <= 28.3cm)
+      // 50 piezas / 2 = 25 filas. 25 * 10.3 - 0.3 = 257.2 cm = 2.57 m lineales
+      expect(metersText.textContent).toContain('2.57 m lineales');
+      expect(distText.textContent).toContain('2 por fila • 25 filas en bobina Audley 28 cm');
+      // En escala 1-5m tarifa Q115/m -> 2.57 * 115 = Q295.55
+      expect(listDisplay.textContent).toContain('Lista: Q295.78');
+    });
+
+    it('simula descuento ofrecido y actualiza la utilidad neta, nuevo margen y consejo', () => {
+      const offeredInput = document.getElementById('stkOfferedPrice');
+      const btnResetStk = document.getElementById('btnResetStkPrice');
+      const discountNotice = document.getElementById('stkDiscountNotice');
+      const discountBadge = document.getElementById('stkDiscountBadge');
+      const netProfitEl = document.getElementById('stkResNetProfit');
+      const adviceBox = document.getElementById('stkAdviceBox');
+
+      // Colocar precio con descuento de Q100 (precio lista 5x5 100uds es Q140)
+      offeredInput.value = '100';
+      offeredInput.dispatchEvent(new Event('input'));
+
+      expect(discountNotice.textContent).toContain('Descuento aplicado: Q40.00 (-28.6%)');
+      expect(discountBadge.textContent).toContain('Desc: -28.6%');
+      expect(netProfitEl.textContent).not.toBe('Q0.00');
+      expect(adviceBox.textContent).toContain('Descuento seguro');
+
+      // Probar descuento agresivo que baje del 50%
+      offeredInput.value = '35';
+      offeredInput.dispatchEvent(new Event('input'));
+
+      expect(adviceBox.textContent).toContain('Alerta: este descuento reduce el margen a menos del 50%');
+
+      // Restablecer precio a lista oficial
+      btnResetStk.click();
+      expect(offeredInput.value).toBe('');
+      expect(discountNotice.textContent).toContain('Sin descuento');
+      expect(discountBadge.textContent).toBe('Precio Lista');
+    });
+
+    it('recalcula costos de sticker al cambiar acabado y activar corte perimetral', () => {
+      const finishSelect = document.getElementById('stkFinish');
+      const cutCheckbox = document.getElementById('stkCutting');
+      const costEl = document.getElementById('stkResTotalCost');
+      const breakdown = document.getElementById('stkCostBreakdownTableBody');
+
+      // Sin corte inicialmente
+      expect(breakdown.textContent).not.toContain('Navaja de Corte Perimetral');
+
+      // Activar corte
+      cutCheckbox.checked = true;
+      cutCheckbox.dispatchEvent(new Event('change'));
+
+      expect(breakdown.textContent).toContain('Navaja de Corte Perimetral');
+
+      // Cambiar a acabado mate
+      finishSelect.value = 'Sin Barniz / Mate';
+      finishSelect.dispatchEvent(new Event('change'));
+
+      expect(breakdown.textContent).toContain('0 ml (Sin barniz)');
+      expect(costEl.textContent).not.toBe('Q0.00');
+    });
+  });
 });

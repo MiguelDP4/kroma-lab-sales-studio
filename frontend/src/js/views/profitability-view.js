@@ -1,6 +1,7 @@
 /**
  * Vista de Costos Industriales y Rentabilidad Unitaria UV DTF.
- * Permite simular tirajes en tiempo real, desglosar costos por metro y pieza,
+ * Permite simular tirajes en tiempo real (por dimensiones de sticker con negociación de descuentos
+ * o por metros lineales directos), desglosar costos por metro y pieza,
  * y analizar el margen neto de cada pedido en taller contra la meta de Q20,000/mes.
  */
 
@@ -11,6 +12,7 @@ import {
   saveCostsConfig,
   resetCostsConfig,
   calculatePrintRunCost,
+  calculateStickerProfitability,
   calculatePortfolioProfitability,
 } from '../modules/profitability-engine.js';
 
@@ -57,137 +59,310 @@ export const profitabilityView = {
           <!-- Inyectado dinámicamente por renderMonthlyGoalCard() -->
         </div>
 
-        <!-- SECCIÓN 1: SIMULADOR DE TIRAJE EN VIVO -->
+        <!-- SECCIÓN DE SIMULACIÓN Y NEGOCIACIÓN -->
         <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: clamp(1.2rem, 3vw, 1.75rem); margin-bottom: 2.5rem;">
-          <div style="margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>🧮</span>
-              <span>Simulador de Costo y Margen por Tiraje</span>
-            </h2>
-            <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">
-              Ajusta los metros y piezas para proyectar el costo de producción exacto y tu ganancia neta en Quetzales.
-            </p>
+          
+          <!-- Selector de Modo de Simulación (Mobile-First) -->
+          <div class="tabs-mode-container" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-surface); padding: 0.35rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); flex-wrap: wrap;">
+            <button type="button" id="btnModeSticker" class="btn btn-primary" style="flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.88rem; font-weight: 700;">
+              <span>📐</span>
+              <span>Por Medidas de Sticker y Descuento</span>
+            </button>
+            <button type="button" id="btnModeDirect" class="btn btn-secondary" style="flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.88rem; font-weight: 700;">
+              <span>📏</span>
+              <span>Por Metros Lineales Directos</span>
+            </button>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-            <!-- Parámetros de Entrada -->
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-              <div class="form-group" style="margin: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                  <label class="form-label" for="simMeters" style="margin: 0; font-weight: 700;">Metros Lineales:</label>
-                  <span id="simMetersDisplay" style="font-family: var(--font-mono); font-weight: 800; color: var(--cerulean); font-size: 1.05rem;">
-                    2.00 m
+          <!-- MODO 1: SIMULADOR POR MEDIDAS DE STICKER Y DESCUENTO -->
+          <div id="panelModeSticker">
+            <div style="margin-bottom: 1.25rem;">
+              <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📐</span>
+                <span>Calculadora de Tiraje por Medidas y Negociador de Descuentos</span>
+              </h2>
+              <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">
+                Ingresa el tamaño del sticker y cantidad; calcularemos los metros lineales exactos en bobina de 28cm y el margen neto resultante si decides aplicar un descuento.
+              </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+              <!-- Inputs del Sticker -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="input-row" style="margin: 0; display: flex; gap: 0.75rem;">
+                  <div class="form-group" style="margin: 0; flex: 1;">
+                    <label class="form-label" for="stkWidth" style="font-weight: 700;">Ancho (cm):</label>
+                    <input type="number" id="stkWidth" class="input-control" value="5" min="0.5" max="28" step="0.5" style="min-height: 44px;" required>
+                  </div>
+                  <div class="form-group" style="margin: 0; flex: 1;">
+                    <label class="form-label" for="stkHeight" style="font-weight: 700;">Alto (cm):</label>
+                    <input type="number" id="stkHeight" class="input-control" value="5" min="0.5" max="100" step="0.5" style="min-height: 44px;" required>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" for="stkQty" style="font-weight: 700;">Cantidad de Stickers (Uds):</label>
+                  <input type="number" id="stkQty" class="input-control" value="100" min="1" max="50000" step="1" style="min-height: 44px;" required>
+                </div>
+
+                <!-- Indicador de Metraje Calculado en Bobina Audley -->
+                <div style="background: rgba(28, 114, 147, 0.1); border: 1px solid var(--cerulean); border-radius: var(--radius-md); padding: 0.75rem 1rem;">
+                  <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--cerulean); letter-spacing: 0.05em; margin-bottom: 0.2rem;">
+                    Metraje en Bobina Audley (28 cm útiles)
+                  </div>
+                  <div id="stkCalculatedMetersText" style="font-weight: 800; font-size: 1.15rem; color: var(--text-primary); font-family: var(--font-mono);">
+                    1.06 m lineales
+                  </div>
+                  <div id="stkDistributionText" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                    5 stickers por fila • 20 filas en rollo
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" for="stkFinish" style="font-weight: 700;">Acabado y Barniz:</label>
+                  <select id="stkFinish" class="input-control" style="min-height: 44px;">
+                    <option value="Barniz con Relieve 3D">Barniz con Relieve 3D (Brillo + Textura)</option>
+                    <option value="Barniz Brillante">Barniz Brillante Estándar</option>
+                    <option value="Sin Barniz / Mate">Sin Barniz (Mate UV)</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; cursor: pointer; min-height: 44px;">
+                    <input type="checkbox" id="stkCutting" style="width: 20px; height: 20px;">
+                    <span>✂️ Incluye servicio de corte perimetral de precisión</span>
+                  </label>
+                </div>
+
+                <!-- Simulación de Descuento / Precio Ofrecido -->
+                <div style="background: var(--bg-surface); border: 1px dashed var(--cerulean); border-radius: var(--radius-md); padding: 1rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.25rem;">
+                    <label class="form-label" for="stkOfferedPrice" style="margin: 0; font-weight: 700; color: var(--text-primary);">
+                      Precio Ofrecido al Cliente (Q):
+                    </label>
+                    <span id="stkListPriceDisplay" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
+                      Lista: Q0.00
+                    </span>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="stkOfferedPrice" class="input-control" placeholder="Precio de lista" step="1" style="min-height: 44px;">
+                    <button type="button" id="btnResetStkPrice" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.45rem 0.75rem; white-space: nowrap; min-height: 44px;">
+                      Precio Lista
+                    </button>
+                  </div>
+                  <div id="stkDiscountNotice" style="font-size: 0.8rem; margin-top: 0.4rem; font-weight: 600;">
+                    <!-- Inyectado dinámicamente -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel de Resultados Financieros del Sticker -->
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.8rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em;">
+                      Rentabilidad con Precio Negociado
+                    </span>
+                    <span id="stkDiscountBadge" class="badge" style="font-size: 0.75rem;">Precio Lista</span>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin: 1rem 0;">
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--color-danger);">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Costo Producción</span>
+                      <div id="stkResTotalCost" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #ef4444;">Q0.00</div>
+                      <span id="stkResCostPerMeter" style="font-size: 0.72rem; color: var(--text-muted);">Q0.00 / m</span>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--cerulean);">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Precio Cobrado</span>
+                      <div id="stkResSellingPrice" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: var(--cerulean);">Q0.00</div>
+                      <span id="stkResListCompare" style="font-size: 0.72rem; color: var(--text-muted);">Lista: Q0.00</span>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--color-success);">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Utilidad Neta</span>
+                      <div id="stkResNetProfit" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: var(--color-success);">Q0.00</div>
+                      <span id="stkResMarginPercent" style="font-size: 0.75rem; font-weight: 700; color: var(--color-success);">0% margen</span>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid #8b5cf6;">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Ganancia / Sticker</span>
+                      <div id="stkResProfitPerSticker" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #8b5cf6;">Q0.00</div>
+                      <span id="stkResCostPerSticker" style="font-size: 0.72rem; color: var(--text-muted);">Costo: Q0.00</span>
+                    </div>
+                  </div>
+
+                  <!-- Barra Visual Costo vs Margen -->
+                  <div style="margin: 1.25rem 0 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem;">
+                      <span style="color: #ef4444;">Costo Producción (<span id="stkPctCostBar">0%</span>)</span>
+                      <span style="color: var(--color-success);">Margen Neto (<span id="stkPctMarginBar">0%</span>)</span>
+                    </div>
+                    <div style="width: 100%; height: 12px; background: #e2e8f0; border-radius: var(--radius-full); overflow: hidden; display: flex;">
+                      <div id="stkBarCostFill" style="height: 100%; background: #ef4444; width: 25%; transition: width 0.3s ease;"></div>
+                      <div id="stkBarMarginFill" style="height: 100%; background: #10b981; width: 75%; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Recomendación de Negociación y Salud -->
+                <div>
+                  <div id="stkTierBadgeIndicator" style="margin-top: 0.5rem; text-align: center;"></div>
+                  <div id="stkAdviceBox" style="margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; text-align: center;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla Desglosada del Sticker -->
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
+                Desglose Técnico de Insumos para este Tiraje de Stickers:
+              </h3>
+              <div class="orders-table-container">
+                <table class="orders-table" style="font-size: 0.85rem;">
+                  <thead>
+                    <tr>
+                      <th>Concepto</th>
+                      <th>Consumo Estimado</th>
+                      <th>Costo Unitario Ref.</th>
+                      <th>Total Rubro (Q)</th>
+                      <th>% del Costo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stkCostBreakdownTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODO 2: SIMULADOR DIRECTO POR METROS LINEALES -->
+          <div id="panelModeDirect" style="display: none;">
+            <div style="margin-bottom: 1.25rem;">
+              <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📏</span>
+                <span>Simulador Directo por Metros Lineales de Bobina</span>
+              </h2>
+              <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">
+                Ajusta directamente los metros y piezas para proyectar el costo de producción exacto y tu ganancia neta en Quetzales.
+              </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+              <!-- Parámetros de Entrada Directos -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group" style="margin: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label class="form-label" for="simMeters" style="margin: 0; font-weight: 700;">Metros Lineales:</label>
+                    <span id="simMetersDisplay" style="font-family: var(--font-mono); font-weight: 800; color: var(--cerulean); font-size: 1.05rem;">
+                      2.00 m
+                    </span>
+                  </div>
+                  <input type="range" id="simMetersSlider" min="0.5" max="25" step="0.5" value="2.0" style="width: 100%; margin-bottom: 0.4rem; accent-color: var(--cerulean); cursor: pointer;">
+                  <input type="number" id="simMeters" class="input-control" value="2.0" min="0.1" max="100" step="0.1" style="min-height: 44px;">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" for="simStickers" style="font-weight: 700;">Cantidad de Stickers (Piezas):</label>
+                  <input type="number" id="simStickers" class="input-control" value="100" min="1" max="50000" step="1" style="min-height: 44px;">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" for="simFinish" style="font-weight: 700;">Acabado y Barniz:</label>
+                  <select id="simFinish" class="input-control" style="min-height: 44px;">
+                    <option value="Barniz con Relieve 3D">Barniz con Relieve 3D (Brillo + Textura)</option>
+                    <option value="Barniz Brillante">Barniz Brillante Estándar</option>
+                    <option value="Sin Barniz / Mate">Sin Barniz (Mate UV)</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; cursor: pointer; min-height: 44px;">
+                    <input type="checkbox" id="simCutting" style="width: 20px; height: 20px;">
+                    <span>✂️ Incluye servicio de corte perimetral de precisión</span>
+                  </label>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" for="simCustomPrice" style="font-weight: 700;">Precio de Venta Cobrado (Q):</label>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="simCustomPrice" class="input-control" placeholder="Escala automática" step="0.5" style="min-height: 44px;">
+                    <button type="button" id="btnResetPriceToScale" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.45rem 0.75rem; white-space: nowrap; min-height: 44px;">
+                      Escala Auto
+                    </button>
+                  </div>
+                  <span id="priceTierIndicator" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem; display: block;"></span>
+                </div>
+              </div>
+
+              <!-- Panel de Resultados Financieros Directos -->
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <span style="font-size: 0.8rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em;">
+                    Rentabilidad Proyectada del Tiraje
                   </span>
+                  
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin: 1rem 0;">
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--color-danger);">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Costo Producción</span>
+                      <div id="resTotalCost" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #ef4444;">Q0.00</div>
+                      <span id="resCostPerMeter" style="font-size: 0.72rem; color: var(--text-muted);">Q0.00 / m</span>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--cerulean);">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Precio Venta</span>
+                      <div id="resSellingPrice" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: var(--cerulean);">Q0.00</div>
+                      <span id="resSellingRate" style="font-size: 0.72rem; color: var(--text-muted);">Tarifa base</span>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--color-success);">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Utilidad Neta</span>
+                      <div id="resNetProfit" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: var(--color-success);">Q0.00</div>
+                      <span id="resMarginPercent" style="font-size: 0.75rem; font-weight: 700; color: var(--color-success);">0% margen</span>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid #8b5cf6;">
+                      <span style="font-size: 0.75rem; color: var(--text-secondary);">Ganancia / Sticker</span>
+                      <div id="resProfitPerSticker" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #8b5cf6;">Q0.00</div>
+                      <span id="resCostPerSticker" style="font-size: 0.72rem; color: var(--text-muted);">Costo: Q0.00</span>
+                    </div>
+                  </div>
+
+                  <!-- Barra Visual de Distribución Directa -->
+                  <div style="margin: 1.25rem 0 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem;">
+                      <span style="color: #ef4444;">Costo Producción (<span id="pctCostBar">0%</span>)</span>
+                      <span style="color: var(--color-success);">Margen Neto (<span id="pctMarginBar">0%</span>)</span>
+                    </div>
+                    <div style="width: 100%; height: 12px; background: #e2e8f0; border-radius: var(--radius-full); overflow: hidden; display: flex;">
+                      <div id="barCostFill" style="height: 100%; background: #ef4444; width: 25%; transition: width 0.3s ease;"></div>
+                      <div id="barMarginFill" style="height: 100%; background: #10b981; width: 75%; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
                 </div>
-                <input type="range" id="simMetersSlider" min="0.5" max="25" step="0.5" value="2.0" style="width: 100%; margin-bottom: 0.4rem; accent-color: var(--cerulean); cursor: pointer;">
-                <input type="number" id="simMeters" class="input-control" value="2.0" min="0.1" max="100" step="0.1" style="min-height: 44px;">
-              </div>
 
-              <div class="form-group" style="margin: 0;">
-                <label class="form-label" for="simStickers" style="font-weight: 700;">Cantidad de Stickers (Piezas):</label>
-                <input type="number" id="simStickers" class="input-control" value="100" min="1" max="50000" step="1" style="min-height: 44px;">
-              </div>
-
-              <div class="form-group" style="margin: 0;">
-                <label class="form-label" for="simFinish" style="font-weight: 700;">Acabado y Barniz:</label>
-                <select id="simFinish" class="input-control" style="min-height: 44px;">
-                  <option value="Barniz con Relieve 3D">Barniz con Relieve 3D (Brillo + Textura)</option>
-                  <option value="Barniz Brillante">Barniz Brillante Estándar</option>
-                  <option value="Sin Barniz / Mate">Sin Barniz (Mate UV)</option>
-                </select>
-              </div>
-
-              <div class="form-group" style="margin: 0;">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; cursor: pointer; min-height: 44px;">
-                  <input type="checkbox" id="simCutting" style="width: 20px; height: 20px;">
-                  <span>✂️ Incluye servicio de corte perimetral de precisión</span>
-                </label>
-              </div>
-
-              <div class="form-group" style="margin: 0;">
-                <label class="form-label" for="simCustomPrice" style="font-weight: 700;">Precio de Venta Cobrado (Q):</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                  <input type="number" id="simCustomPrice" class="input-control" placeholder="Escala automática" step="0.5" style="min-height: 44px;">
-                  <button type="button" id="btnResetPriceToScale" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.45rem 0.75rem; white-space: nowrap; min-height: 44px;">
-                    Escala Auto
-                  </button>
-                </div>
-                <span id="priceTierIndicator" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem; display: block;"></span>
+                <div id="tierBadgeIndicator" style="margin-top: 0.5rem; text-align: center;"></div>
               </div>
             </div>
 
-            <!-- Panel de Resultados Financieros en Vivo -->
-            <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                <span style="font-size: 0.8rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em;">
-                  Rentabilidad Proyectada del Tiraje
-                </span>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin: 1rem 0;">
-                  <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--color-danger);">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Costo Producción</span>
-                    <div id="resTotalCost" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #ef4444;">Q0.00</div>
-                    <span id="resCostPerMeter" style="font-size: 0.72rem; color: var(--text-muted);">Q0.00 / m</span>
-                  </div>
-
-                  <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--cerulean);">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Precio Venta</span>
-                    <div id="resSellingPrice" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: var(--cerulean);">Q0.00</div>
-                    <span id="resSellingRate" style="font-size: 0.72rem; color: var(--text-muted);">Tarifa base</span>
-                  </div>
-
-                  <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--color-success);">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Utilidad Neta</span>
-                    <div id="resNetProfit" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: var(--color-success);">Q0.00</div>
-                    <span id="resMarginPercent" style="font-size: 0.75rem; font-weight: 700; color: var(--color-success);">0% margen</span>
-                  </div>
-
-                  <div style="background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: 4px; border-left: 3px solid #8b5cf6;">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Ganancia / Sticker</span>
-                    <div id="resProfitPerSticker" style="font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #8b5cf6;">Q0.00</div>
-                    <span id="resCostPerSticker" style="font-size: 0.72rem; color: var(--text-muted);">Costo: Q0.00</span>
-                  </div>
-                </div>
-
-                <!-- Barra Visual de Distribución: Costo vs Margen -->
-                <div style="margin: 1.25rem 0 0.75rem;">
-                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem;">
-                    <span style="color: #ef4444;">Costo Producción (<span id="pctCostBar">0%</span>)</span>
-                    <span style="color: var(--color-success);">Margen Neto (<span id="pctMarginBar">0%</span>)</span>
-                  </div>
-                  <div style="width: 100%; height: 12px; background: #e2e8f0; border-radius: var(--radius-full); overflow: hidden; display: flex;">
-                    <div id="barCostFill" style="height: 100%; background: #ef4444; width: 25%; transition: width 0.3s ease;"></div>
-                    <div id="barMarginFill" style="height: 100%; background: #10b981; width: 75%; transition: width 0.3s ease;"></div>
-                  </div>
-                </div>
+            <!-- Tabla Desglosada de Rubros Directos -->
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
+                Desglose Técnico de Rubros de Costo (Metros Directos):
+              </h3>
+              <div class="orders-table-container">
+                <table class="orders-table" style="font-size: 0.85rem;">
+                  <thead>
+                    <tr>
+                      <th>Concepto</th>
+                      <th>Consumo Estimado</th>
+                      <th>Costo Unitario Ref.</th>
+                      <th>Total Rubro (Q)</th>
+                      <th>% del Costo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="costBreakdownTableBody"></tbody>
+                </table>
               </div>
-
-              <div id="tierBadgeIndicator" style="margin-top: 0.5rem; text-align: center;">
-                <!-- Inyectado dinámicamente con badge de salud de margen -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Tabla Desglosada de Rubros de Costo -->
-          <div>
-            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
-              Desglose Técnico de Rubros de Costo:
-            </h3>
-            <div class="orders-table-container">
-              <table class="orders-table" style="font-size: 0.85rem;">
-                <thead>
-                  <tr>
-                    <th>Concepto</th>
-                    <th>Consumo Estimado</th>
-                    <th>Costo Unitario Ref.</th>
-                    <th>Total Rubro (Q)</th>
-                    <th>% del Costo</th>
-                  </tr>
-                </thead>
-                <tbody id="costBreakdownTableBody">
-                  <!-- Inyectado por renderCostBreakdownTable() -->
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
@@ -303,6 +478,22 @@ export const profitabilityView = {
   },
 
   onMount: () => {
+    // Mode Switcher Elements
+    const btnModeSticker = document.getElementById('btnModeSticker');
+    const btnModeDirect = document.getElementById('btnModeDirect');
+    const panelModeSticker = document.getElementById('panelModeSticker');
+    const panelModeDirect = document.getElementById('panelModeDirect');
+
+    // Sticker Mode Elements
+    const stkWidth = document.getElementById('stkWidth');
+    const stkHeight = document.getElementById('stkHeight');
+    const stkQty = document.getElementById('stkQty');
+    const stkFinish = document.getElementById('stkFinish');
+    const stkCutting = document.getElementById('stkCutting');
+    const stkOfferedPrice = document.getElementById('stkOfferedPrice');
+    const btnResetStkPrice = document.getElementById('btnResetStkPrice');
+
+    // Direct Mode Elements
     const metersInput = document.getElementById('simMeters');
     const metersSlider = document.getElementById('simMetersSlider');
     const metersDisplay = document.getElementById('simMetersDisplay');
@@ -313,6 +504,7 @@ export const profitabilityView = {
     const btnResetPrice = document.getElementById('btnResetPriceToScale');
     const priceTierIndicator = document.getElementById('priceTierIndicator');
 
+    // Modal Elements
     const configModal = document.getElementById('costsConfigModal');
     const btnOpenConfigModal = document.getElementById('btnOpenCostsConfigModal');
     const btnCloseConfigModal = document.getElementById('btnCloseCostsModal');
@@ -330,6 +522,34 @@ export const profitabilityView = {
     if (btnOpenConfigModal) btnOpenConfigModal.addEventListener('click', () => toggleModal(true));
     if (btnCloseConfigModal) btnCloseConfigModal.addEventListener('click', () => toggleModal(false));
     if (btnCancelConfigModal) btnCancelConfigModal.addEventListener('click', () => toggleModal(false));
+
+    // Control de Pestañas / Modos de Simulación
+    function switchMode(mode) {
+      if (mode === 'sticker') {
+        if (panelModeSticker) panelModeSticker.style.display = 'block';
+        if (panelModeDirect) panelModeDirect.style.display = 'none';
+        if (btnModeSticker) {
+          btnModeSticker.className = 'btn btn-primary';
+        }
+        if (btnModeDirect) {
+          btnModeDirect.className = 'btn btn-secondary';
+        }
+        renderStickerSimulation();
+      } else {
+        if (panelModeSticker) panelModeSticker.style.display = 'none';
+        if (panelModeDirect) panelModeDirect.style.display = 'block';
+        if (btnModeSticker) {
+          btnModeSticker.className = 'btn btn-secondary';
+        }
+        if (btnModeDirect) {
+          btnModeDirect.className = 'btn btn-primary';
+        }
+        renderSimulation();
+      }
+    }
+
+    if (btnModeSticker) btnModeSticker.addEventListener('click', () => switchMode('sticker'));
+    if (btnModeDirect) btnModeDirect.addEventListener('click', () => switchMode('direct'));
 
     if (btnResetFactory) {
       btnResetFactory.addEventListener('click', () => {
@@ -365,7 +585,155 @@ export const profitabilityView = {
       });
     }
 
-    // Sincronización entre input y slider de metros
+    // ==========================================
+    // LÓGICA DE SIMULACIÓN 1: MEDIDAS DE STICKER
+    // ==========================================
+    if (stkWidth) stkWidth.addEventListener('input', renderStickerSimulation);
+    if (stkHeight) stkHeight.addEventListener('input', renderStickerSimulation);
+    if (stkQty) stkQty.addEventListener('input', renderStickerSimulation);
+    if (stkFinish) stkFinish.addEventListener('change', renderStickerSimulation);
+    if (stkCutting) stkCutting.addEventListener('change', renderStickerSimulation);
+    if (stkOfferedPrice) stkOfferedPrice.addEventListener('input', renderStickerSimulation);
+
+    if (btnResetStkPrice) {
+      btnResetStkPrice.addEventListener('click', () => {
+        if (stkOfferedPrice) stkOfferedPrice.value = '';
+        renderStickerSimulation();
+      });
+    }
+
+    function renderStickerSimulation() {
+      const w = parseFloat(stkWidth?.value) || 5.0;
+      const h = parseFloat(stkHeight?.value) || 5.0;
+      const q = parseInt(stkQty?.value, 10) || 100;
+      const finish = stkFinish?.value || 'Barniz con Relieve 3D';
+      const cut = Boolean(stkCutting?.checked);
+      const customPrice = stkOfferedPrice?.value ? parseFloat(stkOfferedPrice.value) : null;
+
+      const result = calculateStickerProfitability({
+        widthCm: w,
+        heightCm: h,
+        qty: q,
+        finishType: finish,
+        includeCutting: cut,
+        customSellingPriceQ: customPrice,
+      });
+
+      const quote = result.quote;
+      const pComp = result.pricingComparison;
+      const run = result.runCost;
+
+      // Actualizar tarjeta técnica de metraje en bobina
+      const elMetersText = document.getElementById('stkCalculatedMetersText');
+      const elDistText = document.getElementById('stkDistributionText');
+      const elListPriceDisplay = document.getElementById('stkListPriceDisplay');
+      const elDiscountNotice = document.getElementById('stkDiscountNotice');
+      const elDiscountBadge = document.getElementById('stkDiscountBadge');
+
+      if (elMetersText) {
+        elMetersText.textContent = `${quote.actualLinearMeters.toFixed(2)} m lineales ${quote.isUnderMin ? '(Mínimo 1.0 m facturable)' : ''}`;
+      }
+      if (elDistText) {
+        elDistText.textContent = `${quote.stickersPerRow} por fila • ${quote.rows} filas en bobina Audley 28 cm`;
+      }
+      if (elListPriceDisplay) {
+        elListPriceDisplay.textContent = `Precio Lista: Q${pComp.listPriceTotalQ.toFixed(2)}`;
+      }
+
+      // Noticia de descuento
+      if (elDiscountNotice) {
+        if (pComp.isDiscountApplied) {
+          elDiscountNotice.innerHTML = `
+            <span style="color: #f59e0b;">
+              💰 Descuento aplicado: <strong>Q${pComp.discountAmountQ.toFixed(2)} (-${pComp.discountPercent.toFixed(1)}%)</strong>
+            </span>
+          `;
+        } else {
+          elDiscountNotice.innerHTML = `
+            <span style="color: #10b981;">
+              🟢 Sin descuento (Cobrando Precio de Lista Oficial)
+            </span>
+          `;
+        }
+      }
+
+      if (elDiscountBadge) {
+        if (pComp.isDiscountApplied) {
+          elDiscountBadge.textContent = `Desc: -${pComp.discountPercent.toFixed(1)}%`;
+          elDiscountBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+          elDiscountBadge.style.color = '#f59e0b';
+          elDiscountBadge.style.borderColor = '#f59e0b';
+        } else {
+          elDiscountBadge.textContent = 'Precio Lista';
+          elDiscountBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+          elDiscountBadge.style.color = '#10b981';
+          elDiscountBadge.style.borderColor = '#10b981';
+        }
+      }
+
+      // KPIs
+      const elTotalCost = document.getElementById('stkResTotalCost');
+      const elCostPerMeter = document.getElementById('stkResCostPerMeter');
+      const elSellingPrice = document.getElementById('stkResSellingPrice');
+      const elListCompare = document.getElementById('stkResListCompare');
+      const elNetProfit = document.getElementById('stkResNetProfit');
+      const elMarginPercent = document.getElementById('stkResMarginPercent');
+      const elProfitPerSticker = document.getElementById('stkResProfitPerSticker');
+      const elCostPerSticker = document.getElementById('stkResCostPerSticker');
+
+      if (elTotalCost) elTotalCost.textContent = `Q${run.costs.totalProductionCostQ.toFixed(2)}`;
+      if (elCostPerMeter) elCostPerMeter.textContent = `Q${run.costs.costPerMeterQ.toFixed(2)} / m`;
+      if (elSellingPrice) elSellingPrice.textContent = `Q${pComp.offeredPriceTotalQ.toFixed(2)}`;
+      if (elListCompare) {
+        elListCompare.textContent = pComp.isDiscountApplied
+          ? `Lista: Q${pComp.listPriceTotalQ.toFixed(2)}`
+          : 'Tarifa oficial Kroma';
+      }
+      if (elNetProfit) elNetProfit.textContent = `Q${result.netProfitQ.toFixed(2)}`;
+      if (elMarginPercent) elMarginPercent.textContent = `${result.profitMarginPercent.toFixed(1)}% margen`;
+      if (elProfitPerSticker) elProfitPerSticker.textContent = `Q${result.profitPerStickerQ.toFixed(2)}`;
+      if (elCostPerSticker) elCostPerSticker.textContent = `Costo: Q${result.costPerStickerQ.toFixed(2)}`;
+
+      // Barra de distribución visual
+      const costPercent = Math.max(0, Math.min(100, 100 - result.profitMarginPercent));
+      const marginPercent = Math.max(0, Math.min(100, result.profitMarginPercent));
+
+      const elBarCost = document.getElementById('stkBarCostFill');
+      const elBarMargin = document.getElementById('stkBarMarginFill');
+      const elPctCost = document.getElementById('stkPctCostBar');
+      const elPctMargin = document.getElementById('stkPctMarginBar');
+
+      if (elBarCost) elBarCost.style.width = `${costPercent}%`;
+      if (elBarMargin) elBarMargin.style.width = `${marginPercent}%`;
+      if (elPctCost) elPctCost.textContent = `${costPercent.toFixed(1)}%`;
+      if (elPctMargin) elPctMargin.textContent = `${marginPercent.toFixed(1)}%`;
+
+      // Insignia de salud
+      const elBadgeContainer = document.getElementById('stkTierBadgeIndicator');
+      if (elBadgeContainer) {
+        elBadgeContainer.innerHTML = `
+          <span class="badge" style="background: ${run.profitability.badgeColor}22; color: ${run.profitability.badgeColor}; border-color: ${run.profitability.badgeColor}; font-weight: 700; font-size: 0.85rem; padding: 0.4rem 0.85rem;">
+            ${run.profitability.profitabilityBadge}
+          </span>
+        `;
+      }
+
+      // Caja de recomendación de negociación
+      const elAdviceBox = document.getElementById('stkAdviceBox');
+      if (elAdviceBox) {
+        elAdviceBox.textContent = pComp.discountAdvice;
+        elAdviceBox.style.background = `${pComp.adviceColor}18`;
+        elAdviceBox.style.color = pComp.adviceColor;
+        elAdviceBox.style.border = `1px solid ${pComp.adviceColor}44`;
+      }
+
+      // Tabla de desglose de costos
+      renderItemizedCostBreakdownTable('stkCostBreakdownTableBody', run);
+    }
+
+    // ==========================================
+    // LÓGICA DE SIMULACIÓN 2: METROS DIRECTOS
+    // ==========================================
     if (metersSlider && metersInput) {
       metersSlider.addEventListener('input', (e) => {
         metersInput.value = e.target.value;
@@ -459,11 +827,11 @@ export const profitabilityView = {
         `;
       }
 
-      renderCostBreakdownTable(run);
+      renderItemizedCostBreakdownTable('costBreakdownTableBody', run);
     }
 
-    function renderCostBreakdownTable(run) {
-      const tbody = document.getElementById('costBreakdownTableBody');
+    function renderItemizedCostBreakdownTable(tbodyId, run) {
+      const tbody = document.getElementById(tbodyId);
       if (!tbody) return;
 
       const total = run.costs.totalProductionCostQ;
@@ -628,6 +996,7 @@ export const profitabilityView = {
     }
 
     function renderAll() {
+      renderStickerSimulation();
       renderSimulation();
       renderMonthlyGoalCard();
       renderOrdersProfitabilityTable();
