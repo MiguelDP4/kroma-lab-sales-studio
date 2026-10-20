@@ -402,6 +402,37 @@ kroma-lab-sales-studio/
     * **Exportación a CSV:** Botón para descarga de Kardex estructurado bajo el estándar RFC 4180 con UTF-8 BOM para apertura nativa e inmediata en Excel en español.
   * **Persistencia Reactiva:**
     * Almacenado en `localStorage['kromalab_inventory']` y `localStorage['kromalab_inventory_kardex']` con suscripción Pub/Sub en tiempo real.
+* **Módulo de Cuentas por Cobrar y Saldos B2B (`receivables-store.js` + `receivables-view.js`):**
+  * **Acceso y Roles (`ADMIN` y `EMPLOYEE`):** Módulo financiero y de cobranza operativa accesible vía ruta `/cobranza` (y alias `/cuentas-por-cobrar`), respaldado por el permiso RBAC `MANAGE_RECEIVABLES`.
+  * **Conciliación de Saldos y Cuentas Bancarias Locales (Guatemala):**
+    * Barra de acceso rápido con las cuentas monetarias oficiales de Kroma Lab en Quetzales:
+      * **Banco Industrial (Monetaria GTQ):** `144-002931-2`
+      * **BAC Credomatic (Monetaria GTQ):** `90-341902-1`
+      * **Banrural (Monetaria GTQ):** `3033-09182-1`
+      * Botón táctil para copiado instantáneo al portapapeles con confirmación visual.
+  * **Monitoreo de Antigüedad de Deuda (Aging):**
+    * Clasificación automática según los días transcurridos desde la emisión de la orden:
+      * 🟢 **Al Día (0-7 días):** Crédito corriente recién emitido o en producción.
+      * 🟡 **Por Vencer (8-15 días):** Atención preventiva para clientes con crédito comercial.
+      * 🔴 **En Mora Crítica (>15 días):** Saldo vencido que requiere gestión prioritaria de cobro.
+  * **Registro y Conciliación de Pagos / Abonos (`#recordPaymentModal`):**
+    * Soporta abonos parciales sucesivos (anticipos de 50%, pagos contraentrega en taller o liquidación del 100%).
+    * Selector inteligente que preselecciona pedidos con deuda y muestra el desglose financiero en tiempo real.
+    * Chips táctiles de cálculo rápido: `💰 Saldo Total` y `½ Anticipo 50%`.
+    * Métodos de pago parametrizados: `Transferencia Bancaria`, `Efectivo en Taller`, `Tarjeta (POS Visanet)`, `Boleta de Depósito`, `Cheque Compensable`.
+    * Sincronización automática del estado del pedido (`ordersStore`):
+      * `PAID` (Pagado 100% cuando el saldo pendiente es Q0.00).
+      * `PARTIAL` (Anticipo parcial cuando hay abonos registrados pero resta saldo).
+      * `PENDING` (Sin abonos recibidos).
+  * **Gestión de Cobro Directo por WhatsApp:**
+    * Generador inteligente de mensajes personalizados con desglose técnico del pedido, total facturado, saldo abonado, saldo pendiente y cuentas monetarias de Kroma Lab.
+    * Enlace directo a `https://wa.me/502...` para envío inmediato sin pasos intermedios.
+  * **Historial Detallado de Transacciones (`#viewPaymentsModal` y tabla `#paymentsTableBody`):**
+    * Trazabilidad completa con ID de pago (`PAY-XXXX`), fecha/hora, referencia de boleta bancaria, monto abonado, operador que registró el pago y opción para anular abonos erróneos con confirmación.
+  * **Exportación de Cartera a CSV (RFC 4180 con UTF-8 BOM):**
+    * Reporte consolidado de cuentas por cobrar para análisis en Excel, con identificación de cliente, empresa, NIT, teléfono, días de antigüedad y estado de mora.
+  * **Persistencia Reactiva:**
+    * Almacenado en `localStorage['kromalab_payments']` con notificaciones automáticas Pub/Sub.
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.

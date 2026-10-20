@@ -213,11 +213,42 @@ describe('Inventory View — Interfaz de Control de Inventario y Stock de Taller
   });
 
   it('exporta el Kardex a CSV al pulsar el botón de exportación', () => {
+    vi.useFakeTimers();
     const btnExport = document.getElementById('btnExportKardexCSV');
+    const toast = document.getElementById('inventoryToast');
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     btnExport.click();
     expect(clickSpy).toHaveBeenCalled();
+    expect(toast.textContent).toContain('Kardex de inventario exportado exitosamente');
+    expect(toast.style.display).toBe('block');
+
+    vi.advanceTimersByTime(3600);
+    expect(toast.style.display).toBe('none');
+
+    clickSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('maneja excepciones al exportar Kardex a CSV mostrando notificación de error', () => {
+    vi.useFakeTimers();
+    const btnExport = document.getElementById('btnExportKardexCSV');
+    const toast = document.getElementById('inventoryToast');
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const storeSpy = vi.spyOn(inventoryStore, 'exportKardexCSV').mockImplementation(() => {
+      throw new Error('Kardex CSV Error');
+    });
+
+    btnExport.click();
+    expect(toast.textContent).toContain('Ocurrió un error al generar el Kardex en CSV');
+    expect(toast.style.display).toBe('block');
+
+    vi.advanceTimersByTime(3600);
+    expect(toast.style.display).toBe('none');
+
+    storeSpy.mockRestore();
+    errSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it('reacciona en tiempo real cuando se actualiza inventoryStore', () => {

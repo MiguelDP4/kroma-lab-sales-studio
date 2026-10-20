@@ -579,20 +579,23 @@ class InventoryStore {
    * Genera el contenido CSV del Kardex de movimientos para descarga en Excel (RFC 4180 con UTF-8 BOM).
    */
   exportKardexCSV() {
+    const toFixed2 = val => (Number(val) || 0).toFixed(2);
+
     const rows = this.kardex.map(m => {
       const typeLabel = MOVEMENT_TYPES[m.type]?.label || m.type;
       const escape = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+      const dateStr = (m.timestamp ? new Date(m.timestamp) : new Date()).toLocaleString('es-GT');
 
       return [
-        escape(m.id),
-        escape(new Date(m.timestamp).toLocaleString('es-GT')),
-        escape(m.itemName),
-        escape(typeLabel),
-        m.quantity.toFixed(2),
-        escape(m.unit),
-        m.previousStock.toFixed(2),
-        m.newStock.toFixed(2),
-        m.costTotalQ.toFixed(2),
+        escape(m.id || ''),
+        escape(dateStr),
+        escape(m.itemName || ''),
+        escape(typeLabel || ''),
+        toFixed2(m.quantity),
+        escape(m.unit || 'uds'),
+        toFixed2(m.previousStock),
+        toFixed2(m.newStock),
+        toFixed2(m.costTotalQ),
         escape(m.referenceOrderId || m.invoiceNumber || ''),
         escape(m.supplier || ''),
         escape(m.notes || ''),

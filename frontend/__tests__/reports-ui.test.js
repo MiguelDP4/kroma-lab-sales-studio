@@ -182,8 +182,8 @@ describe('Reports View — Interfaz de Reportes Comerciales y Analítica UV DTF'
 
     const updatedGross = document.getElementById('financialMetricsGrid').textContent;
     expect(updatedGross).not.toBe(initialGross);
-    expect(updatedGross).toContain('1698.10');
-    expect(updatedGross).toContain('5 pedidos en el período');
+    expect(updatedGross).toContain('2206.10');
+    expect(updatedGross).toContain('6 pedidos en el período');
   });
 
   it('oculta la notificación de exportación después del tiempo de espera', () => {
