@@ -477,6 +477,18 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('userChipName').textContent).toBe('Visitante');
       expect(document.getElementById('sidebarUserRole').textContent).toBe('COTIZADOR WEB');
     });
+
+    it('abre el modal de configuración de usuario al pulsar el chip de perfil tras inicializar la app', () => {
+      initApp();
+      const chip = document.getElementById('userProfileChip');
+      const modal = document.getElementById('userProfileModal');
+
+      expect(modal).not.toBeNull();
+      expect(modal.style.display).toBe('none');
+
+      chip.click();
+      expect(modal.style.display).toBe('block');
+    });
   });
 
 });
