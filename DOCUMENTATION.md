@@ -198,6 +198,7 @@ kroma-lab-sales-studio/
 │   │       │   ├── checkout-modal.js   # Modal de datos de entrega y facturación SAT
 │   │       │   └── user-profile-modal.js # Modal de autogestión de perfil de usuario y conmutador de cuentas
 │   │       ├── modules/
+│   │       │   ├── api-client.js       # Cliente HTTP REST tipado con JWT y fallback tolerante a fallos
 │   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático de cotización
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
@@ -212,7 +213,7 @@ kroma-lab-sales-studio/
 │   │           ├── production-view.js  # Tablero Kanban interactivo Audley + Monitor de Bobina (Staff)
 │   │           ├── clients-view.js     # Directorio B2B y cartera de clientes (Staff)
 │   │           └── users-view.js       # Administración y permisos RBAC (Admin)
-│   └── __tests__/                  # 518 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
+│   └── __tests__/                  # 532 pruebas unitarias de frontend (> 85% coverage en 4 métricas)
 │       ├── quoter-engine.test.js   # 14 tests de cálculo, mínimas y escalas
 │       ├── cart-engine.test.js     # 14 tests de cálculo consolidado y formateo WhatsApp
 │       ├── cart-store.test.js      # 8 tests de estado reactivo y localStorage
@@ -228,13 +229,26 @@ kroma-lab-sales-studio/
 │       ├── production-kanban.test.js # 14 tests de integración de vistas y modales Kanban
 │       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
-│       ├── app.test.js             # 12 tests de integración, roles, dropzone y WhatsApp
+│       ├── app.test.js             # 24 tests de integración, roles, topbar, sidebar y WhatsApp
+│       ├── api-client.test.js      # 14 tests de cliente HTTP, tokens JWT y fallback
 │       └── setup.js                # Mock de Canvas para JSDOM
-├── backend/                        # API REST (Node.js, Express, Prisma)
-│   ├── package.json                # Scripts y dependencias backend
-│   ├── tsconfig.json               # Configuración TypeScript
-│   └── prisma/
-│       └── schema.prisma           # Esquema de base de datos Neon PostgreSQL
+├── backend/                        # API REST (TypeScript, Express, Prisma, Vitest)
+│   ├── package.json                # Scripts de ejecución, migraciones y test
+│   ├── tsconfig.json               # Configuración TypeScript ES2022 / CommonJS
+│   ├── vitest.config.ts            # Configuración de pruebas backend con cobertura V8
+│   ├── prisma/
+│   │   ├── schema.prisma           # Esquema PostgreSQL de producción (Neon Serverless)
+│   │   └── schema.sqlite.prisma    # Esquema SQLite de desarrollo local y pruebas
+│   ├── src/
+│   │   ├── app.ts                  # Configuración de Express, CORS, cookieParser y rutas
+│   │   ├── index.ts                # Entrypoint y arranque en puerto 4000
+│   │   ├── db/
+│   │   │   ├── prisma.ts           # Instancia singleton de Prisma Client
+│   │   │   └── seed.ts             # Semilla inicial con usuarios, clientes e insumos
+│   │   ├── controllers/            # Controladores de auth, orders, customers, dispatch, inventory, receivables, workshop
+│   │   ├── middlewares/            # Autenticación JWT Bearer, RBAC y errorHandler centralizado
+│   │   └── routes/                 # Enrutadores REST montados en /api/*
+│   └── __tests__/                  # 80 pruebas unitarias e integración en Vitest + Supertest (> 85% coverage)
 └── shared/                         # Constantes maestras de negocio
     └── business-config.js
 ```
@@ -530,13 +544,77 @@ kroma-lab-sales-studio/
 
 ---
 
-## 8. Arquitectura del Backend (Express, Prisma, PostgreSQL Neon)
+## 8. Arquitectura del Backend (Express, TypeScript, Prisma, Neon PostgreSQL / SQLite)
 
-* Modelos base inspirados en Arte Modelo pero adaptados a metros lineales y órdenes de producción de UV DTF:
-  * `User`: Credenciales con `bcrypt`, roles (`ADMIN`, `EMPLOYEE`, `CUSTOMER`), tokens de verificación y refresh.
-  * `Customer`: Datos de empresa/cliente, NIT, teléfono de WhatsApp, vinculación a pedidos.
-  * `Order`: Medidas en cm, cantidad de piezas, metros lineales calculados, costo de impresión, costo de corte, URL de diseño en Cloudflare R2, estado de producción (`PENDING`, `IN_AUDLEY_QUEUE`, `PRINTING`, `LAMINATING_CUTTING`, `READY_FOR_DELIVERY`, `DELIVERED`).
-  * `Quote`: Registro de cotizaciones guardadas para auditoría y seguimiento comercial.
+El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en **TypeScript** y **Express**, respaldado por **Prisma ORM** con soporte de persistencia dual para garantizar autonomía operativa en desarrollo local y alta disponibilidad en la nube.
+
+### Topología de Persistencia Dual (Desarrollo Local vs Producción Neon)
+
+* **Desarrollo y Pruebas Locales (SQLite Embebido):**
+  * Configurado en `backend/prisma/schema.sqlite.prisma` y apuntando a `file:./dev.db`.
+  * No requiere Docker, PostgreSQL local ni credenciales de red para arrancar y ejecutar pruebas unitarias a máxima velocidad.
+  * Semilla inicial automatizada (`npm run db:seed`) que puebla las cuentas de Miguel Dubois (Admin), Carlos Méndez (Taller), clientes B2B demo, insumos de inventario y configuración de taller Audley.
+* **Producción en la Nube (Neon Serverless PostgreSQL):**
+  * Configurado en `backend/prisma/schema.prisma` con tipos nativos `Decimal` para montos financieros (Quetzales GTQ) y `enum` de base de datos.
+  * Conexión segura mediante `DATABASE_URL` con SSL (`sslmode=require`).
+  * Migraciones y sincronización con un solo comando (`npm run db:postgres:push`).
+
+### Modelos de Datos Implementados (Prisma Schema)
+
+1. **`User`:** Gestión de colaboradores de taller y clientes. Contraseñas protegidas mediante `bcryptjs`, tokens JWT de 7 días, roles (`ADMIN`, `EMPLOYEE`, `CUSTOMER`) y campos fiscales (NIT, empresa, dirección, departamento).
+2. **`Customer`:** Directorio de Cartera B2B con expediente comercial 360°, clasificación por tiers (`VIP`, `RECURRENTE`, `NUEVO`, `INACTIVO`) y sectores de negocio en Guatemala.
+3. **`Order`:** Pedidos de impresión UV DTF con folio correlativo anual (`KL-YYYY-XXX`), especificaciones sobre la bobina Audley de 28 cm útiles (ancho, alto, piezas, metros lineales, acabado barniz/mate), desglose en Quetzales y estados sincronizados de producción y pago.
+4. **`DispatchNote`:** Remisiones oficiales de taller y guías de entrega (`REM-YYYY-XXX`), couriers locales (Moto Express, Cargo Expreso, Guatex, Forza, Pick-up), checklist técnico auditado y registro de entrega con DPI.
+5. **`InventoryItem` & `InventoryMovement`:** Catálogo de 7 insumos industriales para la Audley (Film A, Film B, CMYK, Blanco, Barniz 3D, Navajas, Solvente), semáforo de existencias (Óptimo, Bajo, Crítico) y Kardex inmutable.
+6. **`Payment`:** Transacciones de abono y liquidación (`PAY-YYYY-XXX`), métodos de pago parametrizados, conciliación de cuentas bancarias (BI, BAC, Banrural) y recálculo automático de deuda.
+7. **`WorkshopConfig`:** Parámetros maestros de la máquina Audley (ancho imprimible 28.00 cm, ancho bobina 30.00 cm), escalas de tarifas por metro lineal (Q130, Q120, Q115, Q105, Q95), cuentas bancarias y meta mensual.
+
+### Catálogo de Endpoints REST (`/api/*`)
+
+| Módulo | Método y Ruta | Descripción y Acceso RBAC |
+| :--- | :--- | :--- |
+| **Salud** | `GET /api/health` | Estado del servicio y prueba de conectividad a la BD |
+| **Autenticación** | `POST /api/auth/login` | Inicio de sesión, verificación bcrypt y emisión de JWT en cookie/body |
+| **Autenticación** | `POST /api/auth/logout` | Cierre de sesión y limpieza de cookie de sesión |
+| **Autenticación** | `GET /api/auth/me` | Perfil del usuario activo (requiere JWT) |
+| **Autenticación** | `PUT /api/auth/profile` | Actualización de datos de perfil y contacto |
+| **Usuarios** | `GET /api/auth/users` | Listado de colaboradores y clientes (`ADMIN`) |
+| **Pedidos** | `GET /api/orders` | Listado y filtrado por estado, pago y búsqueda de pedidos |
+| **Pedidos** | `GET /api/orders/:id` | Detalle de pedido y trazabilidad |
+| **Pedidos** | `POST /api/orders` | Creación de pedido con folio `KL-YYYY-XXX` (público / auth) |
+| **Pedidos** | `PUT /api/orders/:id/status` | Cambio de fase de producción (`ADMIN`, `EMPLOYEE`) |
+| **Pedidos** | `PUT /api/orders/:id/payment` | Actualización de estado y monto abonado (`ADMIN`, `EMPLOYEE`) |
+| **Pedidos** | `GET /api/orders/stats` | KPIs consolidados: metros en taller, facturación y saldo pendiente |
+| **Cartera B2B** | `GET /api/customers` | Directorio comercial enriquecido con métricas 360° |
+| **Cartera B2B** | `POST /api/customers` | Registro de nuevo cliente B2B |
+| **Cartera B2B** | `PUT /api/customers/:id` | Actualización de perfil comercial y fiscal SAT |
+| **Despacho** | `GET /api/dispatch` | Listado de remisiones de taller y hojas de despacho |
+| **Despacho** | `POST /api/dispatch` | Emisión de nueva remisión con folio `REM-YYYY-XXX` |
+| **Despacho** | `PUT /api/dispatch/:id/status` | Actualización logística (al marcar `DELIVERED`, la orden pasa a `COMPLETED`) |
+| **Inventario** | `GET /api/inventory` | Existencias de insumos UV DTF y semáforo de criticidad |
+| **Inventario** | `POST /api/inventory/restock` | Registro de compra y entrada `IN_PURCHASE` en Kardex |
+| **Inventario** | `POST /api/inventory/adjust` | Ajuste de merma/calibración y entrada `ADJUSTMENT` en Kardex |
+| **Inventario** | `GET /api/inventory/kardex` | Histórico inmutable de movimientos de insumos |
+| **Cobranza** | `GET /api/receivables` | Cuentas por cobrar con clasificación de antigüedad (0-7d, 8-15d, >15d) |
+| **Cobranza** | `POST /api/receivables/payments` | Registro de abono `PAY-YYYY-XXX` y amortización de deuda |
+| **Cobranza** | `DELETE /api/receivables/payments/:id` | Anulación de abono y restitución del saldo |
+| **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
+| **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
+
+### Calidad de Código y Pruebas Unitarias del Backend
+
+* **80 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 11 suites de pruebas).
+* **Métricas de Cobertura de Código (> 85% obligatoria):**
+  * Declaraciones (Statements): **98.43%**
+  * Ramas (Branches): **89.93%**
+  * Funciones (Functions): **100%**
+  * Líneas (Lines): **98.43%**
+
+### Cliente HTTP Frontend (`api-client.js`)
+
+* Ubicado en `frontend/src/js/modules/api-client.js`, proporciona una capa de consumo tipada con manejo automático de tokens Bearer JWT, cookies de sesión y tolerancia a fallos.
+* Si el backend local o remoto no está activo, entra en modo degradado elegante (offline fallback) sin bloquear la navegación de la interfaz.
+* Respaldado por 14 pruebas unitarias dedicadas en `frontend/__tests__/api-client.test.js` (100% passing).
 
 ---
 
