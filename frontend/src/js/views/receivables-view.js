@@ -468,16 +468,37 @@ export const receivablesView = {
     // Exportar CSV
     if (btnExportCSV) {
       btnExportCSV.addEventListener('click', () => {
-        const csvContent = receivablesStore.exportReceivablesCSV();
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `cartera_cuentas_por_cobrar_${new Date().toISOString().slice(0, 10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const originalText = btnExportCSV.innerHTML;
+        btnExportCSV.innerHTML = '<span>⏳</span><span>Generando...</span>';
+        btnExportCSV.disabled = true;
+
+        try {
+          const csvContent = receivablesStore.exportReceivablesCSV();
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', `cartera_cuentas_por_cobrar_${new Date().toISOString().slice(0, 10)}.csv`);
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+
+          setTimeout(() => {
+            if (document.body.contains(link)) {
+              document.body.removeChild(link);
+            }
+            URL.revokeObjectURL(url);
+            btnExportCSV.innerHTML = '<span>✅</span><span>¡Descargado!</span>';
+            setTimeout(() => {
+              btnExportCSV.innerHTML = originalText;
+              btnExportCSV.disabled = false;
+            }, 1800);
+          }, 250);
+        } catch (err) {
+          console.error('Error al exportar CSV:', err);
+          btnExportCSV.innerHTML = originalText;
+          btnExportCSV.disabled = false;
+        }
       });
     }
 
