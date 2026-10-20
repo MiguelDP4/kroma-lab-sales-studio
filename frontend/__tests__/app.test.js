@@ -333,4 +333,138 @@ describe('App — Inicialización y DOM', () => {
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
     });
   });
+
+  describe('Sidebar Drawer y Acciones del Topbar', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `
+        <header class="navbar">
+          <button id="mobileNavToggle" aria-expanded="false">
+            <span id="mobileNavIcon">☰</span>
+          </button>
+          <span id="salesStudioTag" style="display: none;">Sales Studio</span>
+          <div id="userProfileChip">
+            <span id="userChipAvatar">👤</span>
+            <span id="userChipName">Admin</span>
+          </div>
+          <button id="settingsBtn">⚙️</button>
+          <button id="themeToggleBtn"><span id="themeToggleIcon">☀️</span></button>
+        </header>
+
+        <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+        <aside id="appSidebar" class="app-sidebar">
+          <button id="sidebarCloseBtn">✕</button>
+          <nav id="navRoleLinks"></nav>
+          <div id="sidebarUserCard">
+            <div id="sidebarUserAvatar">M</div>
+            <div id="sidebarUserName">Miguel Dubois</div>
+            <div id="sidebarUserRole">ADMINISTRADOR</div>
+          </div>
+        </aside>
+
+        <div id="settingsModalContainer"></div>
+        <main id="app"></main>
+      `;
+      initApp();
+    });
+
+    it('abre y cierra el sidebar drawer usando el botón hamburguesa del topbar', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      const icon = document.getElementById('mobileNavIcon');
+
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
+      expect(backdrop.classList.contains('is-open')).toBe(true);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
+      expect(icon.textContent).toBe('✕');
+
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+      expect(backdrop.classList.contains('is-open')).toBe(false);
+      expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
+      expect(icon.textContent).toBe('☰');
+    });
+
+    it('cierra el sidebar drawer pulsando el botón de cierre (✕)', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
+      const closeBtn = document.getElementById('sidebarCloseBtn');
+
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
+
+      closeBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+    });
+
+    it('cierra el sidebar drawer haciendo clic en el telón de fondo (backdrop)', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
+
+      backdrop.click();
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+    });
+
+    it('cierra el sidebar drawer al presionar la tecla Escape', () => {
+      const toggleBtn = document.getElementById('mobileNavToggle');
+      const sidebar = document.getElementById('appSidebar');
+
+      toggleBtn.click();
+      expect(sidebar.classList.contains('is-open')).toBe(true);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(sidebar.classList.contains('is-open')).toBe(false);
+    });
+
+    it('abre el modal de configuración de taller y lo cierra mediante botón o backdrop', () => {
+      const settingsBtn = document.getElementById('settingsBtn');
+      const container = document.getElementById('settingsModalContainer');
+
+      settingsBtn.click();
+      expect(container.innerHTML).toContain('Configuración de Taller UV DTF');
+      expect(container.innerHTML).toContain('Audley UV DTF Industrial');
+
+      const dismissBtn = document.getElementById('btnDismissSettings');
+      dismissBtn.click();
+      expect(container.innerHTML).toBe('');
+
+      // Re-abrir y cerrar con botón ✕
+      settingsBtn.click();
+      const closeBtn = document.getElementById('closeSettingsModalBtn');
+      closeBtn.click();
+      expect(container.innerHTML).toBe('');
+
+      // Re-abrir y cerrar con backdrop
+      settingsBtn.click();
+      const backdrop = document.getElementById('settingsModalBackdrop');
+      backdrop.click();
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('actualiza el chip de perfil y tarjeta del sidebar al cambiar de rol', () => {
+      syncNavbarRole('ADMIN');
+      expect(document.getElementById('userChipName').textContent).toContain('Admin');
+      expect(document.getElementById('sidebarUserRole').textContent).toBe('ADMINISTRADOR');
+
+      syncNavbarRole('EMPLOYEE');
+      expect(document.getElementById('userChipName').textContent).toBe('Operador Taller');
+      expect(document.getElementById('sidebarUserRole').textContent).toBe('OPERADOR TALLER');
+
+      syncNavbarRole('CUSTOMER');
+      expect(document.getElementById('userChipName').textContent).toBe('Cliente B2B');
+      expect(document.getElementById('sidebarUserRole').textContent).toBe('CLIENTE REGISTRADO');
+
+      syncNavbarRole('VISITOR');
+      expect(document.getElementById('userChipName').textContent).toBe('Visitante');
+      expect(document.getElementById('sidebarUserRole').textContent).toBe('COTIZADOR WEB');
+    });
+  });
+
 });
