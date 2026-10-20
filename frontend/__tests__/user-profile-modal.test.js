@@ -3,12 +3,19 @@ import {
   initUserProfileModal,
   openUserProfileModal,
   closeUserProfileModal,
+  switchAuthTab,
   handleProfileSubmit,
+  handleLoginSubmit,
+  handleRegisterSubmit,
+  loginWithRealCredentials,
+  registerWithRealAccount,
+  handleLogout,
   switchUserAccount,
   showFeedback,
 } from '../src/js/components/user-profile-modal.js';
 import { store } from '../src/js/store.js';
 import { usersStore } from '../src/js/modules/users-store.js';
+import { apiClient } from '../src/js/modules/api-client.js';
 
 describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
   let container;
@@ -60,6 +67,75 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(document.getElementById('profileAddressInput')).not.toBeNull();
       expect(document.getElementById('btnLogoutProfileBtn')).not.toBeNull();
       expect(document.getElementById('btnSaveUserProfile')).not.toBeNull();
+    });
+
+    it('renderiza las pestañas de navegación y los formularios de login y registro', () => {
+      expect(document.getElementById('tabBtnProfile')).not.toBeNull();
+      expect(document.getElementById('tabBtnLogin')).not.toBeNull();
+      expect(document.getElementById('tabBtnRegister')).not.toBeNull();
+      expect(document.getElementById('formUserLogin')).not.toBeNull();
+      expect(document.getElementById('formUserRegister')).not.toBeNull();
+    });
+  });
+
+  describe('Pestañas de Autenticación y Navegación (switchAuthTab)', () => {
+    it('cambia a pestaña login mostrando formulario de acceso y ocultando perfil', () => {
+      switchAuthTab('login');
+
+      const viewLogin = document.getElementById('authViewLogin');
+      const viewProfile = document.getElementById('authViewProfile');
+      const viewRegister = document.getElementById('authViewRegister');
+
+      expect(viewLogin.style.display).toBe('block');
+      expect(viewProfile.style.display).toBe('none');
+      expect(viewRegister.style.display).toBe('none');
+
+      const title = document.getElementById('userProfileModalTitle');
+      expect(title.textContent).toBe('Iniciar Sesión');
+    });
+
+    it('cambia a pestaña register mostrando formulario de registro B2B', () => {
+      switchAuthTab('register');
+
+      const viewRegister = document.getElementById('authViewRegister');
+      const viewLogin = document.getElementById('authViewLogin');
+      const viewProfile = document.getElementById('authViewProfile');
+
+      expect(viewRegister.style.display).toBe('block');
+      expect(viewLogin.style.display).toBe('none');
+      expect(viewProfile.style.display).toBe('none');
+
+      const title = document.getElementById('userProfileModalTitle');
+      expect(title.textContent).toBe('Registro de Cliente B2B');
+    });
+
+    it('cambia a pestaña profile mostrando datos de usuario', () => {
+      switchAuthTab('login');
+      switchAuthTab('profile');
+
+      const viewProfile = document.getElementById('authViewProfile');
+      const viewLogin = document.getElementById('authViewLogin');
+
+      expect(viewProfile.style.display).toBe('block');
+      expect(viewLogin.style.display).toBe('none');
+
+      const title = document.getElementById('userProfileModalTitle');
+      expect(title.textContent).toBe('Configuración de Cuenta');
+    });
+
+    it('cambia de pestaña al hacer clic en los botones de pestaña', () => {
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabRegister = document.getElementById('tabBtnRegister');
+      const tabProfile = document.getElementById('tabBtnProfile');
+
+      tabLogin.click();
+      expect(document.getElementById('authViewLogin').style.display).toBe('block');
+
+      tabRegister.click();
+      expect(document.getElementById('authViewRegister').style.display).toBe('block');
+
+      tabProfile.click();
+      expect(document.getElementById('authViewProfile').style.display).toBe('block');
     });
   });
 
@@ -143,6 +219,12 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(bannerEmail.textContent).toContain('Navegando sin sesión activa');
     });
 
+    it('abre en pestaña específica cuando se le solicita por parámetro', () => {
+      openUserProfileModal('register');
+      const viewRegister = document.getElementById('authViewRegister');
+      expect(viewRegister.style.display).toBe('block');
+    });
+
     it('cierra el modal al llamar a closeUserProfileModal()', () => {
       openUserProfileModal();
       const modal = document.getElementById('userProfileModal');
@@ -180,6 +262,16 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       openUserProfileModal();
       const btnCancel = document.getElementById('btnCancelUserProfile');
       btnCancel.click();
+      expect(modal.style.display).toBe('none');
+
+      openUserProfileModal();
+      const btnCancelLogin = document.getElementById('btnCancelLogin');
+      btnCancelLogin.click();
+      expect(modal.style.display).toBe('none');
+
+      openUserProfileModal();
+      const btnCancelRegister = document.getElementById('btnCancelRegister');
+      btnCancelRegister.click();
       expect(modal.style.display).toBe('none');
     });
 
@@ -265,12 +357,10 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       const feedback = document.getElementById('profileFeedbackMsg');
       expect(feedback.textContent).toContain('actualizada exitosamente');
 
-      // Verificar actualización en store global
       expect(store.state.user.name).toBe('Miguel Ángel Dubois Pappa');
       expect(store.state.user.company).toBe('Kroma Lab Sales Studio');
       expect(store.state.user.address).toContain('Villa Nueva');
 
-      // Verificar actualización en usersStore
       const updatedInStore = usersStore.getUserById('usr_001');
       expect(updatedInStore.name).toBe('Miguel Ángel Dubois Pappa');
     });
@@ -296,7 +386,6 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
 
       openUserProfileModal();
 
-      // Duplicar el correo del admin para forzar error de unicidad
       document.getElementById('profileNameInput').value = 'Carlos';
       document.getElementById('profileEmailInput').value = 'miguel@kromalab.gt';
       document.getElementById('profilePhoneInput').value = '+502 5555-0000';
@@ -306,6 +395,184 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
 
       const feedback = document.getElementById('profileFeedbackMsg');
       expect(feedback.textContent).toContain('ya está registrado');
+    });
+  });
+
+  describe('Autenticación Real con Backend (Login)', () => {
+    it('muestra error si el correo o contraseña están vacíos', async () => {
+      document.getElementById('loginEmailInput').value = '';
+      document.getElementById('loginPasswordInput').value = '';
+
+      const ok = await handleLoginSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('ingresa tu correo y contraseña');
+    });
+
+    it('inicia sesión exitosamente contra la API backend seteando usuario y token en store', async () => {
+      const mockBackendUser = {
+        id: 'usr_real_001',
+        email: 'miguel@kromalab.gt',
+        name: 'Miguel Dubois',
+        role: 'ADMIN',
+      };
+
+      vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+        success: true,
+        user: mockBackendUser,
+        token: 'real-jwt-token-xyz',
+      });
+
+      document.getElementById('loginEmailInput').value = 'miguel@kromalab.gt';
+      document.getElementById('loginPasswordInput').value = 'Admin2026!';
+
+      const ok = await handleLoginSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(true);
+
+      expect(store.state.user.id).toBe('usr_real_001');
+      expect(store.state.user.role).toBe('ADMIN');
+      expect(store.state.token).toBe('real-jwt-token-xyz');
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('Sesión real iniciada');
+    });
+
+    it('maneja credenciales incorrectas o error de servidor mostrando mensaje de error', async () => {
+      vi.spyOn(apiClient.auth, 'login').mockRejectedValue(new Error('Credenciales inválidas'));
+
+      document.getElementById('loginEmailInput').value = 'err@kromalab.gt';
+      document.getElementById('loginPasswordInput').value = 'WrongPass';
+
+      const ok = await handleLoginSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('Credenciales inválidas');
+    });
+
+    it('los botones de login rápido invocan la autenticación real con credenciales', async () => {
+      const loginSpy = vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+        success: true,
+        user: { id: 'usr_002', name: 'Carlos Morales', role: 'EMPLOYEE' },
+        token: 'jwt-taller-tok',
+      });
+
+      const btnQuick = document.querySelector('.btn-quick-login[data-email="taller@kromalab.gt"]');
+      expect(btnQuick).not.toBeNull();
+
+      btnQuick.click();
+
+      // Permitir que la promesa de login se resuelva
+      await vi.waitFor(() => {
+        expect(loginSpy).toHaveBeenCalledWith('taller@kromalab.gt', 'Taller2026!');
+      });
+    });
+  });
+
+  describe('Registro Real de Nuevos Clientes B2B (Register)', () => {
+    it('valida que el nombre de contacto tenga al menos 2 caracteres', async () => {
+      document.getElementById('registerNameInput').value = 'A';
+      document.getElementById('registerEmailInput').value = 'test@empresa.gt';
+      document.getElementById('registerPhoneInput').value = '55551234';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('al menos 2 caracteres');
+    });
+
+    it('valida que el correo electrónico sea válido', async () => {
+      document.getElementById('registerNameInput').value = 'Juan Pérez';
+      document.getElementById('registerEmailInput').value = 'emailinvalido';
+      document.getElementById('registerPhoneInput').value = '55551234';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('correo electrónico válido');
+    });
+
+    it('valida que el teléfono tenga al menos 8 dígitos', async () => {
+      document.getElementById('registerNameInput').value = 'Juan Pérez';
+      document.getElementById('registerEmailInput').value = 'juan@empresa.gt';
+      document.getElementById('registerPhoneInput').value = '123';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('mínimo 8 dígitos');
+    });
+
+    it('valida que la contraseña tenga al menos 6 caracteres', async () => {
+      document.getElementById('registerNameInput').value = 'Juan Pérez';
+      document.getElementById('registerEmailInput').value = 'juan@empresa.gt';
+      document.getElementById('registerPhoneInput').value = '55551234';
+      document.getElementById('registerPasswordInput').value = '123';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('al menos 6 caracteres');
+    });
+
+    it('registra exitosamente un cliente B2B y establece su sesión real', async () => {
+      const mockRegisteredUser = {
+        id: 'usr_new_client_01',
+        name: 'Rodrigo Castillo',
+        company: 'Publicidad Creativa GT',
+        email: 'rodrigo@publicidad.gt',
+        phone: '+502 5555-8888',
+        role: 'CUSTOMER',
+      };
+
+      vi.spyOn(apiClient.auth, 'register').mockResolvedValue({
+        success: true,
+        user: mockRegisteredUser,
+        token: 'new-client-jwt-token',
+      });
+
+      document.getElementById('registerNameInput').value = 'Rodrigo Castillo';
+      document.getElementById('registerCompanyInput').value = 'Publicidad Creativa GT';
+      document.getElementById('registerNitInput').value = '9876543-2';
+      document.getElementById('registerPhoneInput').value = '+502 5555-8888';
+      document.getElementById('registerAddressInput').value = 'Zona 9 Ciudad de Guatemala';
+      document.getElementById('registerEmailInput').value = 'rodrigo@publicidad.gt';
+      document.getElementById('registerPasswordInput').value = 'Promo2026!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(true);
+
+      expect(store.state.user.name).toBe('Rodrigo Castillo');
+      expect(store.state.user.role).toBe('CUSTOMER');
+      expect(store.state.token).toBe('new-client-jwt-token');
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('Cuenta creada exitosamente');
+    });
+
+    it('muestra error cuando el registro en backend falla (p. ej. correo duplicado)', async () => {
+      vi.spyOn(apiClient.auth, 'register').mockRejectedValue(
+        new Error('Ya existe una cuenta registrada con este correo electrónico.')
+      );
+
+      document.getElementById('registerNameInput').value = 'Juan Pérez';
+      document.getElementById('registerEmailInput').value = 'existente@empresa.gt';
+      document.getElementById('registerPhoneInput').value = '55551234';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('Ya existe una cuenta registrada');
     });
   });
 

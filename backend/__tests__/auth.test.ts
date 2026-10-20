@@ -45,6 +45,39 @@ describe('Auth API (/api/auth)', () => {
     expect(res.body.success).toBe(false);
   });
 
+  it('registra una nueva cuenta de cliente B2B exitosamente en /api/auth/register', async () => {
+    const randomEmail = `cliente_${Date.now()}@pruebas.gt`;
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        name: 'Cliente Nuevo Test',
+        email: randomEmail,
+        password: 'PasswordSegura2026!',
+        phone: '+502 5999-1122',
+        company: 'Empresa Test S.A.',
+        taxId: '9876543-2',
+        address: 'Zona 14, Guatemala',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe(randomEmail);
+    expect(res.body.user.role).toBe('CUSTOMER');
+
+    // Rechaza correo duplicado (409)
+    const dupRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        name: 'Cliente Duplicado',
+        email: randomEmail,
+        password: 'OtraPassword123!',
+        phone: '+502 5999-1122',
+      });
+    expect(dupRes.status).toBe(409);
+    expect(dupRes.body.success).toBe(false);
+  });
+
   it('obtiene el perfil del usuario autenticado en /api/auth/me', async () => {
     const res = await request(app)
       .get('/api/auth/me')
@@ -119,6 +152,81 @@ describe('Auth API (/api/auth)', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.users.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('permite a ADMIN crear un nuevo colaborador en /api/auth/users', async () => {
+    const emailOperador = `operador_${Date.now()}@kromalab.gt`;
+    const res = await request(app)
+      .post('/api/auth/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Operador Corte y Empaque',
+        email: emailOperador,
+        password: 'PasswordOperador2026!',
+        role: 'EMPLOYEE',
+        department: 'Corte y Calandrado',
+        phone: '+502 5555-4433',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.user.email).toBe(emailOperador);
+    expect(res.body.user.role).toBe('EMPLOYEE');
+
+    const createdUserId = res.body.user.id;
+
+    // Rechaza correo duplicado (409)
+    const dupRes = await request(app)
+      .post('/api/auth/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Duplicado',
+        email: emailOperador,
+        password: 'OtraPassword123!',
+      });
+    expect(dupRes.status).toBe(409);
+
+    // ADMIN puede restablecer contraseña del usuario creado
+    const resetRes = await request(app)
+      .put(`/api/auth/users/${createdUserId}/reset-password`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ newPassword: 'NuevaPassword2026!' });
+    expect(resetRes.status).toBe(200);
+    expect(resetRes.body.success).toBe(true);
+
+    // ADMIN puede eliminar usuario creado
+    const delRes = await request(app)
+      .delete(`/api/auth/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+  });
+
+  it('ADMIN no puede eliminar su propia cuenta activa (400)', async () => {
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const adminId = meRes.body.user.id;
+
+    const res = await request(app)
+      .delete(`/api/auth/users/${adminId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('retorna 404 si se intenta restablecer contraseña o eliminar usuario inexistente', async () => {
+    const resetRes = await request(app)
+      .put('/api/auth/users/usr-inexistente-xyz/reset-password')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ newPassword: 'Password123!' });
+    expect(resetRes.status).toBe(404);
+
+    const delRes = await request(app)
+      .delete('/api/auth/users/usr-inexistente-xyz')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(delRes.status).toBe(404);
   });
 
   it('cierra la sesión exitosamente en /api/auth/logout', async () => {

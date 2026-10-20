@@ -99,6 +99,16 @@ export class ApiClient {
       }
       return res;
     },
+    register: async (userData) => {
+      const res = await this._request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+      if (res.token) {
+        this.setToken(res.token);
+      }
+      return res;
+    },
     logout: async () => {
       try {
         await this._request('/auth/logout', { method: 'POST' });
@@ -117,6 +127,23 @@ export class ApiClient {
     },
     listUsers: async () => {
       return this._request('/auth/users');
+    },
+    createUser: async (userData) => {
+      return this._request('/auth/users', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+    },
+    resetPassword: async (userId, newPassword) => {
+      return this._request(`/auth/users/${userId}/reset-password`, {
+        method: 'PUT',
+        body: JSON.stringify({ newPassword }),
+      });
+    },
+    deleteUser: async (userId) => {
+      return this._request(`/auth/users/${userId}`, {
+        method: 'DELETE',
+      });
     },
   };
 
