@@ -4,6 +4,7 @@
  */
 
 import { ORDER_STATUS } from '../../shared/business-config.js';
+import { inventoryStore } from './inventory-store.js';
 
 const STORAGE_KEY_ORDERS = 'kromalab_orders';
 
@@ -298,6 +299,13 @@ class OrdersStore {
 
     order.productionStatus = newStatus;
     order.updatedAt = new Date().toISOString();
+    if (newStatus === ORDER_STATUS.PRINTING || newStatus === ORDER_STATUS.COMPLETED) {
+      try {
+        inventoryStore.deductOrderConsumption(order);
+      } catch (e) {
+        console.warn('Error al descontar consumo de inventario:', e);
+      }
+    }
     this._notify();
     return true;
   }
