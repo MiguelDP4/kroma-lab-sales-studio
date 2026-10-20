@@ -59,6 +59,11 @@ export const PERMISSIONS = {
     label: 'Auditoría y Matriz de Permisos',
     desc: 'Consultar e inspeccionar la matriz de seguridad y privilegios RBAC asignados a cada rol.',
   },
+  VIEW_COMMERCIAL_REPORTS: {
+    code: 'VIEW_COMMERCIAL_REPORTS',
+    label: 'Reportes y Analítica Comercial',
+    desc: 'Supervisar métricas de facturación, consumo de bobinas Audley, cobranza y exportar a CSV.',
+  },
   CONFIG_PRICING_TIERS: {
     code: 'CONFIG_PRICING_TIERS',
     label: 'Configuración de Tarifas',
@@ -80,8 +85,10 @@ export const ROLE_PERMISSIONS = {
     'MANAGE_USERS',
     'MANAGE_ROLES_PERMS',
     'CONFIG_PRICING_TIERS',
+    'VIEW_COMMERCIAL_REPORTS',
   ],
   EMPLOYEE: [
+    'VIEW_COMMERCIAL_REPORTS',
     'PUBLIC_ACCESS',
     'SUBMIT_LEAD',
     'CREATE_CUSTOMER_ORDER',

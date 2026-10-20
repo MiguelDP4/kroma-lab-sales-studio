@@ -254,6 +254,7 @@ kroma-lab-sales-studio/
     * `/pedidos`: `ordersView` (`CUSTOMER`, `EMPLOYEE`, `ADMIN`)
     * `/produccion`: `productionView` (`EMPLOYEE`, `ADMIN`)
     * `/clientes`: `clientsView` (`EMPLOYEE`, `ADMIN`)
+    * `/reportes`: `reportsView` (`EMPLOYEE`, `ADMIN`)
     * `/usuarios`: `usersView` (`ADMIN`)
 * **Carrito de Compras Multidiseño (`cart-store.js` + `cart-engine.js` + `cart-drawer.js`):**
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
@@ -307,6 +308,25 @@ kroma-lab-sales-studio/
     * Validación estricta de unicidad y formato de correo electrónico.
   * **Restablecimiento de Credenciales:** Generador de contraseñas temporales seguras (`Kroma!XXXX`) con copiado instantáneo al portapapeles para envío rápido por WhatsApp.
   * **Persistencia Reactiva:** Sincronizado en `localStorage['kromalab_users']` con notificaciones automáticas Pub/Sub.
+* **Módulo de Reportes Comerciales y Analítica UV DTF (`reports-view.js` + `reports-engine.js`):**
+  * **Acceso y Roles:** Disponible para Staff (`ADMIN` y `EMPLOYEE`).
+  * **Supervisión de Facturación y Cobranza:**
+    * Facturación bruta consolidada (Q), cobrado/recaudado (Q), efectividad de cobranza (%), cuentas por cobrar en mora (Q) y ticket promedio por orden.
+  * **Consumo Industrial de Bobina Audley UV DTF (28 cm útiles):**
+    * Metraje lineal impreso total, desglosado en metros entregados vs metros en cola de taller.
+    * Bobinas estándar equivalentes utilizadas (base de 100 metros lineales por bobina).
+    * Total acumulado de stickers y etiquetas producidas.
+    * Estimación de insumos consumidos: Film A base (1.05x margen técnico), Film B calandrado (1.02x) y tinta UV combinada (15 ml/m para CMYK + Cama Blanca + Barniz de Relieve).
+  * **Fidelización y Meta de Cartera B2B:**
+    * Monitoreo del objetivo estratégico de Miguel (20 a 30 clientes B2B recurrentes, meta base: 25 cuentas clave) con barra de progreso porcentual.
+    * Ranking Top 10 Clientes B2B clasificado por volumen de compra y metraje, con estado de cuenta y saldos pendientes.
+    * Desglose por sectores de negocio (Cafeterías, Barberías, Merch, Cervecerías, Retail).
+  * **Filtrado Dinámico por Período:**
+    * Selector interactivo con opciones: *Histórico Completo*, *Hoy*, *Últimos 7 Días*, *Este Mes* y *Últimos 30 Días*, con actualización reactiva instantánea.
+  * **Exportación de Datos a CSV / Excel (RFC 4180 con UTF-8 BOM):**
+    * `Exportar Pedidos Detallados (.csv)`: reporte fila por fila con número de orden, cliente, NIT, dirección, metros, tarifas, estado de producción y pago.
+    * `Exportar Cartera B2B (.csv)`: directorio comercial con contactos, NIT, metraje acumulado, facturación total y cuentas por cobrar.
+    * `Exportar Consumo de Bobina (.csv)`: desglose técnico por orden con metraje de bobina, Film A, Film B, mililitros de tinta UV y tipo de acabado (corte perimetral vs rollo continuo).
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
