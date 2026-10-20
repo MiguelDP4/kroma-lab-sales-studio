@@ -5,6 +5,7 @@
  */
 
 import { PRICING_TIERS, CUTTING_TIERS, ORDER_STATUS } from '../../shared/business-config.js';
+import { calculateQuote } from './quoter-engine.js';
 
 export const STORAGE_KEY_COSTS = 'kromalab_costs_config';
 
@@ -253,6 +254,98 @@ export function calculatePrintRunCost({
       filmAMeters: m * cfg.filmAMarginFactor,
       filmBMeters: m * cfg.filmBMarginFactor,
     },
+  };
+}
+
+/**
+ * Calcula la rentabilidad y simulación de descuentos a partir de dimensiones de sticker y piezas,
+ * emulando el cotizador oficial de Kroma Lab para determinar metros lineales en bobina de 28cm.
+ * @param {Object} params
+ * @param {number} [params.widthCm=5.0] Ancho del sticker en cm
+ * @param {number} [params.heightCm=5.0] Alto del sticker en cm
+ * @param {number} [params.qty=100] Cantidad de stickers
+ * @param {string} [params.finishType='Barniz con Relieve 3D'] Tipo de acabado
+ * @param {boolean} [params.includeCutting=false] Si incluye servicio de corte perimetral
+ * @param {number} [params.customSellingPriceQ=null] Precio de venta negociado/ofrecido (opcional)
+ * @param {Object} [params.customCosts=null] Sobrescritura de costos base
+ * @returns {Object} Desglose completo técnico, cotización base y análisis de descuento
+ */
+export function calculateStickerProfitability({
+  widthCm = 5.0,
+  heightCm = 5.0,
+  qty = 100,
+  finishType = 'Barniz con Relieve 3D',
+  includeCutting = false,
+  customSellingPriceQ = null,
+  customCosts = null,
+} = {}) {
+  const quote = calculateQuote({ widthCm, heightCm, qty, includeCutting });
+  const productionMeters = Math.max(0.01, quote.actualLinearMeters);
+  const listPriceTotalQ = quote.totalPriceQ;
+
+  const hasCustomPrice = customSellingPriceQ !== null &&
+    customSellingPriceQ !== undefined &&
+    customSellingPriceQ !== '' &&
+    !isNaN(customSellingPriceQ);
+
+  const effectiveSellingPriceQ = hasCustomPrice
+    ? Math.max(0, parseFloat(customSellingPriceQ))
+    : listPriceTotalQ;
+
+  const runCost = calculatePrintRunCost({
+    meters: productionMeters,
+    stickersCount: quote.qty,
+    hasCutting: includeCutting,
+    finishType,
+    customSellingPriceQ: effectiveSellingPriceQ,
+    customCosts,
+  });
+
+  const discountAmountQ = Math.max(0, listPriceTotalQ - effectiveSellingPriceQ);
+  const discountPercent = listPriceTotalQ > 0 ? (discountAmountQ / listPriceTotalQ) * 100 : 0;
+  const isDiscountApplied = discountAmountQ > 0.05;
+
+  const listCostQ = runCost.costs.totalProductionCostQ;
+  const listNetProfitQ = listPriceTotalQ - listCostQ;
+  const listMarginPercent = listPriceTotalQ > 0 ? (listNetProfitQ / listPriceTotalQ) * 100 : 0;
+
+  let discountAdvice = '🟢 Precio de lista oficial (Margen óptimo)';
+  let adviceColor = '#10b981';
+
+  if (isDiscountApplied) {
+    if (runCost.profitability.profitMarginPercent >= 70) {
+      discountAdvice = '🟢 Descuento seguro: el margen se mantiene por encima del 70%';
+      adviceColor = '#10b981';
+    } else if (runCost.profitability.profitMarginPercent >= 50) {
+      discountAdvice = '🟡 Descuento aceptable para cliente B2B recurrente (Margen 50-70%)';
+      adviceColor = '#f59e0b';
+    } else {
+      discountAdvice = '🔴 Alerta: este descuento reduce el margen a menos del 50%';
+      adviceColor = '#ef4444';
+    }
+  }
+
+  return {
+    quote,
+    runCost,
+    productionMeters,
+    pricingComparison: {
+      listPriceTotalQ,
+      listNetProfitQ,
+      listMarginPercent,
+      offeredPriceTotalQ: effectiveSellingPriceQ,
+      discountAmountQ,
+      discountPercent,
+      isDiscountApplied,
+      discountAdvice,
+      adviceColor,
+    },
+    costs: runCost.costs,
+    profitability: runCost.profitability,
+    netProfitQ: runCost.profitability.netProfitQ,
+    profitMarginPercent: runCost.profitability.profitMarginPercent,
+    profitPerStickerQ: runCost.profitability.profitPerStickerQ,
+    costPerStickerQ: runCost.costs.costPerStickerQ,
   };
 }
 
