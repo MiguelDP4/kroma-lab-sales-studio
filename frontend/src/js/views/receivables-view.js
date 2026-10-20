@@ -11,6 +11,7 @@ import {
   BANK_ACCOUNTS_GT,
 } from '../modules/receivables-store.js';
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABELS } from '../modules/orders-store.js';
+import { downloadCSV } from '../modules/reports-engine.js';
 
 export const receivablesView = {
   path: '/cobranza',
@@ -21,8 +22,8 @@ export const receivablesView = {
     return `
       <div style="padding: 2rem 0 4rem;">
         <!-- Cabecera de la Vista -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1.25rem;">
-          <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.25rem;">
+          <div style="flex: 1 1 340px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
               <span class="badge">Finanzas & Cobranza</span>
               <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981;">
@@ -37,17 +38,20 @@ export const receivablesView = {
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button id="btnOpenRecordPaymentModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; flex-shrink: 0;">
+            <button id="btnOpenRecordPaymentModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
               <span>➕</span>
               <span>Registrar Abono / Pago</span>
             </button>
-            <button id="btnExportReceivablesCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <button id="btnExportReceivablesCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
               <span>📥</span>
               <span>Exportar Cartera CSV</span>
             </button>
           </div>
         </div>
+
+        <!-- Notificación Toast de Cobranza (No afecta la posición ni el tamaño de los botones) -->
+        <div id="receivablesToast" class="reports-notification" style="display: none; margin-bottom: 1.5rem;"></div>
 
         <!-- Tarjetas de Resumen KPI de Cobranza -->
         <div id="receivablesSummaryContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
@@ -465,39 +469,28 @@ export const receivablesView = {
       });
     }
 
-    // Exportar CSV
+    // Toast de Notificación
+    const toastEl = document.getElementById('receivablesToast');
+    function showToast(message) {
+      if (!toastEl) return;
+      toastEl.textContent = message;
+      toastEl.style.display = 'block';
+      setTimeout(() => {
+        if (toastEl) toastEl.style.display = 'none';
+      }, 3500);
+    }
+
+    // Exportar CSV (Sin modificar texto ni estado del botón para evitar brincos o desalineaciones visuales)
     if (btnExportCSV) {
       btnExportCSV.addEventListener('click', () => {
-        const originalText = btnExportCSV.innerHTML;
-        btnExportCSV.innerHTML = '<span>⏳</span><span>Generando...</span>';
-        btnExportCSV.disabled = true;
-
         try {
           const csvContent = receivablesStore.exportReceivablesCSV();
-          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.setAttribute('href', url);
-          link.setAttribute('download', `cartera_cuentas_por_cobrar_${new Date().toISOString().slice(0, 10)}.csv`);
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-
-          setTimeout(() => {
-            if (document.body.contains(link)) {
-              document.body.removeChild(link);
-            }
-            URL.revokeObjectURL(url);
-            btnExportCSV.innerHTML = '<span>✅</span><span>¡Descargado!</span>';
-            setTimeout(() => {
-              btnExportCSV.innerHTML = originalText;
-              btnExportCSV.disabled = false;
-            }, 1800);
-          }, 250);
+          const filename = `cartera_cuentas_por_cobrar_${new Date().toISOString().slice(0, 10)}.csv`;
+          downloadCSV(filename, csvContent);
+          showToast('✅ Cartera de cuentas por cobrar exportada exitosamente en CSV.');
         } catch (err) {
           console.error('Error al exportar CSV:', err);
-          btnExportCSV.innerHTML = originalText;
-          btnExportCSV.disabled = false;
+          showToast('❌ Ocurrió un error al generar los datos del CSV.');
         }
       });
     }

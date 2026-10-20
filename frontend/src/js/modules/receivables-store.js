@@ -108,9 +108,9 @@ export const INITIAL_SEED_PAYMENTS = [
 ];
 
 export function calculateAging(orderCreatedAt) {
-  const created = new Date(orderCreatedAt).getTime();
+  const created = orderCreatedAt ? new Date(orderCreatedAt).getTime() : NaN;
   const now = Date.now();
-  const diffDays = Math.max(0, Math.floor((now - created) / (1000 * 60 * 60 * 24)));
+  const diffDays = isNaN(created) ? 0 : Math.max(0, Math.floor((now - created) / (1000 * 60 * 60 * 24)));
 
   if (diffDays <= 7) return { days: diffDays, status: AGING_STATUS.CURRENT };
   if (diffDays <= 15) return { days: diffDays, status: AGING_STATUS.ATTENTION };
@@ -415,6 +415,8 @@ class ReceivablesStore {
       return `"${str}"`;
     };
 
+    const toFixed2 = val => (Number(val) || 0).toFixed(2);
+
     const headers = [
       'No. Orden',
       'Fecha Emisión',
@@ -433,23 +435,27 @@ class ReceivablesStore {
       'No. de Abonos',
     ];
 
-    const rows = receivables.map(r => [
-      escapeCSV(r.orderId),
-      escapeCSV(new Date(r.createdAt).toISOString().slice(0, 10)),
-      escapeCSV(r.customer?.name || ''),
-      escapeCSV(r.customer?.company || ''),
-      escapeCSV(r.customer?.phone || ''),
-      escapeCSV(r.customer?.nit || 'CF'),
-      escapeCSV(r.customer?.address || ''),
-      escapeCSV(r.linearMeters.toFixed(2)),
-      escapeCSV(r.grandTotalQ.toFixed(2)),
-      escapeCSV(r.totalPaidQ.toFixed(2)),
-      escapeCSV(r.pendingBalanceQ.toFixed(2)),
-      escapeCSV(r.paymentStatus),
-      escapeCSV(r.agingDays),
-      escapeCSV(r.agingStatus.label),
-      escapeCSV(r.paymentsCount),
-    ]);
+    const rows = receivables.map(r => {
+      const dateStr = (r.createdAt ? new Date(r.createdAt) : new Date()).toISOString().slice(0, 10);
+
+      return [
+        escapeCSV(r.orderId || ''),
+        escapeCSV(dateStr),
+        escapeCSV(r.customer?.name || ''),
+        escapeCSV(r.customer?.company || ''),
+        escapeCSV(r.customer?.phone || ''),
+        escapeCSV(r.customer?.nit || 'CF'),
+        escapeCSV(r.customer?.address || ''),
+        escapeCSV(toFixed2(r.linearMeters)),
+        escapeCSV(toFixed2(r.grandTotalQ)),
+        escapeCSV(toFixed2(r.totalPaidQ)),
+        escapeCSV(toFixed2(r.pendingBalanceQ)),
+        escapeCSV(r.paymentStatus || 'PENDING'),
+        escapeCSV(r.agingDays || 0),
+        escapeCSV(r.agingStatus?.label || 'Al Día'),
+        escapeCSV(r.paymentsCount || 0),
+      ];
+    });
 
     return BOM + [headers.join(','), ...rows.map(row => row.join(','))].join('\r\n');
   }
