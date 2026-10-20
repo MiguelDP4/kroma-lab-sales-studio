@@ -3,6 +3,7 @@ import { ordersView } from '../src/js/views/orders-view.js';
 import { productionView } from '../src/js/views/production-view.js';
 import { clientsView } from '../src/js/views/clients-view.js';
 import { usersView } from '../src/js/views/users-view.js';
+import { reportsView } from '../src/js/views/reports-view.js';
 import { quoterView } from '../src/js/views/quoter-view.js';
 import { store } from '../src/js/store.js';
 
@@ -64,6 +65,17 @@ describe('Vistas Modulares SPA', () => {
       expect(html).toContain('Seguridad y Acceso RBAC');
       expect(html).toContain('Invitar Empleado');
       expect(html).toContain('Rol Asignado');
+    });
+  });
+
+  describe('reportsView', () => {
+    it('renderiza la interfaz de reportes con métricas y botones de exportación', () => {
+      const html = reportsView.render();
+      expect(html).toContain('Reportes y Analítica Comercial');
+      expect(html).toContain('Bobina Audley 28cm');
+      expect(html).toContain('btnExportOrdersCSV');
+      expect(html).toContain('btnExportClientsCSV');
+      expect(html).toContain('btnExportRollCSV');
     });
   });
 
