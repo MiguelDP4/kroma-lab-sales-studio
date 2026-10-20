@@ -11,6 +11,7 @@ import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
 import { validatePrintFile, readFileAsDataURL } from './modules/file-uploader.js';
+import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
 
 import { quoterView } from './views/quoter-view.js';
 import { ordersView } from './views/orders-view.js';
@@ -46,6 +47,7 @@ export function initApp() {
   initNavbarRoleSync();
   initMobileNav();
   initCartDrawer();
+  initUserProfileModal();
   router.init();
 }
 
@@ -193,23 +195,26 @@ export function syncNavbarRole(role) {
   }
 
   // Actualizar tarjeta de usuario y chip
+  const currentUser = store.state.user;
+  const currentName = currentUser?.name;
+
   if (role === 'ADMIN') {
-    if (userChipName) userChipName.textContent = 'Miguel Dubois (Admin)';
+    if (userChipName) userChipName.textContent = currentName ? `${currentName} (Admin)` : 'Miguel Dubois (Admin)';
     if (userChipAvatar) userChipAvatar.textContent = '👑';
-    if (sidebarUserName) sidebarUserName.textContent = 'Miguel Dubois';
-    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'M';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Miguel Dubois';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'M';
     if (sidebarUserRole) sidebarUserRole.textContent = 'ADMINISTRADOR';
   } else if (role === 'EMPLOYEE') {
-    if (userChipName) userChipName.textContent = 'Operador Taller';
+    if (userChipName) userChipName.textContent = currentName || 'Operador Taller';
     if (userChipAvatar) userChipAvatar.textContent = '🛠️';
-    if (sidebarUserName) sidebarUserName.textContent = 'Operador Audley';
-    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'O';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Operador Audley';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'O';
     if (sidebarUserRole) sidebarUserRole.textContent = 'OPERADOR TALLER';
   } else if (role === 'CUSTOMER') {
-    if (userChipName) userChipName.textContent = 'Cliente B2B';
+    if (userChipName) userChipName.textContent = currentName || 'Cliente B2B';
     if (userChipAvatar) userChipAvatar.textContent = '🏢';
-    if (sidebarUserName) sidebarUserName.textContent = 'Cliente B2B';
-    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'C';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Cliente B2B';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'C';
     if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
   } else {
     if (userChipName) userChipName.textContent = 'Visitante';
@@ -313,6 +318,8 @@ function initNavbarRoleSync() {
       if (typeof window !== 'undefined' && router && router.currentRoute) {
         router.resolve(window.location.pathname);
       }
+    } else {
+      syncNavbarRole(role);
     }
   });
   lastSyncedRole = store.state.user?.role || 'VISITOR';
@@ -598,3 +605,5 @@ export function sendWhatsAppQuote(quote) {
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
+
+export { openUserProfileModal, closeUserProfileModal, initUserProfileModal };
