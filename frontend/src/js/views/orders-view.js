@@ -640,6 +640,9 @@ export const ordersView = {
                 <button class="btn-action-icon btn-workshop-sheet" data-order-id="${order.id}" title="Hoja de Taller Audley">
                   <span>🖨️</span>
                 </button>
+                <a href="/despacho" data-link class="btn-action-icon" data-order-id="${order.id}" title="${order.dispatchNoteId ? `Ver Remisión ${order.dispatchNoteId}` : 'Generar Guía de Despacho'}">
+                  <span>🚚</span>
+                </a>
               ` : ''}
               <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(`*KROMA LAB — Pedido #${order.id}*\nHola, deseo consultar el estado de este pedido.`)}" target="_blank" rel="noopener noreferrer" class="btn-action-icon" title="Chat WhatsApp">
                 <span>💬</span>
