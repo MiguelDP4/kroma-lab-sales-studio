@@ -6,6 +6,7 @@ import { inventoryStore } from '../src/js/modules/inventory-store.js';
 import { receivablesStore } from '../src/js/modules/receivables-store.js';
 import { dispatchStore, DISPATCH_STATUS } from '../src/js/modules/dispatch-store.js';
 import { usersStore } from '../src/js/modules/users-store.js';
+import { quotesStore } from '../src/js/modules/quotes-store.js';
 import { initBackendSync } from '../src/js/app.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
 
@@ -573,6 +574,63 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
     });
   });
 
+  describe('QuotesStore <-> API Sync', () => {
+    it('sincroniza cotizaciones desde backend mapeando campos y códigos', async () => {
+      const mockQuotes = [
+        {
+          id: 'qt-backend-1',
+          code: 'COT-2026-088',
+          projectName: 'Stickers Vasos 5x5cm',
+          leadName: 'Juan Carlos',
+          leadPhone: '+502 5555-8888',
+          leadEmail: 'juan@vasos.gt',
+          companyName: 'Vasos y Termos GT',
+          widthCm: 5.0,
+          heightCm: 5.0,
+          qty: 100,
+          linearMeters: 1.0,
+          stickersPerRow: 5,
+          rows: 20,
+          unitRateQ: 140.0,
+          materialPriceQ: 140.0,
+          cuttingPriceQ: 35.0,
+          totalPriceQ: 175.0,
+          withCutting: true,
+          finishType: 'GLOSSY_VARNISH',
+          status: 'SAVED',
+          createdAt: '2026-10-20T10:00:00.000Z',
+        },
+      ];
+
+      vi.spyOn(apiClient.quotes, 'list').mockResolvedValueOnce({
+        success: true,
+        quotes: mockQuotes,
+      });
+
+      const quotes = await quotesStore.syncWithApi();
+      const q1 = quotes.find(q => q.code === 'COT-2026-088');
+      expect(q1).toBeDefined();
+      expect(q1.projectName).toBe('Stickers Vasos 5x5cm');
+      expect(q1.totalPriceQ).toBe(175.0);
+      expect(q1.withCutting).toBe(true);
+    });
+
+    it('sincroniza con lista vacía de cotizaciones sin fallar', async () => {
+      vi.spyOn(apiClient.quotes, 'list').mockResolvedValueOnce({
+        success: true,
+        quotes: [],
+      });
+      const quotes = await quotesStore.syncWithApi();
+      expect(quotes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('maneja fallos de red en syncWithApi de cotizaciones', async () => {
+      vi.spyOn(apiClient.quotes, 'list').mockRejectedValueOnce(new Error('Quotes API error'));
+      const quotes = await quotesStore.syncWithApi();
+      expect(quotes.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   describe('App initBackendSync bootstrap', () => {
     it('inicializa backend y logea sesión de administrador si el token está ausente', async () => {
       vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
@@ -589,6 +647,7 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
       vi.spyOn(receivablesStore, 'syncWithApi').mockResolvedValueOnce([]);
       vi.spyOn(dispatchStore, 'syncWithApi').mockResolvedValueOnce([]);
       vi.spyOn(usersStore, 'syncWithApi').mockResolvedValueOnce([]);
+      vi.spyOn(quotesStore, 'syncWithApi').mockResolvedValueOnce([]);
 
       await initBackendSync();
 
@@ -599,6 +658,7 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
       expect(receivablesStore.syncWithApi).toHaveBeenCalled();
       expect(dispatchStore.syncWithApi).toHaveBeenCalled();
       expect(usersStore.syncWithApi).toHaveBeenCalled();
+      expect(quotesStore.syncWithApi).toHaveBeenCalled();
     });
 
     it('utiliza token existente sin realizar nuevo login', async () => {
@@ -612,6 +672,7 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
       vi.spyOn(receivablesStore, 'syncWithApi').mockResolvedValueOnce([]);
       vi.spyOn(dispatchStore, 'syncWithApi').mockResolvedValueOnce([]);
       vi.spyOn(usersStore, 'syncWithApi').mockResolvedValueOnce([]);
+      vi.spyOn(quotesStore, 'syncWithApi').mockResolvedValueOnce([]);
 
       await initBackendSync();
 
