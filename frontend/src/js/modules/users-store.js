@@ -5,6 +5,7 @@
 
 import { USER_ROLES } from '../../shared/business-config.js';
 import { USER_STATUS } from '../../shared/rbac-config.js';
+import { apiClient } from './api-client.js';
 
 const STORAGE_KEY_USERS = 'kromalab_users';
 
@@ -104,6 +105,49 @@ class UsersStore {
     } catch (_) {}
     this.users = JSON.parse(JSON.stringify(INITIAL_SEED_USERS));
     this.saveToStorage();
+  }
+
+
+  _mapBackendUser(u) {
+    return {
+      id: u.id,
+      backendId: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone || '',
+      role: u.role || USER_ROLES.EMPLOYEE,
+      department: u.department || 'Operador Audley & Taller',
+      status: u.isVerified ? USER_STATUS.ACTIVE.id : USER_STATUS.INACTIVE.id,
+      company: u.company || '',
+      nit: u.taxId || '',
+      address: u.address || '',
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt || u.createdAt,
+      lastLogin: u.updatedAt || u.createdAt,
+      notes: '',
+    };
+  }
+
+  async syncWithApi() {
+    try {
+      if (typeof apiClient !== 'undefined' && apiClient.auth) {
+        const res = await apiClient.auth.listUsers();
+        if (res && res.success && Array.isArray(res.users)) {
+          if (res.users.length > 0) {
+            const apiUsers = res.users.map(u => this._mapBackendUser(u));
+            const apiEmails = new Set(apiUsers.map(u => u.email.toLowerCase()));
+            const localOnly = this.users.filter(u => !apiEmails.has(u.email.toLowerCase()) && !u.backendId);
+            this.users = [...apiUsers, ...localOnly];
+            this.saveToStorage();
+            this.notify();
+          }
+          return this.getUsers();
+        }
+      }
+    } catch (err) {
+      console.warn('[UsersStore] Sincronización API no disponible:', err.message);
+    }
+    return this.getUsers();
   }
 
   saveToStorage() {
@@ -349,6 +393,10 @@ class UsersStore {
     }
 
     return result;
+  }
+
+  resetToInitial() {
+    this.resetToDefaults();
   }
 
   resetToDefaults() {

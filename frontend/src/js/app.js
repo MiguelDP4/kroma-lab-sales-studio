@@ -1,3 +1,10 @@
+import { apiClient } from './modules/api-client.js';
+import { ordersStore } from './modules/orders-store.js';
+import { clientsStore } from './modules/clients-store.js';
+import { inventoryStore } from './modules/inventory-store.js';
+import { receivablesStore } from './modules/receivables-store.js';
+import { dispatchStore } from './modules/dispatch-store.js';
+import { usersStore } from './modules/users-store.js';
 /**
  * SPA Entrypoint — Kroma Lab Sales Studio
  * Manejo de logo, roles en navbar, enrutador SPA y cotizador interactivo.
@@ -42,6 +49,30 @@ export const routes = [
 
 export const router = new Router(routes, 'app');
 
+
+export async function initBackendSync() {
+  try {
+    const health = await apiClient.checkHealth();
+    if (health && health.status === 'ok') {
+      if (!apiClient.token) {
+        try {
+          await apiClient.auth.login('miguel@kromalab.gt', 'Admin2026!');
+        } catch (_) {}
+      }
+      await Promise.allSettled([
+        ordersStore.syncWithApi(),
+        clientsStore.syncWithApi(),
+        inventoryStore.syncWithApi(),
+        receivablesStore.syncWithApi(),
+        dispatchStore.syncWithApi(),
+        usersStore.syncWithApi(),
+      ]);
+    }
+  } catch (err) {
+    console.warn('[BackendSync] Servidor backend offline o no disponible:', err?.message || err);
+  }
+}
+
 export function initApp() {
   initTheme();
   initNavbarRoleSync();
@@ -49,6 +80,7 @@ export function initApp() {
   initCartDrawer();
   initUserProfileModal();
   router.init();
+  initBackendSync();
 }
 
 /**

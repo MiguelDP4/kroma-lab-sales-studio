@@ -5,6 +5,7 @@
  */
 
 import { ordersStore, PAYMENT_STATUS } from './orders-store.js';
+import { apiClient } from './api-client.js';
 
 const STORAGE_KEY_CLIENTS = 'kromalab_clients';
 
@@ -114,6 +115,55 @@ class ClientsStore {
     this.clients = JSON.parse(JSON.stringify(INITIAL_SEED_CLIENTS));
   }
 
+
+  _mapBackendCustomer(c) {
+    let cat = 'COMERCIO_GENERAL';
+    if (c.sector && CLIENT_CATEGORIES[c.sector]) {
+      cat = c.sector;
+    } else if (c.sector === 'ARTICULOS_PROMO') {
+      cat = 'PROMOCIONALES_MERCH';
+    } else if (c.sector === 'CAFETERIAS') {
+      cat = 'RESTAURANTES_CAFES';
+    }
+
+    return {
+      id: c.id,
+      backendId: c.id,
+      company: c.companyName || c.managerName || 'Cliente B2B',
+      name: c.managerName || c.companyName || 'Contacto Principal',
+      phone: c.phone || '+502 5555-0000',
+      nit: c.taxId || 'CF',
+      email: c.email || '',
+      address: c.address || 'Ciudad de Guatemala',
+      category: cat,
+      tier: (c.tier && CLIENT_TIERS[c.tier]) ? c.tier : 'NUEVO',
+      notes: c.notes || '',
+      createdAt: c.createdAt,
+    };
+  }
+
+  async syncWithApi() {
+    try {
+      if (typeof apiClient !== 'undefined' && apiClient.customers) {
+        const res = await apiClient.customers.list();
+        if (res && res.success && Array.isArray(res.customers)) {
+          if (res.customers.length > 0) {
+            const apiClients = res.customers.map(c => this._mapBackendCustomer(c));
+            const apiIds = new Set(apiClients.map(c => c.id));
+            const localOnly = this.clients.filter(c => !apiIds.has(c.id) && !c.backendId);
+            this.clients = [...apiClients, ...localOnly];
+            this._saveClients();
+            this._notify();
+          }
+          return this.clients;
+        }
+      }
+    } catch (err) {
+      console.warn('[ClientsStore] Sincronización API no disponible:', err.message);
+    }
+    return this.clients;
+  }
+
   _saveClients() {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
@@ -194,6 +244,26 @@ class ClientsStore {
 
     this.clients.unshift(newClient);
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.customers) {
+      apiClient.customers.create({
+        companyName: newClient.company,
+        managerName: newClient.name,
+        phone: newClient.phone,
+        email: newClient.email || `${newClient.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'cliente'}@kromalab.gt`,
+        address: newClient.address,
+        taxId: newClient.nit,
+        tier: newClient.tier,
+        sector: newClient.category,
+        notes: newClient.notes,
+      }).then(res => {
+        if (res && res.customer) {
+          newClient.backendId = res.customer.id;
+          this._saveClients();
+        }
+      }).catch(() => {});
+    }
+
     return newClient;
   }
 
@@ -213,6 +283,22 @@ class ClientsStore {
 
     client.updatedAt = new Date().toISOString();
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.customers) {
+      const targetId = client.backendId || client.id;
+      apiClient.customers.update(targetId, {
+        companyName: client.company,
+        managerName: client.name,
+        phone: client.phone,
+        email: client.email || 'cliente@kromalab.gt',
+        address: client.address,
+        taxId: client.nit,
+        tier: client.tier,
+        sector: client.category,
+        notes: client.notes,
+      }).catch(() => {});
+    }
+
     return true;
   }
 

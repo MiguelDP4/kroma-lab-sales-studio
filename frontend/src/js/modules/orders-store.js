@@ -5,6 +5,7 @@
 
 import { ORDER_STATUS } from '../../shared/business-config.js';
 import { inventoryStore } from './inventory-store.js';
+import { apiClient } from './api-client.js';
 
 const STORAGE_KEY_ORDERS = 'kromalab_orders';
 
@@ -260,6 +261,71 @@ class OrdersStore {
     }
   }
 
+  _mapBackendOrder(o) {
+    const firstItemTitle = o.notes ? `Tiraje DTF UV (${o.widthCm} × ${o.heightCm} cm)` : 'Impresión DTF UV';
+    return {
+      id: o.code || o.id,
+      backendId: o.id,
+      createdAt: o.createdAt,
+      customer: {
+        clientId: o.customerId || null,
+        name: o.customerName,
+        company: o.customer?.companyName || o.customerName,
+        phone: o.customerPhone,
+        nit: o.customerTaxId || 'CF',
+        address: o.customerAddress || 'Ciudad de Guatemala',
+        email: o.customerEmail || '',
+      },
+      items: [
+        {
+          title: firstItemTitle,
+          widthCm: Number(o.widthCm),
+          heightCm: Number(o.heightCm),
+          qty: o.qty,
+          actualLinearMeters: Number(o.linearMeters),
+          stickersPerRow: o.stickersPerRow || 1,
+          rows: o.rows || 1,
+          includeCutting: Boolean(o.withCutting),
+          cuttingRateUnit: o.withCutting ? 0.08 : 0,
+          finishType: o.finishType || 'Barniz con Relieve 3D',
+          fileInfo: { name: o.fileName || 'diseño.png', sizeFormatted: '300 DPI' },
+        },
+      ],
+      metrics: {
+        totalBillableMeters: Number(o.linearMeters),
+        tierRate: Number(o.unitRateQ || 105.0),
+        materialTotalQ: Number(o.materialPriceQ),
+        cuttingTotalQ: Number(o.cuttingPriceQ || 0.0),
+        grandTotalQ: Number(o.totalAmountQ),
+        hasCutting: Boolean(o.withCutting),
+      },
+      productionStatus: o.status,
+      paymentStatus: o.paymentStatus,
+      amountPaidQ: Number(o.amountPaidQ || 0.0),
+      workshopNotes: o.notes || '',
+    };
+  }
+
+  async syncWithApi() {
+    try {
+      const res = await apiClient.orders.list();
+      if (res && res.success && Array.isArray(res.orders)) {
+        if (res.orders.length > 0) {
+          const apiOrders = res.orders.map(o => this._mapBackendOrder(o));
+          const apiCodes = new Set(apiOrders.map(o => o.id));
+          const localOnly = this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId);
+          this.orders = [...apiOrders, ...localOnly];
+          this._saveOrders();
+          this._notify();
+        }
+        return this.orders;
+      }
+    } catch (err) {
+      console.warn('[OrdersStore] Sincronización API no disponible:', err.message);
+    }
+    return this.orders;
+  }
+
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -330,6 +396,38 @@ class OrdersStore {
 
     this.orders.unshift(newOrder);
     this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.orders) {
+      const firstItem = newOrder.items[0] || {};
+      apiClient.orders.create({
+        customerId: newOrder.customer.clientId || undefined,
+        customerName: newOrder.customer.name,
+        customerPhone: newOrder.customer.phone,
+        customerEmail: newOrder.customer.email,
+        customerTaxId: newOrder.customer.nit,
+        customerAddress: newOrder.customer.address,
+        widthCm: firstItem.widthCm || 5,
+        heightCm: firstItem.heightCm || 5,
+        qty: firstItem.qty || 50,
+        linearMeters: newOrder.metrics.totalBillableMeters,
+        unitRateQ: newOrder.metrics.tierRate,
+        materialPriceQ: newOrder.metrics.materialTotalQ,
+        withCutting: newOrder.metrics.hasCutting,
+        cuttingPriceQ: newOrder.metrics.cuttingTotalQ,
+        totalAmountQ: newOrder.metrics.grandTotalQ,
+        finishType: firstItem.finishType || 'GLOSSY_VARNISH',
+        stickersPerRow: firstItem.stickersPerRow || 1,
+        rows: firstItem.rows || 1,
+        fileName: firstItem.fileInfo?.name,
+        notes: newOrder.workshopNotes,
+      }).then(res => {
+        if (res && res.order) {
+          newOrder.backendId = res.order.id;
+          if (res.order.code) newOrder.id = res.order.code;
+          this._saveOrders();
+        }
+      }).catch(() => {});
+    }
     return newOrder;
   }
 
@@ -347,6 +445,10 @@ class OrdersStore {
       }
     }
     this._notify();
+    if (typeof apiClient !== 'undefined' && apiClient.orders) {
+      const targetId = order.backendId || order.id;
+      apiClient.orders.updateStatus(targetId, newStatus).catch(() => {});
+    }
     return true;
   }
 
@@ -357,6 +459,10 @@ class OrdersStore {
     order.paymentStatus = newPaymentStatus;
     order.updatedAt = new Date().toISOString();
     this._notify();
+    if (typeof apiClient !== 'undefined' && apiClient.orders) {
+      const targetId = order.backendId || order.id;
+      apiClient.orders.updatePayment(targetId, { paymentStatus: newPaymentStatus }).catch(() => {});
+    }
     return true;
   }
 
