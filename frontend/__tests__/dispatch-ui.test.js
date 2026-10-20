@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   dispatchView,
   renderMetricsHtml,
+  renderDispatchCardsHtml,
   renderTableRowsHtml,
   renderDispatchSheetHtml,
 } from '../src/js/views/dispatch-view.js';
@@ -142,35 +143,35 @@ describe('Dispatch View — Interfaz de Remisiones y Guías de Entrega UV DTF', 
 
     it('filtra remisiones por término de búsqueda en tiempo real', () => {
       const searchInput = document.getElementById('dispatchSearchInput');
-      const tableBody = document.getElementById('dispatchTableBody');
+      const cardsContainer = document.getElementById('dispatchCardsContainer');
 
       searchInput.value = 'Rodrigo';
       searchInput.dispatchEvent(new Event('input'));
 
-      expect(tableBody.innerHTML).toContain('Rodrigo Méndez');
-      expect(tableBody.innerHTML).not.toContain('Licda. Brenda');
+      expect(cardsContainer.innerHTML).toContain('Rodrigo Méndez');
+      expect(cardsContainer.innerHTML).not.toContain('Licda. Brenda');
     });
 
     it('filtra remisiones por estado', () => {
       const statusFilter = document.getElementById('dispatchStatusFilter');
-      const tableBody = document.getElementById('dispatchTableBody');
+      const cardsContainer = document.getElementById('dispatchCardsContainer');
 
       statusFilter.value = 'DELIVERED';
       statusFilter.dispatchEvent(new Event('change'));
 
-      expect(tableBody.innerHTML).toContain('REM-2026-001');
-      expect(tableBody.innerHTML).not.toContain('REM-2026-002');
+      expect(cardsContainer.innerHTML).toContain('REM-2026-001');
+      expect(cardsContainer.innerHTML).not.toContain('REM-2026-002');
     });
 
     it('filtra remisiones por método de envío', () => {
       const methodFilter = document.getElementById('dispatchMethodFilter');
-      const tableBody = document.getElementById('dispatchTableBody');
+      const cardsContainer = document.getElementById('dispatchCardsContainer');
 
       methodFilter.value = 'CARGO_EXPRESO';
       methodFilter.dispatchEvent(new Event('change'));
 
-      expect(tableBody.innerHTML).toContain('Cargo Expreso');
-      expect(tableBody.innerHTML).not.toContain('Moto Local');
+      expect(cardsContainer.innerHTML).toContain('Cargo Expreso');
+      expect(cardsContainer.innerHTML).not.toContain('Moto Local');
     });
 
     it('restablece todos los filtros con el botón Limpiar', () => {
@@ -382,14 +383,14 @@ describe('Dispatch View — Interfaz de Remisiones y Guías de Entrega UV DTF', 
     });
 
     it('reacciona a notificaciones de dispatchStore y ordersStore', () => {
-      const initialRows = document.querySelectorAll('#dispatchTableBody tr').length;
+      const initialCards = document.querySelectorAll('#dispatchCardsContainer .dispatch-card').length;
       dispatchStore.createDispatchNote({
         orderId: 'KL-00042',
         clientName: 'Reactivity Test Client',
       });
 
-      const updatedRows = document.querySelectorAll('#dispatchTableBody tr').length;
-      expect(updatedRows).toBeGreaterThan(initialRows);
+      const updatedCards = document.querySelectorAll('#dispatchCardsContainer .dispatch-card').length;
+      expect(updatedCards).toBeGreaterThan(initialCards);
 
       // Notificación de ordersStore
       expect(() => ordersStore._notify()).not.toThrow();

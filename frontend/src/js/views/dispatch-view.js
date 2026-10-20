@@ -92,28 +92,9 @@ export const dispatchView = {
           </div>
         </div>
 
-        <!-- Tabla Principal de Remisiones (Estilo calc-card + orders-table) -->
-        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-          <div class="mobile-scroll-hint">
-            <span>👈 Desliza horizontalmente para ver más columnas 👉</span>
-          </div>
-          <table class="orders-table" style="min-width: 950px;">
-            <thead>
-              <tr>
-                <th style="min-width: 140px;">Código</th>
-                <th style="min-width: 180px;">Cliente</th>
-                <th style="min-width: 210px;">Envío & Destino</th>
-                <th style="min-width: 110px;">Metros</th>
-                <th style="min-width: 110px;">Total</th>
-                <th style="min-width: 140px;">Estado Despacho</th>
-                <th style="min-width: 130px;">Saldo Cobro</th>
-                <th style="text-align: right; min-width: 130px;">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="dispatchTableBody">
-              ${renderTableRowsHtml(dispatchStore.getDispatchNotes())}
-            </tbody>
-          </table>
+        <!-- Rejilla Principal de Tarjetas de Remisión y Despacho Responsivas -->
+        <div id="dispatchCardsContainer" class="dispatch-cards-grid">
+          ${renderDispatchCardsHtml(dispatchStore.getDispatchNotes())}
         </div>
       </div>
 
@@ -367,7 +348,7 @@ export const dispatchView = {
     const statusFilter = document.getElementById('dispatchStatusFilter');
     const methodFilter = document.getElementById('dispatchMethodFilter');
     const btnResetFilters = document.getElementById('btnResetDispatchFilters');
-    const tableBody = document.getElementById('dispatchTableBody');
+    const cardsContainer = document.getElementById('dispatchCardsContainer');
     const metricsGrid = document.getElementById('dispatchMetricsGrid');
     const btnExportCsv = document.getElementById('btnExportDispatchCSV');
 
@@ -424,8 +405,8 @@ export const dispatchView = {
         notes = notes.filter((n) => n.deliveryMethod === method);
       }
 
-      if (tableBody) tableBody.innerHTML = renderTableRowsHtml(notes);
-      attachRowEventListeners();
+      if (cardsContainer) cardsContainer.innerHTML = renderDispatchCardsHtml(notes);
+      attachCardEventListeners();
     }
 
     // Buscador y filtros
@@ -632,7 +613,7 @@ export const dispatchView = {
     }
 
     // Escuchadores de eventos para filas de la tabla
-    function attachRowEventListeners() {
+    function attachCardEventListeners() {
       // Cambio interactivo directo de estado desde la tabla (.select-dispatch-status)
       document.querySelectorAll('.select-dispatch-status').forEach((sel) => {
         sel.addEventListener('change', () => {
@@ -678,7 +659,8 @@ export const dispatchView = {
       });
     }
 
-    attachRowEventListeners();
+    const attachRowEventListeners = attachCardEventListeners;
+    attachCardEventListeners();
 
     // Suscripción reactiva al almacén de despacho
     const unsubDispatch = dispatchStore.subscribe(() => {
@@ -735,18 +717,22 @@ export function renderMetricsHtml(m) {
 }
 
 /**
- * Renderizado de filas de la tabla de remisiones (Estilo orders-table espacioso y limpio)
+ * Renderizado de tarjetas responsivas de remisión y despacho UV DTF.
+ * Diseño estructurado en cuadrícula adaptativa (Card Grid) que elimina
+ * desbordamientos de tabla ancha y presenta toda la información de forma clara y táctil.
  */
-export function renderTableRowsHtml(notes) {
+export function renderDispatchCardsHtml(notes) {
   if (!notes || notes.length === 0) {
     return `
-      <tr>
-        <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📦</div>
-          <div style="font-weight: 700; font-size: 1.05rem;">No hay remisiones de despacho registradas</div>
-          <div style="font-size: 0.85rem;">Emite una nueva remisión pulsando "+ Nueva Remisión"</div>
-        </td>
-      </tr>
+      <div class="calc-card" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted); width: 100%; grid-column: 1 / -1;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📦</div>
+        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem;">
+          No hay remisiones de despacho registradas
+        </div>
+        <div style="font-size: 0.9rem;">
+          Emite una nueva remisión pulsando "+ Nueva Remisión"
+        </div>
+      </div>
     `;
   }
 
@@ -762,107 +748,141 @@ export function renderTableRowsHtml(notes) {
     const isPaid = n.pendingBalanceQ <= 0;
 
     return `
-      <tr>
-        <!-- CÓDIGO (Folio, Pedido vinculante y fecha) -->
-        <td>
-          <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; font-family: var(--font-mono);">
-            ${n.id}
+      <div class="dispatch-card" data-note-id="${n.id}" style="border-top: 4px solid ${statusDef.color};">
+        <!-- Cabecera de la Tarjeta: Folio, Pedido, Estado y Saldo -->
+        <div class="dispatch-card-header">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span class="dispatch-card-folio">${n.id}</span>
+              <a href="/pedidos" data-link class="badge" style="color: var(--cerulean); border-color: var(--cerulean); text-decoration: none; font-size: 0.78rem; font-weight: 700;">
+                Pedido #${n.orderId}
+              </a>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+              📅 Emitida: ${dateFormatted}
+            </div>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
-            <a href="/pedidos" data-link style="color: var(--cerulean); text-decoration: none; font-weight: 600;">#${n.orderId}</a> • ${dateFormatted}
-          </div>
-        </td>
 
-        <!-- CLIENTE -->
-        <td>
-          <div style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">
-            ${n.clientName}
-          </div>
-          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
-            📞 ${n.clientPhone || 'Sin teléfono'}
-          </div>
-        </td>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <select 
+              class="select-status select-dispatch-status" 
+              data-note-id="${n.id}" 
+              style="background: ${statusDef.bg}; color: ${statusDef.color}; border-color: ${statusDef.color}; min-height: 36px; padding: 0.35rem 0.65rem;"
+            >
+              <option value="PREPARED" ${n.status === 'PREPARED' ? 'selected' : ''}>📦 Empacado</option>
+              <option value="IN_TRANSIT" ${n.status === 'IN_TRANSIT' ? 'selected' : ''}>🚚 En Ruta</option>
+              <option value="DELIVERED" ${n.status === 'DELIVERED' ? 'selected' : ''}>✅ Entregado</option>
+              <option value="CANCELLED" ${n.status === 'CANCELLED' ? 'selected' : ''}>❌ Anulado</option>
+            </select>
 
-        <!-- ENVÍO & DESTINO -->
-        <td>
-          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem; display: flex; align-items: center; gap: 0.35rem;">
-            <span>${method.icon}</span>
-            <span>${method.shortLabel}</span>
-            ${n.trackingNumber ? `
-              <span style="font-size: 0.75rem; color: var(--cerulean); font-family: var(--font-mono);">(${n.trackingNumber})</span>
-            ` : ''}
+            ${isPaid ? `
+              <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981; font-weight: 600; padding: 0.35rem 0.65rem;">
+                ✓ Pagado
+              </span>
+            ` : `
+              <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: 700; padding: 0.35rem 0.65rem;">
+                Cobrar Q${n.pendingBalanceQ.toFixed(2)}
+              </span>
+            `}
           </div>
-          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.deliveryAddress}">
-            📍 ${n.deliveryAddress}
-          </div>
-        </td>
+        </div>
 
-        <!-- METROS & BULTOS -->
-        <td style="font-family: var(--font-mono);">
-          <div style="font-weight: 600; font-size: 0.92rem;">
-            ${n.totalOrderMeters.toFixed(2)} m
+        <!-- Cuerpo de la Tarjeta: Cliente, Logística y Dirección -->
+        <div class="dispatch-card-body">
+          <div class="dispatch-card-client-row">
+            <div>
+              <div class="dispatch-card-client-name">
+                👤 ${n.clientName}
+              </div>
+              <div class="dispatch-card-client-phone">
+                📞 <span>${n.clientPhone || 'Sin teléfono'}</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: var(--cerulean); border-color: var(--cerulean); font-size: 0.78rem;">
+                ${method.icon} ${method.shortLabel}
+              </span>
+              ${n.trackingNumber ? `
+                <div style="font-size: 0.75rem; color: var(--cerulean); font-family: var(--font-mono); margin-top: 0.25rem; font-weight: 600;">
+                  Guía: ${n.trackingNumber}
+                </div>
+              ` : ''}
+            </div>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
-            ${n.packagesCount} ${n.packagesCount === 1 ? 'bulto' : 'bultos'} (${pack.label.split(' ')[0]})
-          </div>
-        </td>
 
-        <!-- TOTAL -->
-        <td style="font-family: var(--font-mono);">
-          <div style="font-weight: 800; color: var(--text-primary); font-size: 0.92rem;">
-            Q${n.totalOrderAmountQ.toFixed(2)}
+          <div class="dispatch-card-address" title="${n.deliveryAddress}">
+            📍 <span style="color: var(--text-primary); font-weight: 500;">${n.deliveryAddress}</span>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
-            Flete: Q${n.shippingCostQ.toFixed(2)}
-          </div>
-        </td>
 
-        <!-- ESTADO DESPACHO (Selector interactivo como en Pedidos) -->
-        <td>
-          <select 
-            class="select-status select-dispatch-status" 
+          <div class="dispatch-card-metrics-grid">
+            <div class="dispatch-card-metric-col">
+              <span>Metraje</span>
+              <span style="color: var(--cerulean);">${n.totalOrderMeters.toFixed(2)} m</span>
+            </div>
+            <div class="dispatch-card-metric-col">
+              <span>Bultos</span>
+              <span style="color: var(--text-primary);">${n.packagesCount} (${pack.label.split(' ')[0]})</span>
+            </div>
+            <div class="dispatch-card-metric-col">
+              <span>Total Orden</span>
+              <span style="color: var(--text-primary);">Q${n.totalOrderAmountQ.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pie de la Tarjeta: Acciones táctiles -->
+        <div class="dispatch-card-footer">
+          <button 
+            type="button"
+            class="btn btn-secondary btn-view-dispatch-sheet" 
             data-note-id="${n.id}" 
-            style="background: ${statusDef.bg}; color: ${statusDef.color}; border-color: ${statusDef.color};"
+            style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+            title="Ver e Imprimir Hoja de Despacho"
           >
-            <option value="PREPARED" ${n.status === 'PREPARED' ? 'selected' : ''}>📦 Empacado</option>
-            <option value="IN_TRANSIT" ${n.status === 'IN_TRANSIT' ? 'selected' : ''}>🚚 En Ruta</option>
-            <option value="DELIVERED" ${n.status === 'DELIVERED' ? 'selected' : ''}>✅ Entregado</option>
-            <option value="CANCELLED" ${n.status === 'CANCELLED' ? 'selected' : ''}>❌ Anulado</option>
-          </select>
-        </td>
-
-        <!-- SALDO COBRO (Badge estilo Pago) -->
-        <td>
-          ${isPaid ? `
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981; font-weight: 600; padding: 0.35rem 0.65rem;">
-              ✓ Pagado
-            </span>
-          ` : `
-            <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: 700; padding: 0.35rem 0.65rem;">
-              Cobrar Q${n.pendingBalanceQ.toFixed(2)}
-            </span>
-          `}
-        </td>
-
-        <!-- ACCIONES (Botones de icono cuadrados como en Pedidos) -->
-        <td style="text-align: right; white-space: nowrap;">
-          <button class="btn-action-icon btn-view-dispatch-sheet" data-note-id="${n.id}" title="Ver e Imprimir Hoja de Despacho">
             <span>🖨️</span>
+            <span>Hoja de Taller</span>
           </button>
-          <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn-action-icon btn-whatsapp-dispatch" title="Enviar Guía a Cliente por WhatsApp">
-            <span>💬</span>
-          </a>
-          <button class="btn-action-icon btn-status-dispatch" data-note-id="${n.id}" title="Detalles y Datos de Entrega">
-            <span>🚚</span>
-          </button>
-          <button class="btn-action-icon btn-delete-dispatch" data-note-id="${n.id}" title="Eliminar Remisión" style="color: #ef4444;">
-            <span>🗑️</span>
-          </button>
-        </td>
-      </tr>
+
+          <div style="display: flex; align-items: center; gap: 0.45rem;">
+            <a 
+              href="${waUrl}" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="btn-action-icon btn-whatsapp-dispatch" 
+              title="Enviar Guía a Cliente por WhatsApp"
+              style="min-height: 42px; min-width: 42px;"
+            >
+              <span>💬</span>
+            </a>
+
+            <button 
+              type="button"
+              class="btn-action-icon btn-status-dispatch" 
+              data-note-id="${n.id}" 
+              title="Detalles y Datos de Entrega"
+              style="min-height: 42px; min-width: 42px;"
+            >
+              <span>🚚</span>
+            </button>
+
+            <button 
+              type="button"
+              class="btn-action-icon btn-delete-dispatch" 
+              data-note-id="${n.id}" 
+              title="Eliminar Remisión" 
+              style="color: #ef4444; min-height: 42px; min-width: 42px;"
+            >
+              <span>🗑️</span>
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   }).join('');
 }
+
+// Alias de retrocompatibilidad
+export const renderTableRowsHtml = renderDispatchCardsHtml;
 
 /**
  * Renderizado de la Hoja de Despacho Oficial (Documento imprimible)
