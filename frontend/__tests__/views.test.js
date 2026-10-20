@@ -7,6 +7,7 @@ import { reportsView } from '../src/js/views/reports-view.js';
 import { quoterView } from '../src/js/views/quoter-view.js';
 import { profitabilityView } from '../src/js/views/profitability-view.js';
 import { inventoryView } from '../src/js/views/inventory-view.js';
+import { receivablesView } from '../src/js/views/receivables-view.js';
 import { store } from '../src/js/store.js';
 
 describe('Vistas Modulares SPA', () => {
@@ -113,6 +114,25 @@ describe('Vistas Modulares SPA', () => {
       document.body.innerHTML = inventoryView.render();
       expect(typeof inventoryView.onMount).toBe('function');
       const cleanup = inventoryView.onMount();
+      expect(typeof cleanup).toBe('function');
+      cleanup();
+    });
+  });
+
+  describe('receivablesView', () => {
+    it('renderiza la interfaz de cuentas por cobrar y saldos B2B', () => {
+      const html = receivablesView.render();
+      expect(html).toContain('Cuentas por Cobrar y Saldos B2B');
+      expect(html).toContain('btnOpenRecordPaymentModal');
+      expect(html).toContain('btnExportReceivablesCSV');
+      expect(html).toContain('recordPaymentModal');
+      expect(html).toContain('viewPaymentsModal');
+    });
+
+    it('ejecuta onMount y retorna una función de limpieza (teardown)', () => {
+      document.body.innerHTML = receivablesView.render();
+      expect(typeof receivablesView.onMount).toBe('function');
+      const cleanup = receivablesView.onMount();
       expect(typeof cleanup).toBe('function');
       cleanup();
     });

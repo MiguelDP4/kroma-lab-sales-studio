@@ -79,6 +79,11 @@ export const PERMISSIONS = {
     label: 'Inventario de Insumos de Taller',
     desc: 'Supervisar existencias de Film A/B, tintas UV y cuchillas, registrar compras y controlar mermas.',
   },
+  MANAGE_RECEIVABLES: {
+    code: 'MANAGE_RECEIVABLES',
+    label: 'Cuentas por Cobrar y Saldos B2B',
+    desc: 'Supervisar saldos adeudados, registrar abonos y pagos parciales, y enviar recordatorios por WhatsApp.',
+  },
 };
 
 export const ROLE_PERMISSIONS = {
@@ -97,11 +102,13 @@ export const ROLE_PERMISSIONS = {
     'CONFIG_PRICING_TIERS',
     'VIEW_PROFITABILITY_ANALYSIS',
     'MANAGE_INVENTORY',
+    'MANAGE_RECEIVABLES',
     'VIEW_COMMERCIAL_REPORTS',
   ],
   EMPLOYEE: [
     'VIEW_PROFITABILITY_ANALYSIS',
     'MANAGE_INVENTORY',
+    'MANAGE_RECEIVABLES',
     'VIEW_COMMERCIAL_REPORTS',
     'PUBLIC_ACCESS',
     'SUBMIT_LEAD',
