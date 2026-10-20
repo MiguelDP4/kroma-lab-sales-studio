@@ -50,6 +50,7 @@ describe('App — Inicialización y DOM', () => {
       expect(tag.style.display).toBe('inline-block');
       expect(nav.innerHTML).toContain('Cola Audley');
       expect(nav.innerHTML).toContain('Usuarios');
+      expect(nav.innerHTML).toContain('Reportes');
     });
 
     it('muestra "Sales Studio" y enlaces de producción cuando el rol es EMPLOYEE', () => {
@@ -91,6 +92,7 @@ describe('App — Inicialización y DOM', () => {
       expect(tag.style.display).toBe('inline-block');
       const nav = document.getElementById('navRoleLinks');
       expect(nav.innerHTML).toContain('Usuarios');
+      expect(nav.innerHTML).toContain('Reportes');
 
       store.clearUser();
       expect(tag.style.display).toBe('none');
