@@ -43,6 +43,25 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
   }
 }
 
+export function optionalAuthenticate(req: AuthenticatedRequest, _res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  let token: string | undefined;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as AuthUserPayload;
+      req.user = decoded;
+    } catch (_) {}
+  }
+  next();
+}
+
 export function requireRole(...roles: string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {

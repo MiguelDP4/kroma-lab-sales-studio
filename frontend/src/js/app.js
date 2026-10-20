@@ -19,6 +19,8 @@ import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
 import { validatePrintFile, readFileAsDataURL } from './modules/file-uploader.js';
 import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
+import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
+import { quotesStore } from './modules/quotes-store.js';
 
 import { quoterView } from './views/quoter-view.js';
 import { ordersView } from './views/orders-view.js';
@@ -30,10 +32,13 @@ import { profitabilityView } from './views/profitability-view.js';
 import { inventoryView } from './views/inventory-view.js';
 import { receivablesView } from './views/receivables-view.js';
 import { dispatchView } from './views/dispatch-view.js';
+import { quotesView } from './views/quotes-view.js';
 
 export const routes = [
   quoterView,
   { ...quoterView, path: '/cotizador' },
+  quotesView,
+  { ...quotesView, path: '/cotizaciones' },
   ordersView,
   productionView,
   clientsView,
@@ -66,6 +71,7 @@ export async function initBackendSync() {
         receivablesStore.syncWithApi(),
         dispatchStore.syncWithApi(),
         usersStore.syncWithApi(),
+        quotesStore.syncWithApi(),
       ]);
     }
   } catch (err) {
@@ -79,6 +85,7 @@ export function initApp() {
   initMobileNav();
   initCartDrawer();
   initUserProfileModal();
+  initSaveQuoteModal();
   router.init();
   initBackendSync();
 }
@@ -282,6 +289,10 @@ export function syncNavbarRole(role) {
           <span class="nav-link-icon">🧮</span>
           <span>Cotizador</span>
         </a>
+        <a href="/cotizaciones" class="nav-link" data-link>
+          <span class="nav-link-icon">📑</span>
+          <span>Cotizaciones</span>
+        </a>
         <a href="/clientes" class="nav-link" data-link>
           <span class="nav-link-icon">👥</span>
           <span>Clientes</span>
@@ -316,6 +327,10 @@ export function syncNavbarRole(role) {
           <span class="nav-link-icon">🧮</span>
           <span>Cotizador</span>
         </a>
+        <a href="/cotizaciones" class="nav-link" data-link>
+          <span class="nav-link-icon">📑</span>
+          <span>Mis Cotizaciones</span>
+        </a>
         <a href="/pedidos" class="nav-link" data-link>
           <span class="nav-link-icon">📦</span>
           <span>Mis Pedidos</span>
@@ -328,6 +343,10 @@ export function syncNavbarRole(role) {
         <a href="/" class="nav-link" data-link>
           <span class="nav-link-icon">🧮</span>
           <span>Cotizador</span>
+        </a>
+        <a href="/cotizaciones" class="nav-link" data-link>
+          <span class="nav-link-icon">📑</span>
+          <span>Cotizaciones</span>
         </a>
         <a href="#contacto" class="nav-link">
           <span class="nav-link-icon">💬</span>
@@ -527,6 +546,33 @@ export function initQuoter() {
     });
   }
 
+  // Botón Guardar Cotización
+  const btnSaveQuote = document.getElementById('btnSaveQuote');
+  if (btnSaveQuote) {
+    btnSaveQuote.addEventListener('click', () => {
+      const w = parseFloat(widthInput.value) || 5;
+      const h = parseFloat(heightInput.value) || 5;
+      const q = parseInt(qtyInput.value, 10) || 50;
+      const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      openSaveQuoteModal({
+        widthCm: w,
+        heightCm: h,
+        qty: q,
+        linearMeters: calculated.linearMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        withCutting: cut,
+        unitRateQ: calculated.unitRateQ,
+        materialPriceQ: calculated.materialPriceQ,
+        cuttingPriceQ: calculated.cuttingPriceQ,
+        totalPriceQ: calculated.totalPriceQ,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+      });
+    });
+  }
+
   // Redimensionado responsivo del canvas
   window.addEventListener('resize', () => {
     const canvas = document.getElementById('rollCanvas');
@@ -638,4 +684,4 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
 
-export { openUserProfileModal, closeUserProfileModal, initUserProfileModal };
+export { openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal };

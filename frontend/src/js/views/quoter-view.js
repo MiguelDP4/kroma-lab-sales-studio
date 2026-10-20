@@ -190,6 +190,9 @@ export const quoterView = {
               <span>+ Agregar al Carrito</span>
               <span>🛒</span>
             </button>
+            <button id="btnSaveQuote" class="btn btn-secondary" style="width: 100%; border-color: var(--cerulean); color: var(--cerulean); min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>💾 Guardar Cotización</span>
+            </button>
             <button id="btnQuoteWhatsApp" class="btn btn-whatsapp" style="width: 100%;">
               <span>Consultar esta Cotización por WhatsApp</span>
               <span>💬</span>

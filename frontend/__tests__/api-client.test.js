@@ -202,4 +202,21 @@ describe('ApiClient — Cliente HTTP Frontend', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('quotes gestiona list (con y sin query params), getById, create, update, convertToOrder y delete', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    await client.quotes.list();
+    await client.quotes.list({ status: 'SAVED', search: 'Stickers' });
+    await client.quotes.getById('q1');
+    await client.quotes.create({ projectName: 'Stickers Termos', totalPriceQ: 140 });
+    await client.quotes.update('q1', { projectName: 'Stickers Termos Yeti' });
+    await client.quotes.convertToOrder('q1');
+    await client.quotes.delete('q1');
+
+    expect(global.fetch).toHaveBeenCalledTimes(7);
+  });
 });
