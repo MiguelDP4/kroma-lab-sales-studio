@@ -2,6 +2,7 @@
  * Vista de Remisiones de Taller y Guías de Entrega (DispatchView) — Kroma Lab UV DTF.
  * Control logístico de despacho, generación de remisiones oficiales numeradas (REM-YYYY-XXX),
  * checklist técnico de control de calidad auditado, vinculación de couriers y formato imprimible para taller y mensajería.
+ * Diseño alineado con el estándar visual de "Control General de Pedidos".
  */
 
 import {
@@ -9,7 +10,6 @@ import {
   DELIVERY_METHODS,
   DISPATCH_STATUS,
   PACKAGE_TYPES,
-  SHIPPING_PAYMENT_TYPES,
   QUALITY_CHECKLIST_LABELS,
 } from '../modules/dispatch-store.js';
 import { ordersStore } from '../modules/orders-store.js';
@@ -28,115 +28,92 @@ export const dispatchView = {
 
     return `
       <div style="padding: 2rem 0 4rem;">
-        <!-- Cabecera de la Vista -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.25rem;">
-          <div style="flex: 1 1 340px; min-width: 0;">
+        <!-- Cabecera de la Vista (Estilo Control General de Pedidos) -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
-              <span class="badge">Producción & Taller</span>
-              <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border-color: #0284c7;">
-                Logística & Despacho UV DTF
-              </span>
+              <span class="badge">Gestión de Taller</span>
+              <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border-color: #0284c7;">Logística & Despacho UV DTF</span>
             </div>
-            <h1 style="font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 800; margin: 0.25rem 0;">
+            <h1 style="font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 800; margin: 0.5rem 0 0.25rem;">
               Remisiones y Guías de Entrega
             </h1>
-            <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
-              Control de empaque, inspección de calidad técnica, generación de remisiones oficiales y guías para mensajería.
+            <p style="color: var(--text-secondary); font-size: 0.95rem;">
+              Supervisión de empaque, inspección de calidad técnica, guías de mensajería y entrega a clientes.
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; flex-shrink: 0;">
-            <button id="btnOpenCreateDispatchModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
-              <span>📦</span>
-              <span>+ Nueva Remisión</span>
-            </button>
-            <button id="btnExportDispatchCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <button id="btnExportDispatchCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.55rem 1rem;">
               <span>📥</span>
               <span>Exportar CSV</span>
+            </button>
+            <button id="btnOpenCreateDispatchModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.55rem 1rem;">
+              <span>+ Nueva Remisión</span>
             </button>
           </div>
         </div>
 
-        <!-- Indicadores KPI Logísticos -->
-        <div id="dispatchMetricsGrid" class="profitability-kpi-grid" style="margin-bottom: 2rem;">
+        <!-- Indicadores KPI Logísticos (Estilo orders-metrics-grid) -->
+        <div id="dispatchMetricsGrid" class="orders-metrics-grid">
           ${renderMetricsHtml(metrics)}
         </div>
 
-        <!-- Barra de Búsqueda y Filtros -->
-        <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-            <div style="flex: 2 1 240px; position: relative;">
-              <span style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); font-size: 1rem; color: var(--text-muted); pointer-events: none;">🔍</span>
-              <input 
-                type="text" 
-                id="dispatchSearchInput" 
-                class="input-control" 
-                placeholder="Buscar por folio (REM-), pedido (#KL-), cliente o courier..." 
-                style="padding-left: 2.5rem; min-height: 44px;"
-              >
-            </div>
+        <!-- Barra de Búsqueda y Filtros (Estilo orders-controls-bar) -->
+        <div class="orders-controls-bar">
+          <div class="orders-filters-group">
+            <input 
+              type="text" 
+              id="dispatchSearchInput" 
+              class="input-control orders-search-input" 
+              placeholder="Buscar por # remisión, orden, cliente o courier..."
+            >
+            
+            <select id="dispatchStatusFilter" class="input-control" style="max-width: 190px;">
+              <option value="ALL">Estado: Todos</option>
+              <option value="PREPARED">Empacado en Taller</option>
+              <option value="IN_TRANSIT">En Ruta / Courier</option>
+              <option value="DELIVERED">Entregado</option>
+              <option value="CANCELLED">Anulado</option>
+            </select>
 
-            <div style="flex: 1 1 180px;">
-              <select id="dispatchStatusFilter" class="input-control" style="min-height: 44px;">
-                <option value="ALL">Todos los Estados</option>
-                <option value="PREPARED">📦 Empacado en Taller</option>
-                <option value="IN_TRANSIT">🚚 En Ruta / Courier</option>
-                <option value="DELIVERED">✅ Entregado a Conformidad</option>
-                <option value="CANCELLED">❌ Anulado</option>
-              </select>
-            </div>
+            <select id="dispatchMethodFilter" class="input-control" style="max-width: 190px;">
+              <option value="ALL">Envío: Todos</option>
+              <option value="MOTO_LOCAL">Moto Local</option>
+              <option value="CARGO_EXPRESO">Cargo Expreso</option>
+              <option value="GUATEX">Guatex</option>
+              <option value="FORZAGRO">Forza Express</option>
+              <option value="PICKUP_TALLER">Retiro en Taller</option>
+            </select>
 
-            <div style="flex: 1 1 200px;">
-              <select id="dispatchMethodFilter" class="input-control" style="min-height: 44px;">
-                <option value="ALL">Todos los Métodos de Envío</option>
-                <option value="MOTO_LOCAL">🛵 Moto Local (Capital / VN)</option>
-                <option value="CARGO_EXPRESO">🚚 Cargo Expreso (Nacional)</option>
-                <option value="GUATEX">📦 Guatex</option>
-                <option value="FORZAGRO">⚡ Forza Express</option>
-                <option value="PICKUP_TALLER">🏬 Retiro en Taller</option>
-              </select>
-            </div>
-
-            <button id="btnResetDispatchFilters" class="btn btn-secondary" style="min-height: 44px; padding: 0 1rem;" title="Restablecer filtros">
+            <button id="btnResetDispatchFilters" class="btn btn-secondary" style="padding: 0.55rem 0.85rem; font-size: 0.85rem;" title="Restablecer filtros">
               Limpiar
             </button>
           </div>
         </div>
 
-        <!-- Tabla de Remisiones Emitidas -->
-        <div class="card" style="padding: 0; overflow: hidden; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-            <div>
-              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">Registro de Remisiones de Taller</h3>
-              <p style="margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-                Historial cronológico de pliegos y bobinas despachadas
-              </p>
-            </div>
-            <span id="dispatchCountBadge" class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border-color: #0284c7;">
-              ${dispatchStore.getDispatchNotes().length} registros
-            </span>
+        <!-- Tabla Principal de Remisiones (Estilo calc-card + orders-table) -->
+        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <div class="mobile-scroll-hint">
+            <span>👈 Desliza horizontalmente para ver más columnas 👉</span>
           </div>
-
-          <div class="table-container" style="margin: 0; border: none; border-radius: 0;">
-            <div class="mobile-scroll-hint">Desliza horizontalmente para ver todas las columnas →</div>
-            <table class="data-table" style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr>
-                  <th>Folio / Fecha</th>
-                  <th>Pedido Ref.</th>
-                  <th>Cliente & Destino</th>
-                  <th>Logística & Courier</th>
-                  <th>Metros & Bultos</th>
-                  <th>Saldo Cobro</th>
-                  <th>Estado</th>
-                  <th style="text-align: right;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="dispatchTableBody">
-                ${renderTableRowsHtml(dispatchStore.getDispatchNotes())}
-              </tbody>
-            </table>
-          </div>
+          <table class="orders-table" style="min-width: 950px;">
+            <thead>
+              <tr>
+                <th style="min-width: 140px;">Código</th>
+                <th style="min-width: 180px;">Cliente</th>
+                <th style="min-width: 210px;">Envío & Destino</th>
+                <th style="min-width: 110px;">Metros</th>
+                <th style="min-width: 110px;">Total</th>
+                <th style="min-width: 140px;">Estado Despacho</th>
+                <th style="min-width: 130px;">Saldo Cobro</th>
+                <th style="text-align: right; min-width: 130px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="dispatchTableBody">
+              ${renderTableRowsHtml(dispatchStore.getDispatchNotes())}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -237,7 +214,7 @@ export const dispatchView = {
             </div>
 
             <!-- Checklist de Calidad Técnica UV DTF -->
-            <div style="background: var(--bg-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="background: var(--bg-surface-elevated, #f8fafc); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
               <strong style="display: block; font-size: 0.88rem; text-transform: uppercase; color: #0284c7; margin-bottom: 0.5rem;">
                 ✓ Checklist Técnico de Calidad (Operador Audley):
               </strong>
@@ -392,7 +369,6 @@ export const dispatchView = {
     const btnResetFilters = document.getElementById('btnResetDispatchFilters');
     const tableBody = document.getElementById('dispatchTableBody');
     const metricsGrid = document.getElementById('dispatchMetricsGrid');
-    const countBadge = document.getElementById('dispatchCountBadge');
     const btnExportCsv = document.getElementById('btnExportDispatchCSV');
 
     // Modales
@@ -449,7 +425,6 @@ export const dispatchView = {
       }
 
       if (tableBody) tableBody.innerHTML = renderTableRowsHtml(notes);
-      if (countBadge) countBadge.textContent = `${notes.length} registros`;
       attachRowEventListeners();
     }
 
@@ -658,6 +633,24 @@ export const dispatchView = {
 
     // Escuchadores de eventos para filas de la tabla
     function attachRowEventListeners() {
+      // Cambio interactivo directo de estado desde la tabla (.select-dispatch-status)
+      document.querySelectorAll('.select-dispatch-status').forEach((sel) => {
+        sel.addEventListener('change', () => {
+          const noteId = sel.dataset.noteId;
+          const newStatus = sel.value;
+          if (newStatus === DISPATCH_STATUS.DELIVERED.id) {
+            // Abrir modal de entrega para registrar quien recibe y DPI
+            openUpdateStatusModal(noteId);
+            if (selectNewStatus) {
+              selectNewStatus.value = DISPATCH_STATUS.DELIVERED.id;
+              updateStatusFieldsVisibility();
+            }
+          } else {
+            dispatchStore.updateDispatchStatus(noteId, newStatus);
+          }
+        });
+      });
+
       // Ver Hoja de Despacho
       document.querySelectorAll('.btn-view-dispatch-sheet').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -666,7 +659,7 @@ export const dispatchView = {
         });
       });
 
-      // Actualizar Estado
+      // Abrir modal de detalles y entrega
       document.querySelectorAll('.btn-status-dispatch').forEach((btn) => {
         btn.addEventListener('click', () => {
           const id = btn.dataset.noteId;
@@ -708,38 +701,41 @@ export const dispatchView = {
 };
 
 /**
- * Renderizado de indicadores KPI logísticos
+ * Renderizado de indicadores KPI logísticos (Estilo orders-metric-card con borde superior temático)
  */
 export function renderMetricsHtml(m) {
   return `
-    <div class="kpi-card" style="border-left: 4px solid #0284c7;">
-      <span class="kpi-label">Empacadas en Taller</span>
-      <div class="kpi-value" style="color: #0284c7;">${m.preparedCount}</div>
-      <span class="kpi-subtext">Listas para recolección o salida</span>
+    <div class="orders-metric-card" style="border-top: 4px solid var(--cerulean);">
+      <span class="orders-metric-title">Empacadas en Taller</span>
+      <span class="orders-metric-value" style="color: var(--text-primary);">${m.preparedCount}</span>
     </div>
 
-    <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
-      <span class="kpi-label">En Ruta / Courier</span>
-      <div class="kpi-value" style="color: #f59e0b;">${m.inTransitCount}</div>
-      <span class="kpi-subtext">Con mensajería o paquetería activa</span>
+    <div class="orders-metric-card" style="border-top: 4px solid var(--color-warning);">
+      <span class="orders-metric-title">En Ruta / Courier</span>
+      <span class="orders-metric-value" style="color: ${m.inTransitCount > 0 ? '#ef4444' : 'var(--text-secondary)'};">
+        ${m.inTransitCount}
+      </span>
     </div>
 
-    <div class="kpi-card" style="border-left: 4px solid #10b981;">
-      <span class="kpi-label">Entregadas</span>
-      <div class="kpi-value" style="color: #10b981;">${m.deliveredCount}</div>
-      <span class="kpi-subtext">${m.todayDispatchedCount} despachadas hoy</span>
+    <div class="orders-metric-card" style="border-top: 4px solid var(--color-success);">
+      <span class="orders-metric-title">Entregadas</span>
+      <span class="orders-metric-value" style="color: var(--color-success);">${m.deliveredCount}</span>
     </div>
 
-    <div class="kpi-card" style="border-left: 4px solid var(--cerulean, #1c7293);">
-      <span class="kpi-label">Metros Despachados</span>
-      <div class="kpi-value" style="font-family: monospace;">${m.totalMetersDispatched.toFixed(2)}m</div>
-      <span class="kpi-subtext">Valor: Q${m.totalShippedAmountQ.toFixed(2)}</span>
+    <div class="orders-metric-card" style="border-top: 4px solid #8b5cf6;">
+      <span class="orders-metric-title">Metros Despachados</span>
+      <span class="orders-metric-value" style="color: var(--cerulean);">${m.totalMetersDispatched.toFixed(2)}m</span>
+    </div>
+
+    <div class="orders-metric-card" style="border-top: 4px solid var(--color-success);">
+      <span class="orders-metric-title">Monto Despachado</span>
+      <span class="orders-metric-value" style="color: var(--color-success);">Q${m.totalShippedAmountQ.toFixed(2)}</span>
     </div>
   `;
 }
 
 /**
- * Renderizado de filas de la tabla de remisiones
+ * Renderizado de filas de la tabla de remisiones (Estilo orders-table espacioso y limpio)
  */
 export function renderTableRowsHtml(notes) {
   if (!notes || notes.length === 0) {
@@ -760,90 +756,103 @@ export function renderTableRowsHtml(notes) {
     const pack = PACKAGE_TYPES[n.packageType] || PACKAGE_TYPES.RIGID_TUBE;
     const dateFormatted = new Date(n.dispatchedAt).toLocaleDateString('es-GT', {
       day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+      month: 'short',
     });
     const waUrl = `https://api.whatsapp.com/send?phone=${(n.clientPhone || '').replace(/\D/g, '')}&text=${dispatchStore.generateWhatsAppText(n)}`;
-
     const isPaid = n.pendingBalanceQ <= 0;
 
     return `
-      <tr style="border-bottom: 1px solid var(--border-color);">
-        <!-- Folio y Fecha -->
+      <tr>
+        <!-- CÓDIGO (Folio, Pedido vinculante y fecha) -->
         <td>
-          <div style="font-weight: 800; font-family: monospace; color: #0284c7; font-size: 0.95rem;">
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; font-family: var(--font-mono);">
             ${n.id}
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">${dateFormatted}</div>
-        </td>
-
-        <!-- Pedido Ref. -->
-        <td>
-          <a href="/pedidos" data-link style="font-weight: 700; text-decoration: none; color: var(--text-primary);">
-            #${n.orderId}
-          </a>
-        </td>
-
-        <!-- Cliente & Destino -->
-        <td>
-          <div style="font-weight: 700; color: var(--text-primary);">${n.clientName}</div>
-          <div style="font-size: 0.8rem; color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.deliveryAddress}">
-            📍 ${n.deliveryAddress}
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+            <a href="/pedidos" data-link style="color: var(--cerulean); text-decoration: none; font-weight: 600;">#${n.orderId}</a> • ${dateFormatted}
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">📞 ${n.clientPhone}</div>
         </td>
 
-        <!-- Logística & Courier -->
+        <!-- CLIENTE -->
         <td>
-          <div style="font-weight: 600; font-size: 0.88rem; display: flex; align-items: center; gap: 0.3rem;">
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">
+            ${n.clientName}
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
+            📞 ${n.clientPhone || 'Sin teléfono'}
+          </div>
+        </td>
+
+        <!-- ENVÍO & DESTINO -->
+        <td>
+          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem; display: flex; align-items: center; gap: 0.35rem;">
             <span>${method.icon}</span>
             <span>${method.shortLabel}</span>
+            ${n.trackingNumber ? `
+              <span style="font-size: 0.75rem; color: var(--cerulean); font-family: var(--font-mono);">(${n.trackingNumber})</span>
+            ` : ''}
           </div>
-          <div style="font-size: 0.8rem; color: var(--text-secondary);">${n.courierName}</div>
-          ${n.trackingNumber ? `
-            <div style="font-size: 0.75rem; font-family: monospace; color: #0284c7;">
-              Guía: ${n.trackingNumber}
-            </div>
-          ` : ''}
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.deliveryAddress}">
+            📍 ${n.deliveryAddress}
+          </div>
         </td>
 
-        <!-- Metros & Bultos -->
-        <td>
-          <div style="font-weight: 700; font-family: monospace;">${n.totalOrderMeters.toFixed(2)}m</div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary);">
+        <!-- METROS & BULTOS -->
+        <td style="font-family: var(--font-mono);">
+          <div style="font-weight: 600; font-size: 0.92rem;">
+            ${n.totalOrderMeters.toFixed(2)} m
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
             ${n.packagesCount} ${n.packagesCount === 1 ? 'bulto' : 'bultos'} (${pack.label.split(' ')[0]})
           </div>
         </td>
 
-        <!-- Saldo Cobro -->
+        <!-- TOTAL -->
+        <td style="font-family: var(--font-mono);">
+          <div style="font-weight: 800; color: var(--text-primary); font-size: 0.92rem;">
+            Q${n.totalOrderAmountQ.toFixed(2)}
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+            Flete: Q${n.shippingCostQ.toFixed(2)}
+          </div>
+        </td>
+
+        <!-- ESTADO DESPACHO (Selector interactivo como en Pedidos) -->
+        <td>
+          <select 
+            class="select-status select-dispatch-status" 
+            data-note-id="${n.id}" 
+            style="background: ${statusDef.bg}; color: ${statusDef.color}; border-color: ${statusDef.color};"
+          >
+            <option value="PREPARED" ${n.status === 'PREPARED' ? 'selected' : ''}>📦 Empacado</option>
+            <option value="IN_TRANSIT" ${n.status === 'IN_TRANSIT' ? 'selected' : ''}>🚚 En Ruta</option>
+            <option value="DELIVERED" ${n.status === 'DELIVERED' ? 'selected' : ''}>✅ Entregado</option>
+            <option value="CANCELLED" ${n.status === 'CANCELLED' ? 'selected' : ''}>❌ Anulado</option>
+          </select>
+        </td>
+
+        <!-- SALDO COBRO (Badge estilo Pago) -->
         <td>
           ${isPaid ? `
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981; font-size: 0.78rem;">
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981; font-weight: 600; padding: 0.35rem 0.65rem;">
               ✓ Pagado
             </span>
           ` : `
-            <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-size: 0.78rem; font-weight: 700;">
+            <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-weight: 700; padding: 0.35rem 0.65rem;">
               Cobrar Q${n.pendingBalanceQ.toFixed(2)}
             </span>
           `}
         </td>
 
-        <!-- Estado -->
-        <td>
-          <span class="badge" style="background: ${statusDef.bg}; color: ${statusDef.color}; border-color: ${statusDef.border};">
-            ${statusDef.badge}
-          </span>
-        </td>
-
-        <!-- Acciones -->
+        <!-- ACCIONES (Botones de icono cuadrados como en Pedidos) -->
         <td style="text-align: right; white-space: nowrap;">
-          <button class="btn-action-icon btn-view-dispatch-sheet" data-note-id="${n.id}" title="Ver e Imprimir Remisión Oficial">
+          <button class="btn-action-icon btn-view-dispatch-sheet" data-note-id="${n.id}" title="Ver e Imprimir Hoja de Despacho">
             <span>🖨️</span>
           </button>
           <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn-action-icon btn-whatsapp-dispatch" title="Enviar Guía a Cliente por WhatsApp">
-            <span>📲</span>
+            <span>💬</span>
           </a>
-          <button class="btn-action-icon btn-status-dispatch" data-note-id="${n.id}" title="Actualizar Estado (En Ruta / Entregado)">
+          <button class="btn-action-icon btn-status-dispatch" data-note-id="${n.id}" title="Detalles y Datos de Entrega">
             <span>🚚</span>
           </button>
           <button class="btn-action-icon btn-delete-dispatch" data-note-id="${n.id}" title="Eliminar Remisión" style="color: #ef4444;">
