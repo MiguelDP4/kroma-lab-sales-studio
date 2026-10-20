@@ -339,11 +339,11 @@ export function initSettingsModal() {
           <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem;">
             <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
               <span style="color: var(--text-secondary);">🖨️ Maquinaria Principal:</span>
-              <strong>Audley UV DTF Industrial (60 cm)</strong>
+              <strong>Audley UV DTF Industrial (30 cm)</strong>
             </li>
             <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
               <span style="color: var(--text-secondary);">📏 Ancho Útil Bobina:</span>
-              <strong>58.00 cm</strong>
+              <strong>28.00 cm</strong>
             </li>
             <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
               <span style="color: var(--text-secondary);">💱 Moneda Base:</span>

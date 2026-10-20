@@ -470,7 +470,7 @@ kroma-lab-sales-studio/
     * Desplegado interactivamente al presionar el botón ⚙️ del topbar con jerarquía de capas optimizada (`z-index: 1060` para la tarjeta frente a `1050` del backdrop), garantizando lectura 100% nítida sin desenfoques indeseados sobre el texto.
     * Incorpora bloqueo de scroll en fondo (`overflow: hidden` en `body`) y soporte de cierre mediante botón `✕`, botón "Entendido", clic en telón o pulsación de la tecla `Escape`.
     * Expone de forma clara y accesible las especificaciones industriales activas:
-      * Equipo: Audley UV DTF Industrial (60 cm bobina, 58 cm ancho útil imprimible).
+      * Equipo: Audley UV DTF Industrial (30 cm bobina, 28 cm ancho útil imprimible).
       * Tecnología: Cabezales duales Epson i3200 con tintas UV CMYK + White + Varnish.
       * Moneda y Tarifas: Quetzales (Q / GTQ) con desglose de mayoreo escalonado.
       * Canales Bancarios Oficiales: Banco Industrial, BAC Credomatic y Banrural con números de cuenta y enlaces de copia rápida.
