@@ -44,11 +44,13 @@
 .navbar {
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-surface-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  position: sticky;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 950;
   width: 100%;
   transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
@@ -2008,6 +2010,10 @@
 
 /* @media (max-width: 768px): Navegación móvil, tablas, filtros y KPIs */
 @media (max-width: 768px) {
+  body {
+    padding-top: 64px;
+  }
+
   .navbar-container {
     height: 64px;
   }

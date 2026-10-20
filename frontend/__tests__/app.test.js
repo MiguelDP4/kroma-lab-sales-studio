@@ -446,6 +446,11 @@ describe('App — Inicialización y DOM', () => {
       const backdrop = document.getElementById('settingsModalBackdrop');
       backdrop.click();
       expect(container.innerHTML).toBe('');
+
+      // Re-abrir y cerrar con tecla Escape
+      settingsBtn.click();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(container.innerHTML).toBe('');
     });
 
     it('actualiza el chip de perfil y tarjeta del sidebar al cambiar de rol', () => {

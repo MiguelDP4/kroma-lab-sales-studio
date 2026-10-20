@@ -323,48 +323,46 @@ export function initSettingsModal() {
 
   function renderModal() {
     container.innerHTML = `
-      <div id="settingsModal" class="modal is-active" style="display: flex;">
-        <div class="modal-backdrop" id="settingsModalBackdrop"></div>
-        <div class="modal-card" style="max-width: 500px; z-index: 1001;">
-          <div class="modal-header">
-            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
-              <span>⚙️</span>
-              <span>Configuración de Taller UV DTF</span>
-            </h3>
-            <button id="closeSettingsModalBtn" class="modal-close-btn" aria-label="Cerrar modal">✕</button>
+      <div class="modal-backdrop" id="settingsModalBackdrop"></div>
+      <div class="modal-card" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle" style="max-width: 520px; z-index: 1060;">
+        <div class="modal-header">
+          <h3 id="settingsModalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary);">
+            <span>⚙️</span>
+            <span>Configuración de Taller UV DTF</span>
+          </h3>
+          <button id="closeSettingsModalBtn" class="btn-close-modal" aria-label="Cerrar modal">✕</button>
+        </div>
+        <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+          <div style="background: var(--bg-surface-elevated); padding: 0.85rem 1rem; border-radius: var(--radius-md); border-left: 4px solid var(--cerulean); margin-bottom: 1.25rem;">
+            <strong>Kroma Lab Sales Studio</strong> — Parámetros Industriales Activos
           </div>
-          <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
-            <div style="background: var(--bg-surface); padding: 0.85rem 1rem; border-radius: var(--radius-md); border-left: 4px solid var(--cerulean); margin-bottom: 1.25rem;">
-              <strong>Kroma Lab Sales Studio</strong> — Parámetros Industriales Activos
-            </div>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem;">
-              <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
-                <span style="color: var(--text-secondary);">🖨️ Maquinaria Principal:</span>
-                <strong>Audley UV DTF Industrial (60 cm)</strong>
-              </li>
-              <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
-                <span style="color: var(--text-secondary);">📏 Ancho Útil Bobina:</span>
-                <strong>58.00 cm</strong>
-              </li>
-              <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
-                <span style="color: var(--text-secondary);">💱 Moneda Base:</span>
-                <strong>Quetzales (GTQ / Q)</strong>
-              </li>
-              <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
-                <span style="color: var(--text-secondary);">🏦 Cuentas de Cobro:</span>
-                <strong>BI, BAC, Banrural</strong>
-              </li>
-              <li style="display: flex; justify-content: space-between; padding-bottom: 0.4rem;">
-                <span style="color: var(--text-secondary);">🛡️ Modo Operativo:</span>
-                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Frontend SPA Activo</span>
-              </li>
-            </ul>
-          </div>
-          <div class="modal-footer" style="display: flex; justify-content: flex-end;">
-            <button id="btnDismissSettings" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">
-              Entendido
-            </button>
-          </div>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem;">
+            <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+              <span style="color: var(--text-secondary);">🖨️ Maquinaria Principal:</span>
+              <strong>Audley UV DTF Industrial (60 cm)</strong>
+            </li>
+            <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+              <span style="color: var(--text-secondary);">📏 Ancho Útil Bobina:</span>
+              <strong>58.00 cm</strong>
+            </li>
+            <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+              <span style="color: var(--text-secondary);">💱 Moneda Base:</span>
+              <strong>Quetzales (GTQ / Q)</strong>
+            </li>
+            <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+              <span style="color: var(--text-secondary);">🏦 Cuentas de Cobro:</span>
+              <strong>BI, BAC, Banrural</strong>
+            </li>
+            <li style="display: flex; justify-content: space-between; padding-bottom: 0.4rem;">
+              <span style="color: var(--text-secondary);">🛡️ Modo Operativo:</span>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Frontend SPA Activo</span>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
+          <button id="btnDismissSettings" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">
+            Entendido
+          </button>
         </div>
       </div>
     `;
@@ -373,13 +371,22 @@ export function initSettingsModal() {
     const dismissBtn = document.getElementById('btnDismissSettings');
     const backdrop = document.getElementById('settingsModalBackdrop');
 
+    const handleKeydown = (e) => {
+      if (e.key === 'Escape') closeModal();
+    };
+
     const closeModal = () => {
       container.innerHTML = '';
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeydown);
     };
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (dismissBtn) dismissBtn.addEventListener('click', closeModal);
     if (backdrop) backdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', handleKeydown);
+
+    document.body.style.overflow = 'hidden';
   }
 
   settingsBtn.addEventListener('click', renderModal);
