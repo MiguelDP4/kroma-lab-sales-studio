@@ -455,8 +455,11 @@ kroma-lab-sales-studio/
       * Soporta cierre por botón `✕` (`#sidebarCloseBtn`), clic en telón de fondo, tecla `Escape`, o selección de enlace de navegación.
     * **Tarjeta de Usuario en Pie de Sidebar (`#sidebarUserCard`):**
       * Muestra avatar circular con iniciales, nombre del operador y etiqueta de rol activa sincronizada (`ADMINISTRADOR`, `OPERADOR TALLER`, `CLIENTE REGISTRADO`, `COTIZADOR WEB`).
-  * **Barra Superior Limpia y Despejada (`.navbar`):**
-    * Despejada de enlaces masivos y reservada exclusivamente para acciones globales prioritarias:
+  * **Barra Superior Limpia y Fija (`.navbar`):**
+    * Configurada con posicionamiento fijo (`position: fixed; top: 0; left: 0; right: 0; z-index: 950;`), permaneciendo permanentemente visible durante el scroll vertical en cualquier vista.
+    * El cuerpo de la página incluye compensación automática (`padding-top: 70px;` en escritorio, `64px` en móviles) evitando solapamientos de contenido.
+    * Integra efecto de cristal esmerilado translúcido (`backdrop-filter: blur(16px)` con `--bg-surface-glass`) permitiendo ver el paso sutil de los elementos subyacentes.
+    * Reservada exclusivamente para acciones globales prioritarias:
       1. Botón menú hamburguesa 44×44px (`#mobileNavToggle`).
       2. Logotipo Kroma Lab SVG con tag dinámico `Sales Studio` (visible en roles internos).
       3. Botón de Carrito con indicador dinámico de ítems (`#cartToggleBtn`).
@@ -464,7 +467,8 @@ kroma-lab-sales-studio/
       5. Botón de Parámetros de Taller (`#settingsBtn` ⚙️).
       6. Interruptor de Tema Visual (`#themeToggleBtn` ☀️ / 🌙).
   * **Modal de Parámetros y Configuración de Taller (`#settingsModalContainer`):**
-    * Desplegado interactivamente al presionar el botón ⚙️ del topbar.
+    * Desplegado interactivamente al presionar el botón ⚙️ del topbar con jerarquía de capas optimizada (`z-index: 1060` para la tarjeta frente a `1050` del backdrop), garantizando lectura 100% nítida sin desenfoques indeseados sobre el texto.
+    * Incorpora bloqueo de scroll en fondo (`overflow: hidden` en `body`) y soporte de cierre mediante botón `✕`, botón "Entendido", clic en telón o pulsación de la tecla `Escape`.
     * Expone de forma clara y accesible las especificaciones industriales activas:
       * Equipo: Audley UV DTF Industrial (60 cm bobina, 58 cm ancho útil imprimible).
       * Tecnología: Cabezales duales Epson i3200 con tintas UV CMYK + White + Varnish.
