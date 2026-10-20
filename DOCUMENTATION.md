@@ -260,6 +260,17 @@ kroma-lab-sales-studio/
   * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
   * **Drawer Lateral Interactivo:** Permite modificar cantidades en tiempo real (+ / -), eliminar ítems, ver el desglose financiero consolidado y despachar el pedido completo estructurado directamente hacia WhatsApp o hacia el modal de checkout.
   * **Persistencia:** Almacenado en `localStorage['kromalab_cart']` para no perder los ítems al recargar o navegar entre vistas.
+* **Autocompletado Inteligente en Checkout y Pedidos con Cartera B2B (`checkout-modal.js` + `clients-store.js` + `orders-view.js`):**
+  * **Conexión Directa Cartera ↔ Pedidos:** Resuelve la fricción en ventas de mostrador y compras recurrentes en línea permitiendo seleccionar clientes registrados directamente desde la Cartera B2B (`clientsStore.getClients()`).
+  * **Población Automática Multicampo:** Al seleccionar un cliente, autocompleta instantáneamente:
+    * Nombre comercial / Razón social.
+    * WhatsApp de contacto.
+    * NIT para facturación SAT (ej. `7845129-4` o `CF`).
+    * Dirección exacta de entrega o recolección.
+    * Instrucciones y requerimientos especiales de taller (ej. tipo de barniz o acabados).
+  * **Distintivo Visual de Vinculación y Tier:** Presenta una insignia destacada con el nombre de la empresa y su nivel comercial (`VIP`, `Recurrente`, `Nuevo`), acompañada de un botón ergonómico de desvinculación rápida (`Desvincular ✕`) con área táctil >= 44px para alternar con compras de nuevos prospectos.
+  * **Reconocimiento Automático de Sesión:** Si el usuario tiene una sesión activa con cliente B2B vinculado (`user.clientId`, o coincidencia por NIT/teléfono/correo), el checkout preselecciona su perfil automáticamente sin intervención manual.
+  * **Sincronización Bidireccional (`checkSaveToClients` / `manualCheckSaveClient`):** Permite registrar clientes nuevos directamente al confirmar pedidos o actualizar datos modificados (dirección, teléfono, NIT), asignando automáticamente el `clientId` a la orden para alimentar en tiempo real el expediente 360° en `/clientes`.
 * **Módulo de Gestión de Pedidos y Hoja de Taller Audley (`orders-store.js` + `orders-view.js`):**
   * **Vistas Contextuales por Rol:**
     * **Staff (`ADMIN` / `EMPLOYEE`):** Monitor integral con 4 KPIs en tiempo real (Pedidos Activos, Metros en Taller, Total Facturación y Saldo Pendiente de Cobro), tabla de pedidos con selector dinámico de estado de producción y estado de pago, botón para generar Hoja de Taller Audley y modal de registro manual para ventas en mostrador.

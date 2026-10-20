@@ -35,6 +35,7 @@ const INITIAL_SEED_ORDERS = [
     id: 'KL-00042',
     createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
     customer: {
+      clientId: 'CLI-001',
       name: 'Rodrigo Méndez',
       company: 'Café San Cristóbal',
       phone: '+502 5555-1234',
@@ -74,6 +75,7 @@ const INITIAL_SEED_ORDERS = [
     id: 'KL-00041',
     createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
     customer: {
+      clientId: 'CLI-002',
       name: 'Alejandro Morales',
       company: 'Barbería Vintage',
       phone: '+502 5111-2233',
@@ -249,6 +251,7 @@ class OrdersStore {
       id: newId,
       createdAt: new Date().toISOString(),
       customer: {
+        clientId: customer.clientId || null,
         name: customer.name || 'Cliente Mostrador',
         company: customer.company || '',
         phone: customer.phone || '+502 5555-0000',
