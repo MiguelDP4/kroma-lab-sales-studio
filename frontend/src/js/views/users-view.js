@@ -303,6 +303,7 @@ export const usersView = {
   `,
 
   onMount: () => {
+    usersStore.syncWithApi().catch(() => {});
     // Referencias al DOM
     const metricsContainer = document.getElementById('usersMetricsContainer');
     const tableBody = document.getElementById('usersTableBody');

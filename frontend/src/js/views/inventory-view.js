@@ -244,6 +244,7 @@ export const inventoryView = {
   },
 
   onMount: () => {
+    inventoryStore.syncWithApi().catch(() => {});
     let activeCategory = 'ALL';
 
     // Elementos de Modales
