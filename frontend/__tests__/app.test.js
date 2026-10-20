@@ -429,7 +429,8 @@ describe('App — Inicialización y DOM', () => {
 
       settingsBtn.click();
       expect(container.innerHTML).toContain('Configuración de Taller UV DTF');
-      expect(container.innerHTML).toContain('Audley UV DTF Industrial');
+      expect(container.innerHTML).toContain('Audley UV DTF Industrial (30 cm)');
+      expect(container.innerHTML).toContain('28.00 cm');
 
       const dismissBtn = document.getElementById('btnDismissSettings');
       dismissBtn.click();
