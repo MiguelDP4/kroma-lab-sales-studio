@@ -31,6 +31,8 @@ const createOrderSchema = z.object({
   notes: z.string().optional(),
   canvasSnapshot: z.string().optional(),
   rotationDeg: z.number().int().optional(),
+  paymentReceiptUrl: z.string().optional(),
+  paymentReceiptFileName: z.string().optional(),
 });
 
 const updateStatusSchema = z.object({
@@ -48,6 +50,15 @@ const updateStatusSchema = z.object({
 const updatePaymentSchema = z.object({
   paymentStatus: z.enum(['PENDING', 'PARTIAL', 'PAID', 'CANCELLED']),
   amountPaidQ: z.number().nonnegative().optional(),
+});
+
+const attachReceiptSchema = z.object({
+  receiptUrl: z.string().min(1, 'La URL o archivo del comprobante es requerida.'),
+  receiptFileName: z.string().optional(),
+  amountPaidQ: z.number().positive().optional(),
+  bankName: z.enum(['BI', 'BAC', 'BANRURAL']).optional(),
+  bankReference: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export async function listOrders(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
@@ -190,6 +201,75 @@ export async function updateOrderPayment(req: AuthenticatedRequest, res: Respons
       success: true,
       message: 'Estado de pago actualizado.',
       order: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function attachPaymentReceipt(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const data = attachReceiptSchema.parse(req.body);
+
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      res.status(404).json({ success: false, message: 'Orden no encontrada.' });
+      return;
+    }
+
+    if (req.user?.role === 'CUSTOMER' && order.customerEmail !== req.user.email) {
+      res.status(403).json({ success: false, message: 'Acceso no autorizado a este pedido.' });
+      return;
+    }
+
+    const updateData: any = {
+      paymentReceiptUrl: data.receiptUrl,
+      paymentReceiptFileName: data.receiptFileName || 'comprobante_bancario',
+    };
+
+    let payment = null;
+    if (data.amountPaidQ) {
+      const newAmountPaid = order.amountPaidQ + data.amountPaidQ;
+      const isFullyPaid = newAmountPaid >= order.totalAmountQ - 0.01;
+      updateData.amountPaidQ = newAmountPaid;
+      updateData.paymentStatus = isFullyPaid ? 'PAID' : 'PARTIAL';
+
+      const paymentCount = await prisma.payment.count();
+      const paymentCode = `PAY-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(3, '0')}`;
+
+      payment = await prisma.payment.create({
+        data: {
+          paymentCode,
+          orderId: order.id,
+          customerName: order.customerName,
+          customerTaxId: order.customerTaxId,
+          amountPaidQ: data.amountPaidQ,
+          method: 'TRANSFER',
+          bankName: data.bankName || 'BI',
+          bankReference: data.bankReference,
+          receiptUrl: data.receiptUrl,
+          notes: data.notes || 'Comprobante bancario adjuntado',
+          registeredById: req.user?.id,
+        },
+      });
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: updateData,
+      include: {
+        customer: true,
+        dispatchNotes: true,
+        payments: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Comprobante de pago vinculado exitosamente a la orden.',
+      order: updatedOrder,
+      payment,
     });
   } catch (error) {
     next(error);

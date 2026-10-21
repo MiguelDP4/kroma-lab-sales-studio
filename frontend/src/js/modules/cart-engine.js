@@ -164,7 +164,14 @@ export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
   if (customer.notes) {
     msg += `• *Notas:* ${customer.notes}\n\n`;
   }
-  msg += `¿Me confirman tiempos de entrega y métodos de pago (transferencia/depósito)? Gracias.`;
+  if (customer.paymentReceiptUrl) {
+    msg += `• 🧾 *Comprobante de Pago:* ${customer.paymentReceiptUrl}\n\n`;
+  }
+  if (customer.paymentReceiptUrl) {
+    msg += `Adjunto mi comprobante para revisión y confirmación a producción. ¡Gracias!`;
+  } else {
+    msg += `¿Me confirman tiempos de entrega y métodos de pago (transferencia/depósito)? Gracias.`;
+  }
 
   return msg;
 }

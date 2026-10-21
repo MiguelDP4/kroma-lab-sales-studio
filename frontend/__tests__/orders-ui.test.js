@@ -4,6 +4,7 @@ import { ordersStore, PAYMENT_STATUS } from '../src/js/modules/orders-store.js';
 import { clientsStore } from '../src/js/modules/clients-store.js';
 import { store } from '../src/js/store.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
+import * as fileUploader from '../src/js/modules/file-uploader.js';
 
 describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
   let cleanupFn = null;
@@ -648,6 +649,176 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
       expect(msg).not.toContain('🖼️ *Arte:*');
       expect(msg).not.toContain('📐 *Montaje:*');
       expect(msg).toContain('*KROMA LAB — Pedido #PED-NO-URLS*');
+    });
+  });
+  describe('Comprobantes de Pago Bancario & Lightbox (Opción 2)', () => {
+    it('muestra badges de estado de boleta en la tabla de pedidos', () => {
+      // Crear una orden con boleta y otra sin boleta
+      ordersStore.createOrder({
+        customer: { name: 'Cliente Con Boleta' },
+        paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta1.jpg',
+        paymentReceiptFileName: 'boleta1.jpg',
+      });
+      ordersStore.createOrder({
+        customer: { name: 'Cliente Sin Boleta' },
+      });
+
+      const tableBody = document.getElementById('ordersTableBody');
+      expect(tableBody.textContent).toContain('📄 Boleta');
+      expect(tableBody.textContent).toContain('⏳ Boleta Pendiente');
+    });
+
+    it('abre el lightbox de comprobante bancario para imágenes y permite cerrarlo', () => {
+      const order = ordersStore.createOrder({
+        customer: { name: 'Cliente Boleta Lightbox' },
+        paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta_completa.jpg',
+        paymentReceiptFileName: 'boleta_completa.jpg',
+      });
+
+      const viewBtn = document.querySelector(`.btn-view-order[data-order-id="${order.id}"]`);
+      expect(viewBtn).not.toBeNull();
+      viewBtn.click();
+
+      const detailModal = document.getElementById('orderDetailModal');
+      expect(detailModal.style.display).toBe('block');
+
+      // Click en Ver Comprobante
+      const btnViewReceipt = detailModal.querySelector('.btn-view-receipt-lightbox');
+      expect(btnViewReceipt).not.toBeNull();
+      btnViewReceipt.click();
+
+      const receiptLightbox = document.getElementById('receiptLightboxModal');
+      const receiptImg = document.getElementById('receiptLightboxImg');
+      expect(receiptLightbox.style.display).toBe('block');
+      expect(receiptImg.src).toContain('boleta_completa.jpg');
+      expect(receiptImg.style.display).toBe('block');
+
+      // Cerrar vía botón X
+      const btnClose = document.getElementById('btnCloseReceiptLightbox');
+      btnClose.click();
+      expect(receiptLightbox.style.display).toBe('none');
+
+      // Abrir de nuevo y cerrar con backdrop o botón dismiss
+      btnViewReceipt.click();
+      expect(receiptLightbox.style.display).toBe('block');
+      const btnDismiss = document.getElementById('btnDismissReceiptLightbox');
+      btnDismiss.click();
+      expect(receiptLightbox.style.display).toBe('none');
+
+      btnViewReceipt.click();
+      receiptLightbox.click(); // backdrop click
+      expect(receiptLightbox.style.display).toBe('none');
+    });
+
+    it('soporta visualización de PDF en el lightbox de comprobante', () => {
+      const order = ordersStore.createOrder({
+        customer: { name: 'Cliente Boleta PDF' },
+        paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/transferencia_bi.pdf',
+        paymentReceiptFileName: 'transferencia_bi.pdf',
+      });
+
+      const viewBtn = document.querySelector(`.btn-view-order[data-order-id="${order.id}"]`);
+      viewBtn.click();
+
+      const detailModal = document.getElementById('orderDetailModal');
+      const btnViewReceipt = detailModal.querySelector('.btn-view-receipt-lightbox');
+      btnViewReceipt.click();
+
+      const receiptLightbox = document.getElementById('receiptLightboxModal');
+      const receiptPdf = document.getElementById('receiptLightboxPdf');
+      const receiptPdfLink = document.getElementById('receiptLightboxPdfLink');
+      expect(receiptLightbox.style.display).toBe('block');
+      expect(receiptPdf.style.display).toBe('block');
+      expect(receiptPdfLink.href).toContain('transferencia_bi.pdf');
+    });
+
+    it('permite a un cliente o staff adjuntar comprobante desde el modal de detalle', async () => {
+      const uploadSpy = vi.spyOn(fileUploader, 'uploadFileToStorage').mockResolvedValueOnce({
+        success: true,
+        fileUrl: 'https://pub-r2.dev/assets/payments/boleta_adjuntada_modal.jpg',
+      });
+
+      const order = ordersStore.createOrder({
+        customer: { name: 'Cliente Subir En Modal' },
+      });
+
+      const viewBtn = document.querySelector(`.btn-view-order[data-order-id="${order.id}"]`);
+      viewBtn.click();
+
+      const detailModal = document.getElementById('orderDetailModal');
+      const btnTrigger = detailModal.querySelector('.btn-trigger-upload-receipt');
+      expect(btnTrigger).not.toBeNull();
+
+      const fileInput = document.getElementById(`modalReceiptFileInput_${order.id}`);
+      const clickSpy = vi.spyOn(fileInput, 'click');
+      btnTrigger.click();
+      expect(clickSpy).toHaveBeenCalled();
+
+      // Simular selección de archivo
+      const file = new File(['fake-jpg'], 'boleta_modal.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await new Promise(r => setTimeout(r, 60));
+
+      const updatedOrder = ordersStore.getOrderById(order.id);
+      expect(updatedOrder.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_adjuntada_modal.jpg');
+      expect(updatedOrder.paymentReceiptFileName).toBe('boleta_modal.jpg');
+
+      uploadSpy.mockRestore();
+      clickSpy.mockRestore();
+    });
+
+    it('ejecuta acciones rápidas de cobranza y aprobación de producción para Staff', async () => {
+      const order = ordersStore.createOrder({
+        customer: { name: 'Cliente Acciones Staff' },
+        cartTotals: { grandTotalQ: 200.0, totalBillableMeters: 1.5 },
+      });
+      expect(order.productionStatus).toBe(ORDER_STATUS.PENDING_REVIEW);
+      expect(order.paymentStatus).toBe(PAYMENT_STATUS.PENDING);
+
+      const viewBtn = document.querySelector(`.btn-view-order[data-order-id="${order.id}"]`);
+      viewBtn.click();
+
+      const detailModal = document.getElementById('orderDetailModal');
+
+      // 1. Anticipo 50%
+      const btnPartial = detailModal.querySelector('.btn-quick-pay-partial');
+      expect(btnPartial).not.toBeNull();
+      btnPartial.click();
+      await new Promise(r => setTimeout(r, 30));
+
+      let currentOrder = ordersStore.getOrderById(order.id);
+      expect(currentOrder.paymentStatus).toBe(PAYMENT_STATUS.PARTIAL);
+      expect(currentOrder.amountPaidQ).toBe(100.0);
+
+      // 2. Pagado 100%
+      const btnFull = detailModal.querySelector('.btn-quick-pay-full');
+      expect(btnFull).not.toBeNull();
+      btnFull.click();
+      await new Promise(r => setTimeout(r, 30));
+
+      currentOrder = ordersStore.getOrderById(order.id);
+      expect(currentOrder.paymentStatus).toBe(PAYMENT_STATUS.PAID);
+      expect(currentOrder.amountPaidQ).toBe(200.0);
+
+      // 3. Aprobar para Producción (pasa a IN_AUDLEY_QUEUE)
+      const btnApprove = detailModal.querySelector('.btn-quick-approve-production');
+      expect(btnApprove).not.toBeNull();
+      btnApprove.click();
+      await new Promise(r => setTimeout(r, 30));
+
+      currentOrder = ordersStore.getOrderById(order.id);
+      expect(currentOrder.productionStatus).toBe(ORDER_STATUS.IN_AUDLEY_QUEUE);
+    });
+
+    it('incluye enlace a la boleta en el mensaje de WhatsApp si el pedido cuenta con boleta', () => {
+      const msg = formatOrderWhatsAppMessage({
+        id: 'KL-00099',
+        paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta_99.jpg',
+        items: [],
+      });
+      expect(msg).toContain('🧾 *Boleta:* https://pub-r2.dev/assets/payments/boleta_99.jpg');
     });
   });
 });

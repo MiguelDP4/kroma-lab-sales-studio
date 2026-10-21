@@ -244,4 +244,13 @@ describe('Controller Error Handlers & Catch Blocks', () => {
     const res = await request(app).delete('/api/quotes/cot_test');
     expect(res.status).toBe(500);
   });
+
+  it('captura error de base de datos en attachPaymentReceipt', async () => {
+    vi.spyOn(prisma.order, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
+    const res = await request(app)
+      .post(`/api/orders/${testOrderId}/receipt`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ receiptUrl: 'https://pub-r2.dev/test.jpg' });
+    expect(res.status).toBe(500);
+  });
 });

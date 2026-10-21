@@ -5,6 +5,7 @@ import {
   createOrder,
   updateOrderStatus,
   updateOrderPayment,
+  attachPaymentReceipt,
   getOrderStats,
 } from '../controllers/orders.controller';
 import { authenticate, requireRole } from '../middlewares/auth';
@@ -17,5 +18,6 @@ router.get('/:id', authenticate, getOrderById);
 router.post('/', createOrder); // Público desde el checkout o autenticado
 router.put('/:id/status', authenticate, requireRole('ADMIN', 'EMPLOYEE'), updateOrderStatus);
 router.put('/:id/payment', authenticate, requireRole('ADMIN', 'EMPLOYEE'), updateOrderPayment);
+router.post('/:id/receipt', authenticate, attachPaymentReceipt);
 
 export default router;

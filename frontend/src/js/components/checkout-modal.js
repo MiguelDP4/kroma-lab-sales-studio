@@ -10,7 +10,7 @@ import { store } from '../store.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { ordersStore } from '../modules/orders-store.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
-import { uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
+import { uploadCanvasSnapshotToStorage, uploadFileToStorage, readFileAsDataURL, validateReceiptFile, formatFileSize } from '../modules/file-uploader.js';
 
 export function openCheckoutModal(cartTotals) {
   let modalContainer = document.getElementById('checkoutModalContainer');
@@ -112,6 +112,42 @@ export function openCheckoutModal(cartTotals) {
             <span>💾 Guardar / Sincronizar en Cartera de Clientes B2B</span>
           </label>
         </div>
+        <!-- INFORMACIÓN DE PAGO BANCARIO Y SUBIDA DE BOLETA -->
+        <div class="checkout-bank-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+            <strong style="font-size: 0.88rem; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
+              <span>💳</span>
+              <span>Cuentas para Transferencia / Depósito</span>
+            </strong>
+            <span class="badge" style="font-size: 0.72rem;">Anticipo 50% o Pago 100%</span>
+          </div>
+          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0.65rem;">
+            <div>• <strong>Banco Industrial (Monetaria Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">5371667253</code></div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Beneficiario: Miguel Angel Dubois / Kroma Lab</div>
+          </div>
+
+          <label class="form-label" for="checkoutReceiptInput" style="font-size: 0.82rem; margin-bottom: 0.25rem;">
+            Adjuntar Boleta o Comprobante de Pago (Opcional):
+          </label>
+          <div class="checkout-receipt-dropzone" id="checkoutReceiptDropzone" style="border: 1px dashed var(--border-color); border-radius: 4px; padding: 0.65rem; text-align: center; cursor: pointer; background: rgba(28, 114, 147, 0.04); min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: border-color 0.2s;">
+            <input type="file" id="checkoutReceiptInput" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+            <div id="checkoutReceiptPrompt" style="font-size: 0.82rem; color: var(--text-secondary);">
+              <span>📎 Clic para seleccionar comprobante (JPG, PNG o PDF)</span>
+            </div>
+            <div id="checkoutReceiptPreview" style="display: none; align-items: center; justify-content: space-between; width: 100%; gap: 0.5rem; text-align: left;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+                <img id="checkoutReceiptThumb" src="" alt="Boleta" style="width: 36px; height: 36px; object-fit: cover; border-radius: 3px; display: none; border: 1px solid var(--border-color);">
+                <span id="checkoutReceiptIcon" style="font-size: 1.5rem; display: none;">📄</span>
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <strong id="checkoutReceiptFileName" style="font-size: 0.82rem; display: block; overflow: hidden; text-overflow: ellipsis;"></strong>
+                  <span id="checkoutReceiptFileSize" style="font-size: 0.74rem; color: var(--text-muted);"></span>
+                </div>
+              </div>
+              <button type="button" id="btnRemoveCheckoutReceipt" class="btn-action-icon" title="Quitar comprobante" style="min-width: 36px; min-height: 36px; color: #ef4444; font-size: 1rem;">✕</button>
+            </div>
+          </div>
+          <div id="checkoutReceiptError" style="display: none; color: #ef4444; font-size: 0.75rem; margin-top: 0.35rem;"></div>
+        </div>
 
         <div class="checkout-summary-box">
           <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.35rem;">
@@ -145,6 +181,108 @@ export function openCheckoutModal(cartTotals) {
   const autofillSelect = document.getElementById('clientAutofillSelect');
   const btnClearAutofill = document.getElementById('btnClearAutofill');
   const badgeContainer = document.getElementById('autofillBadgeContainer');
+
+  const receiptInput = document.getElementById('checkoutReceiptInput');
+  const receiptDropzone = document.getElementById('checkoutReceiptDropzone');
+  const receiptPrompt = document.getElementById('checkoutReceiptPrompt');
+  const receiptPreview = document.getElementById('checkoutReceiptPreview');
+  const receiptThumb = document.getElementById('checkoutReceiptThumb');
+  const receiptIcon = document.getElementById('checkoutReceiptIcon');
+  const receiptFileName = document.getElementById('checkoutReceiptFileName');
+  const receiptFileSize = document.getElementById('checkoutReceiptFileSize');
+  const btnRemoveReceipt = document.getElementById('btnRemoveCheckoutReceipt');
+  const receiptError = document.getElementById('checkoutReceiptError');
+
+  let selectedReceiptFile = null;
+
+  function clearReceiptSelection() {
+    selectedReceiptFile = null;
+    if (receiptInput) receiptInput.value = '';
+    if (receiptPreview) receiptPreview.style.display = 'none';
+    if (receiptPrompt) receiptPrompt.style.display = 'block';
+    if (receiptThumb) { receiptThumb.src = ''; receiptThumb.style.display = 'none'; }
+    if (receiptIcon) receiptIcon.style.display = 'none';
+    if (receiptFileName) receiptFileName.textContent = '';
+    if (receiptFileSize) receiptFileSize.textContent = '';
+    if (receiptError) { receiptError.textContent = ''; receiptError.style.display = 'none'; }
+  }
+
+  async function handleReceiptFileSelection(file) {
+    if (!file) return;
+    const validation = validateReceiptFile(file);
+    if (!validation.valid) {
+      if (receiptError) {
+        receiptError.textContent = validation.error;
+        receiptError.style.display = 'block';
+      }
+      return;
+    }
+    if (receiptError) {
+      receiptError.textContent = '';
+      receiptError.style.display = 'none';
+    }
+    selectedReceiptFile = file;
+    if (receiptFileName) receiptFileName.textContent = file.name;
+    if (receiptFileSize) receiptFileSize.textContent = formatFileSize(file.size);
+    if (receiptPrompt) receiptPrompt.style.display = 'none';
+    if (receiptPreview) receiptPreview.style.display = 'flex';
+
+    const ext = (file.name || '').slice((file.name || '').lastIndexOf('.')).toLowerCase();
+    if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+      try {
+        const dataUrl = await readFileAsDataURL(file);
+        if (dataUrl && receiptThumb) {
+          receiptThumb.src = dataUrl;
+          receiptThumb.style.display = 'block';
+          if (receiptIcon) receiptIcon.style.display = 'none';
+        }
+      } catch (e) {
+        if (receiptIcon) receiptIcon.style.display = 'inline-block';
+      }
+    } else {
+      if (receiptThumb) receiptThumb.style.display = 'none';
+      if (receiptIcon) receiptIcon.style.display = 'inline-block';
+    }
+  }
+
+  if (receiptDropzone && receiptInput) {
+    receiptDropzone.addEventListener('click', (e) => {
+      if (e.target.closest('#btnRemoveCheckoutReceipt')) return;
+      receiptInput.click();
+    });
+
+    receiptDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      receiptDropzone.style.borderColor = 'var(--cerulean)';
+    });
+
+    receiptDropzone.addEventListener('dragleave', () => {
+      receiptDropzone.style.borderColor = 'var(--border-color)';
+    });
+
+    receiptDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      receiptDropzone.style.borderColor = 'var(--border-color)';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleReceiptFileSelection(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  if (receiptInput) {
+    receiptInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleReceiptFileSelection(e.target.files[0]);
+      }
+    });
+  }
+
+  if (btnRemoveReceipt) {
+    btnRemoveReceipt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearReceiptSelection();
+    });
+  }
 
   const nameInput = document.getElementById('custName');
   const phoneInput = document.getElementById('custPhone');
@@ -285,11 +423,34 @@ export function openCheckoutModal(cartTotals) {
         }
       }
 
+      let paymentReceiptUrl = null;
+      let paymentReceiptFileName = null;
+
+      if (selectedReceiptFile) {
+        try {
+          const receiptRes = await uploadFileToStorage(selectedReceiptFile, { context: 'payments' });
+          if (receiptRes && receiptRes.fileUrl) {
+            paymentReceiptUrl = receiptRes.fileUrl;
+            paymentReceiptFileName = selectedReceiptFile.name;
+          }
+        } catch (rErr) {
+          console.warn('[Checkout] Error subiendo comprobante a storage:', rErr);
+          paymentReceiptFileName = selectedReceiptFile.name;
+        }
+      }
+
+      customer.paymentReceiptUrl = paymentReceiptUrl;
+      customer.paymentReceiptFileName = paymentReceiptFileName;
+      cartTotals.paymentReceiptUrl = paymentReceiptUrl;
+      cartTotals.paymentReceiptFileName = paymentReceiptFileName;
+
       ordersStore.createOrder({
         customer,
         cartTotals,
         items: cartTotals.items || [],
         workshopNotes: customer.notes || '',
+        paymentReceiptUrl,
+        paymentReceiptFileName,
       });
       cartStore.clearCart();
 

@@ -149,6 +149,52 @@ describe('Orders API (/api/orders)', () => {
     expect(res2.body.order.paymentStatus).toBe('PAID');
   });
 
+  it('permite adjuntar comprobante de pago con POST /api/orders/:id/receipt y registrar abono', async () => {
+    const res = await request(app)
+      .post(`/api/orders/${createdOrderId}/receipt`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        receiptUrl: 'https://pub-r2.dev/assets/payments/boleta_bi_12345.jpg',
+        receiptFileName: 'boleta_bi_12345.jpg',
+        amountPaidQ: 145.5,
+        bankName: 'BI',
+        bankReference: 'DEP-8849201',
+        notes: 'Depósito monetario en agencia San José',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.order.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_bi_12345.jpg');
+    expect(res.body.order.paymentReceiptFileName).toBe('boleta_bi_12345.jpg');
+    expect(res.body.payment).toBeDefined();
+    expect(res.body.payment.bankReference).toBe('DEP-8849201');
+
+    // Adjuntar solo comprobante sin monto previo
+    const resWithoutAmount = await request(app)
+      .post(`/api/orders/${createdOrderId}/receipt`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        receiptUrl: 'https://pub-r2.dev/assets/payments/boleta_simple.jpg',
+      });
+    expect(resWithoutAmount.status).toBe(200);
+    expect(resWithoutAmount.body.payment).toBeNull();
+    expect(resWithoutAmount.body.order.paymentReceiptFileName).toBe('comprobante_bancario');
+
+    // 404 si la orden no existe
+    const res404 = await request(app)
+      .post('/api/orders/ord_inexistente_999/receipt')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ receiptUrl: 'https://pub-r2.dev/test.jpg' });
+    expect(res404.status).toBe(404);
+
+    // 403 si un cliente CUSTOMER intenta adjuntar a una orden ajena
+    const res403 = await request(app)
+      .post(`/api/orders/${createdOrderId}/receipt`)
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ receiptUrl: 'https://pub-r2.dev/test.jpg' });
+    expect(res403.status).toBe(403);
+  });
+
   it('retorna estadísticas consolidadas en /api/orders/stats', async () => {
     const res = await request(app)
       .get('/api/orders/stats')

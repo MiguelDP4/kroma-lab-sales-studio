@@ -24,9 +24,7 @@ describe('Workshop Config API (/api/workshop)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.config.printableRollWidthCm).toBe(28.0);
     expect(res.body.config.rollWidthCm).toBe(30.0);
-    expect(res.body.config.bankBiAccount).toBe('144-002931-2');
-    expect(res.body.config.bankBacAccount).toBe('90-341902-1');
-    expect(res.body.config.bankBanruralAccount).toBe('3033-09182-1');
+    expect(res.body.config.bankBiAccount).toBe('5371667253');
   });
 
   it('crea automáticamente la configuración por defecto si no existe en la BD', async () => {

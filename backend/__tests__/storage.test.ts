@@ -225,6 +225,42 @@ describe('Storage & Cloudflare R2 Presigned URLs API (/api/storage)', () => {
       expect(updatedOrder?.fileUrl).toBe('https://pub-r2.dev/assets/orders/456-arte.tiff');
       expect(updatedOrder?.fileName).toBe('arte_audley.tiff');
     });
+
+    it('confirma y vincula un comprobante de pago a una orden de producción existente', async () => {
+      const code = `KL-2026-REC-${Date.now()}`;
+      const order = await prisma.order.create({
+        data: {
+          code,
+          customerName: 'Cliente Comprobante',
+          customerPhone: '+502 5555-4321',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 50,
+          linearMeters: 1.0,
+          unitRateQ: 140,
+          materialPriceQ: 140,
+          totalAmountQ: 140,
+        },
+      });
+
+      const res = await request(app)
+        .post('/api/storage/confirm-upload')
+        .send({
+          fileKey: 'assets/payments/boleta_bac_999.png',
+          fileUrl: 'https://pub-r2.dev/assets/payments/boleta_bac_999.png',
+          fileName: 'boleta_bac_999.png',
+          fileSizeBytes: 524288,
+          orderId: order.id,
+          isReceipt: true,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const updatedOrder = await prisma.order.findUnique({ where: { id: order.id } });
+      expect(updatedOrder?.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_bac_999.png');
+      expect(updatedOrder?.paymentReceiptFileName).toBe('boleta_bac_999.png');
+    });
   });
 
   describe('GET /api/storage/download-url', () => {

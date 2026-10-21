@@ -182,6 +182,12 @@ export class ApiClient {
     getStats: async () => {
       return this._request('/orders/stats');
     },
+    attachReceipt: async (id, receiptData) => {
+      return this._request(`/orders/${id}/receipt`, {
+        method: 'POST',
+        body: JSON.stringify(receiptData),
+      });
+    },
   };
 
   // --- Cartera B2B y Clientes ---
