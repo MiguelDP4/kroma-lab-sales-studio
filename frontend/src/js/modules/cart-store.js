@@ -49,7 +49,14 @@ class CartStore {
       qty: parseInt(item.qty, 10) || 50,
       includeCutting: Boolean(item.includeCutting),
       fileInfo: item.fileInfo || null,
+      fileUrl: item.fileUrl || item.fileInfo?.fileUrl || null,
+      fileName: item.fileName || item.fileInfo?.name || null,
       previewUrl: item.previewUrl || null,
+      canvasSnapshot: item.canvasSnapshot || null,
+      rotationDeg: Number(item.rotationDeg) || 0,
+      actualLinearMeters: parseFloat(item.actualLinearMeters) || 0,
+      stickersPerRow: item.stickersPerRow || 1,
+      rows: item.rows || 1,
       createdAt: item.createdAt || new Date().toISOString(),
     };
 

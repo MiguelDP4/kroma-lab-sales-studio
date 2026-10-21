@@ -134,6 +134,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('sincroniza reactivamente el navbar al cambiar el usuario y rol en el store', () => {
+      setActivePreviewImg(null);
       initApp();
       const tag = document.getElementById('salesStudioTag');
       expect(tag.style.display).toBe('none');
@@ -153,6 +154,7 @@ describe('App — Inicialización y DOM', () => {
 
   describe('Control de Menú Hamburguesa Móvil (Mobile-First)', () => {
     it('alterna la clase is-open, el aria-expanded y el ícono al pulsar el botón hamburguesa', () => {
+      setActivePreviewImg(null);
       initApp();
 
       const toggleBtn = document.getElementById('mobileNavToggle');
@@ -175,6 +177,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('cierra el menú al hacer clic en un enlace de navegación', () => {
+      setActivePreviewImg(null);
       initApp();
       syncNavbarRole('CUSTOMER');
 
@@ -194,6 +197,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('cierra el menú al hacer clic fuera del área del menú', () => {
+      setActivePreviewImg(null);
       initApp();
 
       const toggleBtn = document.getElementById('mobileNavToggle');
@@ -214,6 +218,7 @@ describe('App — Inicialización y DOM', () => {
 
   describe('Cotizador Interactivo y Cálculos en DOM', () => {
     it('recalcula la cotización al escribir en los inputs y al hacer clic en chips de preset', () => {
+      setActivePreviewImg(null);
       initApp();
 
       const widthInput = document.getElementById('stickerWidth');
@@ -237,6 +242,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('renderiza resultados con corte opcional activo', () => {
+      setActivePreviewImg(null);
       initApp();
       const mockQuote = {
         widthCm: 5,
@@ -276,6 +282,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('agrega el diseño al carrito y abre el drawer al hacer clic en btnAddToCart', () => {
+      setActivePreviewImg(null);
       initApp();
 
       const btnAddToCart = document.getElementById('btnAddToCart');
@@ -288,6 +295,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('gestiona la selección y remoción de archivos en el dropzone con Estrategia 1 (Lazy Upload)', async () => {
+      setActivePreviewImg(null);
       initApp();
 
       const dropzone = document.getElementById('quoterDropzone');
@@ -359,6 +367,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('ejecuta Lazy Upload al presionar btnAddToCart con archivo adjunto', async () => {
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['dummy png data'], 'logo-cliente.png', { type: 'image/png' });
@@ -385,6 +394,7 @@ describe('App — Inicialización y DOM', () => {
         fileUrl: 'blob:...',
         provider: 'local',
       });
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['dummy png data'], 'logo-local.png', { type: 'image/png' });
@@ -411,6 +421,7 @@ describe('App — Inicialización y DOM', () => {
           triggerError = fn;
         }
       };
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['corrupt data'], 'corrupt.png', { type: 'image/png' });
@@ -421,7 +432,7 @@ describe('App — Inicialización y DOM', () => {
       fileInput.dispatchEvent(new Event('change'));
       await vi.waitFor(() => {
         expect(triggerError).not.toBeNull();
-      });
+      }, { timeout: 3000 });
       triggerError();
       expect(getActivePreviewImg()).toBeNull();
       global.Image = originalImage;
@@ -439,6 +450,7 @@ describe('App — Inicialización y DOM', () => {
           }, 10);
         }
       };
+      setActivePreviewImg(null);
       initApp();
       const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
       keepAspectCheckbox.checked = false;
@@ -450,7 +462,9 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 150));
+      await vi.waitFor(() => {
+        expect(getActivePreviewImg()).not.toBeNull();
+      }, { timeout: 3000 });
 
       expect(getActivePreviewImg()).not.toBeNull();
       global.Image = originalImage;
@@ -468,6 +482,7 @@ describe('App — Inicialización y DOM', () => {
           }, 10);
         }
       };
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['png data'], 'art.png', { type: 'image/png' });
@@ -476,7 +491,9 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 150));
+      await vi.waitFor(() => {
+        expect(getActivePreviewImg()).not.toBeNull();
+      }, { timeout: 3000 });
 
       const widthInput = document.getElementById('stickerWidth');
       const heightInput = document.getElementById('stickerHeight');
@@ -497,6 +514,7 @@ describe('App — Inicialización y DOM', () => {
           resolveRead = resolve;
         });
       });
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['png data'], 'concur.png', { type: 'image/png' });
@@ -529,6 +547,7 @@ describe('App — Inicialización y DOM', () => {
           }, 10);
         }
       };
+      setActivePreviewImg(null);
       initApp();
       const widthInput = document.getElementById('stickerWidth');
       const heightInput = document.getElementById('stickerHeight');
@@ -544,7 +563,9 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 150));
+      await vi.waitFor(() => {
+        expect(getActivePreviewImg()).not.toBeNull();
+      }, { timeout: 3000 });
 
       // Asignar alto a 35 con relación de aspecto desactivada para probar el límite de ancho de bobina
       const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
@@ -561,6 +582,7 @@ describe('App — Inicialización y DOM', () => {
 
     it('maneja error en uploadFileToStorage al presionar btnAddToCart manteniendo fallback local', async () => {
       fileUploader.uploadFileToStorage.mockRejectedValueOnce(new Error('R2 Error'));
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['dummy png data'], 'logo-err.png', { type: 'image/png' });
@@ -580,6 +602,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('pasa rawFile y parámetros de archivo a openSaveQuoteModal al presionar btnSaveQuote', async () => {
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['art content'], 'arte-vector.png', { type: 'image/png' });
@@ -598,6 +621,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('permite gestionar imagen activa en canvas con setActivePreviewImg y redrawRollCanvas', () => {
+      setActivePreviewImg(null);
       initApp();
       expect(getActivePreviewImg()).toBeNull();
 
@@ -622,6 +646,7 @@ describe('App — Inicialización y DOM', () => {
           }, 10);
         }
       };
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['png data'], 'valid-art.png', { type: 'image/png' });
@@ -630,13 +655,16 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 150));
+      await vi.waitFor(() => {
+        expect(getActivePreviewImg()).not.toBeNull();
+      }, { timeout: 3000 });
       expect(getActivePreviewImg()).not.toBeNull();
       global.Image = originalImage;
     });
 
     it('captura error si readFileAsDataURL lanza excepción en handleFileSelected', async () => {
       const spy = vi.spyOn(fileUploader, 'readFileAsDataURL').mockRejectedValueOnce(new Error('Read fail'));
+      setActivePreviewImg(null);
       initApp();
       const fileInput = document.getElementById('quoterFileInput');
       const validFile = new File(['fail data'], 'fail.png', { type: 'image/png' });
@@ -662,6 +690,7 @@ describe('App — Inicialización y DOM', () => {
         }
       };
 
+      setActivePreviewImg(null);
       initApp();
       const widthInput = document.getElementById('stickerWidth');
       const heightInput = document.getElementById('stickerHeight');
@@ -713,6 +742,7 @@ describe('App — Inicialización y DOM', () => {
         }
       };
 
+      setActivePreviewImg(null);
       initApp();
       const widthInput = document.getElementById('stickerWidth');
       const heightInput = document.getElementById('stickerHeight');
@@ -757,6 +787,7 @@ describe('App — Inicialización y DOM', () => {
         }
       };
 
+      setActivePreviewImg(null);
       initApp();
       const widthInput = document.getElementById('stickerWidth');
       const heightInput = document.getElementById('stickerHeight');
@@ -852,6 +883,7 @@ describe('App — Inicialización y DOM', () => {
 
         <main id="app"></main>
       `;
+      setActivePreviewImg(null);
       initApp();
     });
 
@@ -967,6 +999,7 @@ describe('App — Inicialización y DOM', () => {
     });
 
     it('abre el modal de configuración de usuario al pulsar el chip de perfil tras inicializar la app', () => {
+      setActivePreviewImg(null);
       initApp();
       const chip = document.getElementById('userProfileChip');
       const modal = document.getElementById('userProfileModal');

@@ -85,4 +85,26 @@ describe('Cart Store — Almacén Reactivo de Carrito', () => {
     expect(() => cartStore.saveCartToStorage()).not.toThrow();
     setItemSpy.mockRestore();
   });
+
+  it('almacena canvasSnapshot, rotationDeg, fileUrl y fileName en los ítems agregados', () => {
+    const item = cartStore.addItem({
+      title: 'Stickers Bobina',
+      widthCm: 8,
+      heightCm: 5,
+      qty: 60,
+      canvasSnapshot: 'data:image/png;base64,cartSnapshot123',
+      rotationDeg: 90,
+      fileUrl: 'https://r2.dev/sticker.png',
+      fileName: 'sticker.png',
+    });
+
+    expect(item.canvasSnapshot).toBe('data:image/png;base64,cartSnapshot123');
+    expect(item.rotationDeg).toBe(90);
+    expect(item.fileUrl).toBe('https://r2.dev/sticker.png');
+    expect(item.fileName).toBe('sticker.png');
+
+    const retrieved = cartStore.getItems()[0];
+    expect(retrieved.canvasSnapshot).toBe('data:image/png;base64,cartSnapshot123');
+    expect(retrieved.rotationDeg).toBe(90);
+  });
 });

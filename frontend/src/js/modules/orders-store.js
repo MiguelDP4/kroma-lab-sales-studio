@@ -267,6 +267,10 @@ class OrdersStore {
       id: o.code || o.id,
       backendId: o.id,
       createdAt: o.createdAt,
+      fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
+      fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileName) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
+      canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || null,
+      rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.rotationDeg) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
       customer: {
         clientId: o.customerId || null,
         name: o.customerName,
@@ -288,7 +292,15 @@ class OrdersStore {
           includeCutting: Boolean(o.withCutting),
           cuttingRateUnit: o.withCutting ? 0.08 : 0,
           finishType: o.finishType || 'Barniz con Relieve 3D',
-          fileInfo: { name: o.fileName || 'diseño.png', sizeFormatted: '300 DPI' },
+          fileInfo: {
+            name: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.name) || 'diseño.png',
+            fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.fileUrl) || null,
+            sizeFormatted: (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.sizeFormatted) || '300 DPI',
+          },
+          fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
+          fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
+          canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || null,
+          rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
         },
       ],
       metrics: {
@@ -366,6 +378,10 @@ class OrdersStore {
         address: customer.address || 'Ciudad de Guatemala',
         email: customer.email || '',
       },
+      canvasSnapshot: items[0]?.canvasSnapshot || cartTotals.canvasSnapshot || null,
+      rotationDeg: items[0]?.rotationDeg || cartTotals.rotationDeg || 0,
+      fileUrl: items[0]?.fileUrl || items[0]?.fileInfo?.fileUrl || null,
+      fileName: items[0]?.fileName || items[0]?.fileInfo?.name || null,
       items: items.map((it, idx) => ({
         title: it.title || `Diseño #${idx + 1}`,
         widthCm: parseFloat(it.widthCm) || 5,
@@ -378,7 +394,11 @@ class OrdersStore {
         cuttingRateUnit: it.cuttingRateUnit || 0,
         finishType: it.finishType || 'Barniz con Relieve 3D',
         fileInfo: it.fileInfo || null,
+        fileUrl: it.fileUrl || it.fileInfo?.fileUrl || null,
+        fileName: it.fileName || it.fileInfo?.name || null,
         previewUrl: it.previewUrl || null,
+        canvasSnapshot: it.canvasSnapshot || null,
+        rotationDeg: Number(it.rotationDeg) || 0,
       })),
       metrics: {
         totalBillableMeters: parseFloat(cartTotals.totalBillableMeters) || 1.0,
@@ -418,7 +438,10 @@ class OrdersStore {
         finishType: firstItem.finishType || 'GLOSSY_VARNISH',
         stickersPerRow: firstItem.stickersPerRow || 1,
         rows: firstItem.rows || 1,
-        fileName: firstItem.fileInfo?.name,
+        fileUrl: firstItem.fileUrl || firstItem.fileInfo?.fileUrl || newOrder.fileUrl,
+        fileName: firstItem.fileName || firstItem.fileInfo?.name || newOrder.fileName,
+        canvasSnapshot: firstItem.canvasSnapshot || newOrder.canvasSnapshot,
+        rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
         notes: newOrder.workshopNotes,
       }).then(res => {
         if (res && res.order) {
