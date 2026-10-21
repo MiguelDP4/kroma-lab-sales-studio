@@ -10,6 +10,7 @@ import { store } from '../store.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { ordersStore } from '../modules/orders-store.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
+import { uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
 
 export function openCheckoutModal(cartTotals) {
   let modalContainer = document.getElementById('checkoutModalContainer');
@@ -208,7 +209,7 @@ export function openCheckoutModal(cartTotals) {
   if (btnClose) btnClose.addEventListener('click', closeCheckoutModal);
 
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const nameVal = nameInput?.value?.trim() || '';
       const phoneVal = phoneInput?.value?.trim() || '';
@@ -264,6 +265,25 @@ export function openCheckoutModal(cartTotals) {
         notes: notesVal,
         clientId: linkedClientId || null,
       };
+
+      if (cartTotals.items && Array.isArray(cartTotals.items)) {
+        for (const item of cartTotals.items) {
+          if (!item.canvasSnapshotUrl && item.canvasSnapshot && item.canvasSnapshot.startsWith('data:')) {
+            try {
+              const snapUrl = await uploadCanvasSnapshotToStorage(
+                item.canvasSnapshot,
+                `bobina_${item.widthCm}x${item.heightCm}cm.png`,
+                { context: 'orders' }
+              );
+              if (snapUrl) {
+                item.canvasSnapshotUrl = snapUrl;
+              }
+            } catch (err) {
+              console.warn('[Storage] Error subiendo snapshot en checkout:', err);
+            }
+          }
+        }
+      }
 
       ordersStore.createOrder({
         customer,

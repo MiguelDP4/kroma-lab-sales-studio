@@ -142,7 +142,16 @@ export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
     msg += `   • Medida: ${item.widthCm} × ${item.heightCm} cm\n`;
     msg += `   • Cantidad: ${item.qty} stickers\n`;
     msg += `   • Acabado: ${cutText}${fileName}\n`;
-    msg += `   • Acomodo: ${item.stickersPerRow}/fila (${item.rows} filas, ${(item.actualLinearMeters).toFixed(2)}m)\n\n`;
+    msg += `   • Acomodo: ${item.stickersPerRow}/fila (${item.rows} filas, ${(item.actualLinearMeters).toFixed(2)}m)\n`;
+    const clientArtUrl = item.fileInfo?.fileUrl || item.fileUrl;
+    if (clientArtUrl) {
+      msg += `   • 🖼️ *Arte del cliente:* ${clientArtUrl}\n`;
+    }
+    const snapUrl = item.canvasSnapshotUrl || (item.canvasSnapshot && !item.canvasSnapshot.startsWith('data:') ? item.canvasSnapshot : null);
+    if (snapUrl) {
+      msg += `   • 📐 *Montaje en bobina:* ${snapUrl}\n`;
+    }
+    msg += `\n`;
   });
 
   msg += `*CONSOLIDADO DE PRODUCCIÓN:*\n`;

@@ -188,3 +188,62 @@ export async function uploadFileToStorage(file, options = {}) {
     confirmation,
   };
 }
+
+/**
+ * Convierte un Data URL (base64) en un objeto File/Blob compatible con subidas multipart/PUT.
+ * @param {string} dataUrl - Cadena en formato data:image/...;base64,...
+ * @param {string} filename - Nombre del archivo de destino.
+ * @returns {File|Blob|null}
+ */
+export function dataURLtoFile(dataUrl, filename = 'esquema_bobina.png') {
+  if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+    return null;
+  }
+  try {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    if (typeof File !== 'undefined') {
+      return new File([u8arr], filename, { type: mime });
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    blob.name = filename;
+    return blob;
+  } catch (err) {
+    console.warn('[Storage] Error al convertir dataURL a File:', err);
+    return null;
+  }
+}
+
+/**
+ * Sube una instantánea del canvas (en base64) a Cloudflare R2 / Storage
+ * y retorna la URL pública HTTP/HTTPS permanente.
+ * @param {string} dataUrl - Cadena en base64 del canvas.
+ * @param {string} filename - Nombre de archivo opcional.
+ * @param {Object} options - Opciones de contexto para uploadFileToStorage.
+ * @returns {Promise<string|null>} - URL pública permanente en R2 o null en caso de error.
+ */
+export async function uploadCanvasSnapshotToStorage(dataUrl, filename = 'esquema_bobina.png', options = {}) {
+  if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+    return null;
+  }
+  const file = dataURLtoFile(dataUrl, filename);
+  if (!file) return null;
+  try {
+    const res = await uploadFileToStorage(file, {
+      context: options.context || 'orders',
+      referenceCode: options.referenceCode || null,
+      ...options,
+    });
+    return res?.fileUrl || null;
+  } catch (err) {
+    console.warn('[Storage] Error al subir snapshot a almacenamiento:', err);
+    return null;
+  }
+}

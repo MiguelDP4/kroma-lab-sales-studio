@@ -270,6 +270,7 @@ class OrdersStore {
       fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
       fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileName) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
       canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || null,
+      canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || null,
       rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.rotationDeg) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
       customer: {
         clientId: o.customerId || null,
@@ -300,6 +301,7 @@ class OrdersStore {
           fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
           fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
           canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || null,
+          canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || null,
           rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
         },
       ],
@@ -379,6 +381,7 @@ class OrdersStore {
         email: customer.email || '',
       },
       canvasSnapshot: items[0]?.canvasSnapshot || cartTotals.canvasSnapshot || null,
+      canvasSnapshotUrl: items[0]?.canvasSnapshotUrl || (items[0]?.canvasSnapshot && !items[0]?.canvasSnapshot.startsWith('data:') ? items[0]?.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
       rotationDeg: items[0]?.rotationDeg || cartTotals.rotationDeg || 0,
       fileUrl: items[0]?.fileUrl || items[0]?.fileInfo?.fileUrl || null,
       fileName: items[0]?.fileName || items[0]?.fileInfo?.name || null,
@@ -398,6 +401,7 @@ class OrdersStore {
         fileName: it.fileName || it.fileInfo?.name || null,
         previewUrl: it.previewUrl || null,
         canvasSnapshot: it.canvasSnapshot || null,
+        canvasSnapshotUrl: it.canvasSnapshotUrl || (it.canvasSnapshot && !it.canvasSnapshot.startsWith('data:') ? it.canvasSnapshot : null) || null,
         rotationDeg: Number(it.rotationDeg) || 0,
       })),
       metrics: {

@@ -29,6 +29,7 @@ vi.mock('../src/js/modules/file-uploader.js', async () => {
         provider: 'cloudflare-r2',
       };
     }),
+    uploadCanvasSnapshotToStorage: vi.fn().mockResolvedValue('https://pub-r2.dev/assets/quotes/esquema_bobina.png'),
   };
 });
 
@@ -852,6 +853,65 @@ describe('App — Inicialización y DOM', () => {
 
       sendWhatsAppQuote(mockQuote);
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
+    });
+
+    it('sendWhatsAppQuote retorna inmediatamente si el parámetro quote es nulo', () => {
+      window.open = vi.fn();
+      sendWhatsAppQuote(null);
+      expect(window.open).not.toHaveBeenCalled();
+    });
+
+    it('sendWhatsAppQuote incluye enlaces a Cloudflare R2 del arte y del canvas en el texto', () => {
+      window.open = vi.fn();
+      const mockQuote = {
+        widthCm: 8,
+        heightCm: 6,
+        qty: 120,
+        stickersPerRow: 3,
+        billableMeters: 2.4,
+        tierRate: 115.0,
+        includeCutting: true,
+        isCuttingMinApplied: false,
+        cuttingRateUnit: 0.30,
+        cuttingTotalQ: 36.0,
+        totalPriceQ: 312.0,
+        fileUrl: 'https://pub-r2.dev/assets/quotes/diseno_cliente.png',
+        canvasSnapshotUrl: 'https://pub-r2.dev/assets/quotes/esquema_bobina.png',
+      };
+
+      sendWhatsAppQuote(mockQuote);
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
+      const calledUrl = window.open.mock.calls[0][0];
+      const decodedText = decodeURIComponent(calledUrl);
+      expect(decodedText).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/assets/quotes/diseno_cliente.png');
+      expect(decodedText).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/assets/quotes/esquema_bobina.png');
+      expect(decodedText).toContain('Sí, corte recto');
+    });
+
+    it('sendWhatsAppQuote maneja corte con tarifa base mínima aplicada', () => {
+      window.open = vi.fn();
+      const mockQuote = {
+        widthCm: 5,
+        heightCm: 5,
+        qty: 20,
+        stickersPerRow: 5,
+        billableMeters: 1.0,
+        tierRate: 140.0,
+        includeCutting: true,
+        isCuttingMinApplied: true,
+        cuttingRateUnit: 0.35,
+        cuttingTotalQ: 25.0,
+        totalPriceQ: 165.0,
+        fileInfo: { fileUrl: 'https://pub-r2.dev/file.png' },
+        canvasSnapshot: 'https://pub-r2.dev/montaje.png',
+      };
+
+      sendWhatsAppQuote(mockQuote);
+      const calledUrl = window.open.mock.calls[0][0];
+      const decodedText = decodeURIComponent(calledUrl);
+      expect(decodedText).toContain('tarifa base mínima');
+      expect(decodedText).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/file.png');
+      expect(decodedText).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/montaje.png');
     });
   });
 

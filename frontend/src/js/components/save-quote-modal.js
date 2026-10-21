@@ -6,7 +6,7 @@
 
 import { store } from '../store.js';
 import { quotesStore } from '../modules/quotes-store.js';
-import { uploadFileToStorage } from '../modules/file-uploader.js';
+import { uploadFileToStorage, uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
 import { generateCanvasSnapshot } from '../modules/roll-simulator.js';
 
 let modalInitialized = false;
@@ -334,6 +334,22 @@ export async function handleSaveQuoteSubmit(e) {
     }
   }
 
+  // Si la instantánea del canvas es un base64 y no se ha subido aún, subir ahora a R2
+  if (specs.canvasSnapshot && specs.canvasSnapshot.startsWith('data:') && !specs.canvasSnapshotUrl) {
+    try {
+      const snapUrl = await uploadCanvasSnapshotToStorage(
+        specs.canvasSnapshot,
+        `esquema_${specs.widthCm}x${specs.heightCm}cm.png`,
+        { context: 'quotes' }
+      );
+      if (snapUrl) {
+        specs.canvasSnapshotUrl = snapUrl;
+      }
+    } catch (snapErr) {
+      console.warn('[Storage] Error al subir canvas snapshot en modal cotización:', snapErr);
+    }
+  }
+
   const newQuote = quotesStore.createQuote({
     projectName,
     leadName,
@@ -343,6 +359,7 @@ export async function handleSaveQuoteSubmit(e) {
     notes,
     ...specs,
     canvasSnapshot: specs.canvasSnapshot || null,
+    canvasSnapshotUrl: specs.canvasSnapshotUrl || null,
     rotationDeg: specs.rotationDeg || 0,
     fileName: specs.fileName || (specs.rawFile ? specs.rawFile.name : null),
     fileUrl: specs.fileUrl || null,

@@ -12,6 +12,7 @@ import * as fileUploader from '../src/js/modules/file-uploader.js';
 
 vi.mock('../src/js/modules/file-uploader.js', () => ({
   uploadFileToStorage: vi.fn(),
+  uploadCanvasSnapshotToStorage: vi.fn(),
 }));
 
 describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
@@ -36,6 +37,7 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
       fileUrl: 'https://r2.kroma.gt/quotes/mock-key.png',
       provider: 'cloudflare-r2',
     });
+    fileUploader.uploadCanvasSnapshotToStorage.mockResolvedValue('https://r2.kroma.gt/quotes/mock-snapshot.png');
   });
 
   afterEach(() => {

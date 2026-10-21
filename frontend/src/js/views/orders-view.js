@@ -11,6 +11,30 @@ import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 import { calculateOrderProfitability } from '../modules/profitability-engine.js';
 import { printDocument } from '../modules/print-helper.js';
 
+export function formatOrderWhatsAppMessage(order) {
+  if (!order) return '';
+  const artUrls = (order.items || [])
+    .map(it => it.fileInfo?.fileUrl || it.fileUrl)
+    .filter(Boolean);
+  if (!artUrls.length && order.fileUrl) {
+    artUrls.push(order.fileUrl);
+  }
+  const snapUrls = (order.items || [])
+    .map(it => it.canvasSnapshotUrl || (it.canvasSnapshot && !it.canvasSnapshot.startsWith('data:') ? it.canvasSnapshot : null))
+    .filter(Boolean);
+  if (!snapUrls.length && order.canvasSnapshot && !order.canvasSnapshot.startsWith('data:')) {
+    snapUrls.push(order.canvasSnapshot);
+  }
+  let waOrderLinks = '';
+  if (artUrls.length > 0) {
+    waOrderLinks += `\n🖼️ *Arte:* ${artUrls.join(' | ')}`;
+  }
+  if (snapUrls.length > 0) {
+    waOrderLinks += `\n📐 *Montaje:* ${snapUrls.join(' | ')}`;
+  }
+  return `*KROMA LAB — Pedido #${order.id}*\nHola, deseo consultar el estado de este pedido.${waOrderLinks}`;
+}
+
 export const ordersView = {
   path: '/pedidos',
   name: 'orders',
@@ -650,6 +674,7 @@ export const ordersView = {
 
         const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus];
         const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
+        const orderWaMsg = formatOrderWhatsAppMessage(order);
 
         return `
           <tr data-order-row="${order.id}">
@@ -722,7 +747,7 @@ export const ordersView = {
                   <span>🚚</span>
                 </a>
               ` : ''}
-              <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(`*KROMA LAB — Pedido #${order.id}*\nHola, deseo consultar el estado de este pedido.`)}" target="_blank" rel="noopener noreferrer" class="btn-action-icon" title="Chat WhatsApp">
+              <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" target="_blank" rel="noopener noreferrer" class="btn-action-icon" title="Chat WhatsApp">
                 <span>💬</span>
               </a>
             </td>
@@ -747,6 +772,7 @@ export const ordersView = {
       if (contentEl) {
         const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus];
         const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
+        const orderWaMsg = formatOrderWhatsAppMessage(order);
 
         contentEl.innerHTML = `
           <div class="order-detail-meta-grid">
@@ -853,6 +879,12 @@ export const ordersView = {
               <strong>Notas:</strong> ${order.workshopNotes}
             </div>
           ` : ''}
+
+          <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="font-size: 0.85rem; padding: 0.5rem 1rem; text-decoration: none;">
+              <span>💬 Enviar / Consultar por WhatsApp</span>
+            </a>
+          </div>
         `;
       }
 

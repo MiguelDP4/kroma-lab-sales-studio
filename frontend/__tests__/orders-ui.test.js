@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ordersView } from '../src/js/views/orders-view.js';
+import { ordersView, formatOrderWhatsAppMessage } from '../src/js/views/orders-view.js';
 import { ordersStore, PAYMENT_STATUS } from '../src/js/modules/orders-store.js';
 import { clientsStore } from '../src/js/modules/clients-store.js';
 import { store } from '../src/js/store.js';
@@ -603,5 +603,51 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
     expect(lightbox.style.display).toBe('none');
 
     document.getElementById('btnCancelWorkshopModal').click();
+  });
+
+  describe('formatOrderWhatsAppMessage', () => {
+    it('retorna cadena vacía si order es nulo o indefinido', () => {
+      expect(formatOrderWhatsAppMessage(null)).toBe('');
+      expect(formatOrderWhatsAppMessage(undefined)).toBe('');
+    });
+
+    it('genera enlace de WhatsApp con enlaces al arte y al montaje de bobina si están disponibles', () => {
+      const msg = formatOrderWhatsAppMessage({
+        id: 'PED-FULL-WA',
+        items: [
+          {
+            title: 'Sticker Full Links',
+            fileUrl: 'https://pub-r2.dev/assets/orders/arte_cliente.png',
+            canvasSnapshotUrl: 'https://pub-r2.dev/assets/orders/esquema_bobina.png',
+          },
+        ],
+      });
+      expect(msg).toContain('🖼️ *Arte:* https://pub-r2.dev/assets/orders/arte_cliente.png');
+      expect(msg).toContain('📐 *Montaje:* https://pub-r2.dev/assets/orders/esquema_bobina.png');
+    });
+
+    it('utiliza fallback a order.fileUrl y order.canvasSnapshot a nivel raíz si items no tienen URLs', () => {
+      const msg = formatOrderWhatsAppMessage({
+        id: 'PED-ROOT-99',
+        fileUrl: 'https://pub-r2.dev/arte_root.png',
+        canvasSnapshot: 'https://pub-r2.dev/montaje_root.png',
+        items: [],
+      });
+      expect(msg).toContain('🖼️ *Arte:* https://pub-r2.dev/arte_root.png');
+      expect(msg).toContain('📐 *Montaje:* https://pub-r2.dev/montaje_root.png');
+    });
+
+    it('omite arte y montaje si no hay URLs válidas o si el snapshot es base64', () => {
+      const msg = formatOrderWhatsAppMessage({
+        id: 'PED-NO-URLS',
+        canvasSnapshot: 'data:image/png;base64,localOnly',
+        items: [
+          { title: 'Sin URL', canvasSnapshot: 'data:image/png;base64,abc' },
+        ],
+      });
+      expect(msg).not.toContain('🖼️ *Arte:*');
+      expect(msg).not.toContain('📐 *Montaje:*');
+      expect(msg).toContain('*KROMA LAB — Pedido #PED-NO-URLS*');
+    });
   });
 });
