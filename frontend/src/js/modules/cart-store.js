@@ -53,6 +53,7 @@ class CartStore {
       fileName: item.fileName || item.fileInfo?.name || null,
       previewUrl: item.previewUrl || null,
       canvasSnapshot: item.canvasSnapshot || null,
+      canvasSnapshotUrl: item.canvasSnapshotUrl || (item.canvasSnapshot && !item.canvasSnapshot.startsWith('data:') ? item.canvasSnapshot : null),
       rotationDeg: Number(item.rotationDeg) || 0,
       actualLinearMeters: parseFloat(item.actualLinearMeters) || 0,
       stickersPerRow: item.stickersPerRow || 1,

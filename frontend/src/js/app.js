@@ -17,7 +17,7 @@ import { BUSINESS_CONFIG } from '../shared/business-config.js';
 import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
-import { validatePrintFile, readFileAsDataURL, uploadFileToStorage } from './modules/file-uploader.js';
+import { validatePrintFile, readFileAsDataURL, uploadFileToStorage, uploadCanvasSnapshotToStorage } from './modules/file-uploader.js';
 import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
@@ -506,18 +506,55 @@ export function initQuoter() {
     });
   });
 
-  // Botón de WhatsApp
-  const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
-  if (btnWhatsApp) {
-    btnWhatsApp.addEventListener('click', () => {
-      sendWhatsAppQuote(store.state.activeQuote);
-    });
-  }
-
   // Zona de Carga de Archivos de Impresión (Dropzone)
   let currentAttachedFile = null;
   let currentRawFile = null;
   let currentPreviewUrl = null;
+
+  // Botón de WhatsApp
+  const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
+  if (btnWhatsApp) {
+    btnWhatsApp.addEventListener('click', async () => {
+      let fileUrl = currentAttachedFile ? currentAttachedFile.fileUrl : null;
+      if (currentRawFile && currentAttachedFile && !fileUrl) {
+        try {
+          const uploadRes = await uploadFileToStorage(currentRawFile, { context: 'quotes' });
+          currentAttachedFile.fileKey = uploadRes.fileKey;
+          currentAttachedFile.fileUrl = uploadRes.fileUrl;
+          currentAttachedFile.provider = uploadRes.provider;
+          fileUrl = uploadRes.fileUrl;
+        } catch (uploadErr) {
+          console.warn('[Storage] Error al subir archivo para cotización WhatsApp:', uploadErr);
+        }
+      }
+
+      const rollCanvas = document.getElementById('rollCanvas');
+      const calculated = store.state.activeQuote;
+      let canvasSnapshotUrl = null;
+      if (rollCanvas && calculated) {
+        try {
+          const snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
+          if (snapshotBase64) {
+            canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
+              snapshotBase64,
+              `esquema_${calculated.widthCm}x${calculated.heightCm}cm.png`,
+              { context: 'quotes' }
+            );
+          }
+        } catch (snapErr) {
+          console.warn('[Storage] Error al subir snapshot canvas para cotización WhatsApp:', snapErr);
+        }
+      }
+
+      const quoteToSend = {
+        ...store.state.activeQuote,
+        fileUrl,
+        canvasSnapshotUrl,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+      };
+      sendWhatsAppQuote(quoteToSend);
+    });
+  }
 
   const dropzone = document.getElementById('quoterDropzone');
   const fileInput = document.getElementById('quoterFileInput');
@@ -734,6 +771,18 @@ export function initQuoter() {
       const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
       const rollCanvas = document.getElementById('rollCanvas');
       const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+      let canvasSnapshotUrl = null;
+      if (canvasSnapshot) {
+        try {
+          canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
+            canvasSnapshot,
+            `bobina_${w}x${h}cm.png`,
+            { context: 'orders' }
+          );
+        } catch (snapErr) {
+          console.warn('[Storage] Error al subir snapshot canvas al carrito:', snapErr);
+        }
+      }
 
       cartStore.addItem({
         title: `Stickers ${w} × ${h} cm`,
@@ -749,6 +798,7 @@ export function initQuoter() {
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
         previewUrl: currentPreviewUrl,
         canvasSnapshot: canvasSnapshot || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
         rotationDeg: currentRotation || 0,
       });
 
@@ -881,6 +931,12 @@ export function sendWhatsAppQuote(quote) {
     ? `• *Corte / Acabado:* Sí, corte recto con máquinas de precisión ${cutDetail}\n`
     : `• *Corte / Acabado:* No (Entrega estándar en rollo continuo)\n`;
 
+  const clientArtUrl = quote.fileUrl || quote.fileInfo?.fileUrl || null;
+  const clientArtText = clientArtUrl ? `• 🖼️ *Arte del cliente:* ${clientArtUrl}\n` : '';
+
+  const snapUrl = quote.canvasSnapshotUrl || (quote.canvasSnapshot && !quote.canvasSnapshot.startsWith('data:') ? quote.canvasSnapshot : null);
+  const snapText = snapUrl ? `• 📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+
   const text = `*KROMA LAB — Cotización UV DTF*\n\n` +
     `Hola, deseo consultar la siguiente cotización:\n` +
     `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
@@ -889,6 +945,8 @@ export function sendWhatsAppQuote(quote) {
     `• *Metros requeridos:* ${quote.billableMeters.toFixed(2)} m\n` +
     `• *Tarifa material:* Q${quote.tierRate.toFixed(2)} / m\n` +
     cuttingText +
+    clientArtText +
+    snapText +
     `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
     `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 

@@ -203,6 +203,11 @@ function renderQuotesCards(quotes) {
     }) : 'Reciente';
 
     // Generar texto para WhatsApp
+    const clientArtUrl = q.fileUrl || null;
+    const clientArtText = clientArtUrl ? `🖼️ *Arte del cliente:* ${clientArtUrl}\n` : '';
+    const snapUrl = q.canvasSnapshotUrl || (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null);
+    const snapText = snapUrl ? `📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+
     const waText = encodeURIComponent(
       `¡Hola! Te comparto la cotización formal de Kroma Lab UV DTF:\n` +
       `📌 *Proyecto:* ${q.projectName}\n` +
@@ -210,6 +215,8 @@ function renderQuotesCards(quotes) {
       `📏 *Medidas:* ${q.widthCm} x ${q.heightCm} cm (${q.qty} piezas)\n` +
       `📐 *Metros lineales:* ${Number(q.linearMeters).toFixed(2)} m\n` +
       `✂️ *Corte:* ${q.withCutting ? 'Despiece individual incluido' : 'En rollo continuo'}\n` +
+      clientArtText +
+      snapText +
       `💰 *Total:* Q${Number(q.totalPriceQ).toFixed(2)}\n\n` +
       `¿Deseas que lo ingresemos a cola de impresión?`
     );

@@ -282,4 +282,34 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     btnDismiss.click();
     expect(modal.style.display).toBe('none');
   });
+
+  it('incluye enlaces al arte del cliente y al montaje del canvas en el botón de compartir por WhatsApp', () => {
+    quotesStore.quotes = [
+      {
+        id: 'q-wa-test',
+        code: 'COT-WA-001',
+        projectName: 'Prueba WhatsApp Links',
+        leadName: 'María López',
+        leadPhone: '50255551234',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 100,
+        linearMeters: 1.0,
+        totalPriceQ: 140,
+        withCutting: false,
+        status: 'SAVED',
+        fileUrl: 'https://pub-r2.dev/assets/quotes/maria_logo.png',
+        canvasSnapshotUrl: 'https://pub-r2.dev/assets/quotes/maria_esquema.png',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    const waBtn = document.querySelector('a.btn-whatsapp');
+    expect(waBtn).not.toBeNull();
+    const href = waBtn.getAttribute('href');
+    const decoded = decodeURIComponent(href);
+    expect(decoded).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/assets/quotes/maria_logo.png');
+    expect(decoded).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/assets/quotes/maria_esquema.png');
+  });
 });
