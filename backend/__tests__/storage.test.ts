@@ -476,5 +476,19 @@ describe('Storage & Cloudflare R2 Presigned URLs API (/api/storage)', () => {
         });
       expect(res.status).toBe(500);
     });
+
+    it('lanza error si fileKey está vacío en generatePresignedDownloadUrl', async () => {
+      await expect(storageService.generatePresignedDownloadUrl('')).rejects.toThrow('Identificador fileKey requerido.');
+    });
+
+    it('retorna false si fileKey está vacío en deleteObject', async () => {
+      const res = await storageService.deleteObject('');
+      expect(res).toBe(false);
+    });
+
+    it('retorna true si el archivo no existe localmente al llamar deleteObject', async () => {
+      const res = await storageService.deleteObject('assets/general/archivo-que-no-existe-12345.png');
+      expect(res).toBe(true);
+    });
   });
 });

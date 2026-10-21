@@ -91,6 +91,7 @@ export function calculateCommercialReport(orders = [], clients = [], period = 'A
   };
 
   const productionBreakdown = {
+    [ORDER_STATUS.PENDING_REVIEW]: 0,
     [ORDER_STATUS.IN_AUDLEY_QUEUE]: 0,
     [ORDER_STATUS.PRINTING]: 0,
     [ORDER_STATUS.LAMINATING_CUTTING]: 0,

@@ -7,7 +7,7 @@ import {
   convertToOrder,
   deleteQuote,
 } from '../controllers/quotes.controller';
-import { optionalAuthenticate } from '../middlewares/auth';
+import { authenticate, optionalAuthenticate, requireRole } from '../middlewares/auth';
 
 const router = Router();
 
@@ -23,8 +23,8 @@ router.post('/', optionalAuthenticate, createQuote);
 // Actualizar datos de cotización
 router.put('/:id', optionalAuthenticate, updateQuote);
 
-// Convertir cotización directamente a orden de producción en 1 clic
-router.post('/:id/convert', optionalAuthenticate, convertToOrder);
+// Convertir cotización directamente a orden de producción (Solo Administrador y Personal de Taller)
+router.post('/:id/convert', authenticate, requireRole('ADMIN', 'EMPLOYEE'), convertToOrder);
 
 // Eliminar cotización guardada
 router.delete('/:id', optionalAuthenticate, deleteQuote);

@@ -233,7 +233,9 @@ describe('Controller Error Handlers & Catch Blocks', () => {
 
   it('captura error de base de datos en convertToOrder', async () => {
     vi.spyOn(prisma.quote, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
-    const res = await request(app).post('/api/quotes/cot_test/convert');
+    const res = await request(app)
+      .post('/api/quotes/cot_test/convert')
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(500);
   });
 

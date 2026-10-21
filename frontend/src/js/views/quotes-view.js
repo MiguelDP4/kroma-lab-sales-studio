@@ -188,6 +188,9 @@ function renderQuotesCards(quotes) {
     `;
   }
 
+  const role = store.state.user?.role || 'CUSTOMER';
+  const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
+
   return quotes.map((q) => {
     const isConverted = q.status === 'CONVERTED';
     const statusBadge = isConverted
@@ -322,10 +325,17 @@ function renderQuotesCards(quotes) {
                   🔍 Ver en Pedidos
                 </a>
               </div>
-            ` : `
+            ` : isStaff ? `
               <button type="button" class="btn btn-primary btn-convert-quote" data-quote-id="${q.id}" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; background: linear-gradient(135deg, #059669, #10b981);">
                 <span>⚡ Convertir en Orden de Producción</span>
               </button>
+            ` : `
+              <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--text-secondary);">
+                <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid #8b5cf6;">
+                  ⏳ Pendiente de Confirmación
+                </span>
+                <span>Envía tu pedido por WhatsApp para confirmar e iniciar producción</span>
+              </div>
             `}
           </div>
 
