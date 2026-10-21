@@ -46,7 +46,7 @@ describe('Orders Store — Almacén Reactivo de Pedidos', () => {
     });
 
     expect(newOrder.id).toMatch(/^KL-\d{5}$/);
-    expect(newOrder.productionStatus).toBe(ORDER_STATUS.IN_AUDLEY_QUEUE);
+    expect(newOrder.productionStatus).toBe(ORDER_STATUS.PENDING_REVIEW);
     expect(newOrder.paymentStatus).toBe(PAYMENT_STATUS.PENDING);
     expect(newOrder.metrics.grandTotalQ).toBe(255.0);
     expect(newOrder.items[0].title).toBe('Stickers 6x6');
