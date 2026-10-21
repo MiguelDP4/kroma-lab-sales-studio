@@ -270,6 +270,8 @@ class OrdersStore {
       createdAt: o.createdAt,
       fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
       fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileName) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
+      paymentReceiptUrl: o.paymentReceiptUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.paymentReceiptUrl) || null,
+      paymentReceiptFileName: o.paymentReceiptFileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.paymentReceiptFileName) || null,
       canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || null,
       canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || null,
       rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.rotationDeg) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
@@ -365,7 +367,7 @@ class OrdersStore {
     return this.orders.find(o => o.id === id) || null;
   }
 
-  createOrder({ customer = {}, cartTotals = {}, items = [], workshopNotes = '' }) {
+  createOrder({ customer = {}, cartTotals = {}, items = [], workshopNotes = '', paymentReceiptUrl = null, paymentReceiptFileName = null }) {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     const newId = `KL-${randomNum}`;
 
@@ -381,6 +383,8 @@ class OrdersStore {
         address: customer.address || 'Ciudad de Guatemala',
         email: customer.email || '',
       },
+      paymentReceiptUrl: paymentReceiptUrl || cartTotals.paymentReceiptUrl || null,
+      paymentReceiptFileName: paymentReceiptFileName || cartTotals.paymentReceiptFileName || null,
       canvasSnapshot: items[0]?.canvasSnapshot || cartTotals.canvasSnapshot || null,
       canvasSnapshotUrl: items[0]?.canvasSnapshotUrl || (items[0]?.canvasSnapshot && !items[0]?.canvasSnapshot.startsWith('data:') ? items[0]?.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
       rotationDeg: items[0]?.rotationDeg || cartTotals.rotationDeg || 0,
@@ -447,6 +451,8 @@ class OrdersStore {
         fileName: firstItem.fileName || firstItem.fileInfo?.name || newOrder.fileName,
         canvasSnapshot: firstItem.canvasSnapshot || newOrder.canvasSnapshot,
         rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
+        paymentReceiptUrl: newOrder.paymentReceiptUrl,
+        paymentReceiptFileName: newOrder.paymentReceiptFileName,
         notes: newOrder.workshopNotes,
       }).then(res => {
         if (res && res.order) {
@@ -457,6 +463,47 @@ class OrdersStore {
       }).catch(() => {});
     }
     return newOrder;
+  }
+
+  async attachPaymentReceipt(orderId, receiptData = {}) {
+    const order = this.orders.find(o => o.id === orderId || o.backendId === orderId);
+    if (!order) return null;
+
+    if (receiptData.paymentReceiptUrl) {
+      order.paymentReceiptUrl = receiptData.paymentReceiptUrl;
+    }
+    if (receiptData.paymentReceiptFileName !== undefined) {
+      order.paymentReceiptFileName = receiptData.paymentReceiptFileName;
+    }
+    if (receiptData.amountPaidQ !== undefined) {
+      order.amountPaidQ = Number(receiptData.amountPaidQ);
+    }
+    if (receiptData.paymentStatus) {
+      order.paymentStatus = receiptData.paymentStatus;
+    }
+    order.updatedAt = new Date().toISOString();
+    this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.orders && typeof apiClient.orders.attachReceipt === 'function') {
+      try {
+        const targetId = order.backendId || order.id;
+        const res = await apiClient.orders.attachReceipt(targetId, receiptData);
+        if (res && res.order) {
+          order.paymentReceiptUrl = res.order.paymentReceiptUrl || order.paymentReceiptUrl;
+          order.paymentReceiptFileName = res.order.paymentReceiptFileName || order.paymentReceiptFileName;
+          if (res.order.amountPaidQ !== undefined) {
+            order.amountPaidQ = Number(res.order.amountPaidQ);
+          }
+          if (res.order.paymentStatus) {
+            order.paymentStatus = res.order.paymentStatus;
+          }
+          this._notify();
+        }
+      } catch (err) {
+        console.warn('[OrdersStore] Error al adjuntar boleta en backend:', err.message);
+      }
+    }
+    return order;
   }
 
   updateProductionStatus(orderId, newStatus) {

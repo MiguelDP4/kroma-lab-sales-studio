@@ -9,6 +9,10 @@ import {
   uploadFileToStorage,
   dataURLtoFile,
   uploadCanvasSnapshotToStorage,
+  ALLOWED_RECEIPT_EXTENSIONS,
+  MAX_RECEIPT_SIZE_BYTES,
+  validateReceiptFile,
+  uploadPaymentReceiptToStorage,
 } from '../src/js/modules/file-uploader.js';
 
 describe('File Uploader — Validación y Subida de Archivos Gráficos UV DTF', () => {
@@ -307,6 +311,95 @@ describe('File Uploader — Validación y Subida de Archivos Gráficos UV DTF', 
 
       const url = await uploadCanvasSnapshotToStorage(sampleDataUrl, 'bobina.png', { apiClient: mockApiClient });
       expect(url).toBeNull();
+    });
+  });
+  describe('validateReceiptFile', () => {
+    it('rechaza si no se proporciona archivo', () => {
+      const res = validateReceiptFile(null);
+      expect(res.valid).toBe(false);
+      expect(res.error).toContain('No se seleccionó ningún archivo de comprobante');
+    });
+
+    it('acepta formatos bancarios permitidos (.jpg, .jpeg, .png, .pdf)', () => {
+      ALLOWED_RECEIPT_EXTENSIONS.forEach(ext => {
+        const mockFile = { name: `boleta_bi${ext}`, size: 1024 * 500, type: 'image/jpeg' };
+        const res = validateReceiptFile(mockFile);
+        expect(res.valid).toBe(true);
+        expect(res.fileData.extension).toBe(ext);
+      });
+    });
+
+    it('rechaza formatos no bancarios (.exe, .ai, .psd, .bmp)', () => {
+      const mockFile = { name: 'archivo.ai', size: 1024, type: 'application/illustrator' };
+      const res = validateReceiptFile(mockFile);
+      expect(res.valid).toBe(false);
+      expect(res.error).toContain('Formato de comprobante no soportado');
+    });
+
+    it('rechaza archivos que superan el límite de 20 MB', () => {
+      const mockFile = { name: 'boleta_enorme.pdf', size: MAX_RECEIPT_SIZE_BYTES + 1024, type: 'application/pdf' };
+      const res = validateReceiptFile(mockFile);
+      expect(res.valid).toBe(false);
+      expect(res.error).toContain('supera el límite de 20 MB');
+    });
+  });
+
+  describe('uploadPaymentReceiptToStorage', () => {
+    let mockApiClient;
+    let mockXHR;
+
+    beforeEach(() => {
+      mockApiClient = {
+        storage: {
+          getPresignedUrl: vi.fn().mockResolvedValue({
+            uploadUrl: 'https://r2.cloudflarestorage.com/kroma/receipt.jpg?signed=1',
+            publicUrl: 'https://pub-r2.dev/assets/payments/receipt.jpg',
+            fileKey: 'assets/payments/receipt.jpg',
+            provider: 'cloudflare-r2',
+          }),
+          confirmUpload: vi.fn().mockResolvedValue({
+            success: true,
+            asset: { fileKey: 'assets/payments/receipt.jpg' },
+          }),
+        },
+      };
+
+      mockXHR = {
+        open: vi.fn(),
+        setRequestHeader: vi.fn(),
+        send: vi.fn(),
+        status: 200,
+        statusText: 'OK',
+        upload: {},
+      };
+
+      global.XMLHttpRequest = vi.fn(() => {
+        setTimeout(() => {
+          if (mockXHR.onload) mockXHR.onload();
+        }, 5);
+        return mockXHR;
+      });
+    });
+
+    it('sube un comprobante bancario con context: payments y registra isReceipt: true', async () => {
+      const mockFile = new File(['fake-receipt-content'], 'boleta_deposito.jpg', { type: 'image/jpeg' });
+      const res = await uploadPaymentReceiptToStorage(mockFile, {
+        orderId: 'order-123',
+        apiClient: mockApiClient,
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.fileUrl).toBe('https://pub-r2.dev/assets/payments/receipt.jpg');
+      expect(mockApiClient.storage.getPresignedUrl).toHaveBeenCalledWith(expect.objectContaining({
+        fileName: 'boleta_deposito.jpg',
+        context: 'payments',
+      }));
+      expect(mockApiClient.storage.confirmUpload).toHaveBeenCalledWith(expect.objectContaining({
+        fileKey: 'assets/payments/receipt.jpg',
+        orderId: 'order-123',
+        isReceipt: true,
+        context: 'payments',
+      }));
     });
   });
 });

@@ -112,6 +112,10 @@ model Order {
   fileSizeBytes  Int?
   notes          String?
 
+  // Comprobante de pago o transferencia bancaria (Cloudflare R2)
+  paymentReceiptUrl      String?
+  paymentReceiptFileName String?
+
   dispatchNotes  DispatchNote[]
   payments       Payment[]
 

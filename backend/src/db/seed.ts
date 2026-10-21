@@ -195,9 +195,9 @@ export async function seedDatabase() {
   }
 
   // 5. Órdenes iniciales de demostración
-  const existingOrder = await prisma.order.findUnique({ where: { code: 'KL-2026-001' } });
-  if (!existingOrder) {
-    const order1 = await prisma.order.create({
+  let order1 = await prisma.order.findUnique({ where: { code: 'KL-2026-001' } });
+  if (!order1) {
+    order1 = await prisma.order.create({
       data: {
         code: 'KL-2026-001',
         status: 'PRINTING',
@@ -224,8 +224,11 @@ export async function seedDatabase() {
         notes: 'Logotipos promocionales para termos de acero inoxidable.',
       },
     });
+  }
 
-    // Remisión inicial
+  // Remisión inicial
+  const existingDispatch = await prisma.dispatchNote.findUnique({ where: { folio: 'REM-2026-001' } });
+  if (!existingDispatch) {
     await prisma.dispatchNote.create({
       data: {
         folio: 'REM-2026-001',
@@ -244,8 +247,11 @@ export async function seedDatabase() {
         notes: 'Entregar en recepción con comprobante de anticipo verificado.',
       },
     });
+  }
 
-    // Abono parcial inicial
+  // Abono parcial inicial
+  const existingPayment = await prisma.payment.findUnique({ where: { paymentCode: 'PAY-2026-001' } });
+  if (!existingPayment) {
     await prisma.payment.create({
       data: {
         paymentCode: 'PAY-2026-001',

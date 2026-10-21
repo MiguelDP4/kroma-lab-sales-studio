@@ -458,5 +458,133 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const orders = ordersStore.getOrders();
       expect(orders[0].customer.clientId).toBe('CLI-001');
     });
+    it('muestra cuentas bancarias autorizadas y permite seleccionar, previsualizar y remover una boleta', async () => {
+      openCheckoutModal(cartStore.getTotals());
+
+      // Verificar cuentas bancarias
+      const bankBox = document.querySelector('.checkout-bank-box');
+      expect(bankBox).not.toBeNull();
+      expect(bankBox.textContent).toContain('144-002931-2'); // BI
+      expect(bankBox.textContent).toContain('90-341902-1');  // BAC
+      expect(bankBox.textContent).toContain('3033-09182-1'); // Banrural
+
+      const dropzone = document.getElementById('checkoutReceiptDropzone');
+      const input = document.getElementById('checkoutReceiptInput');
+      const promptEl = document.getElementById('checkoutReceiptPrompt');
+      const previewEl = document.getElementById('checkoutReceiptPreview');
+      const nameEl = document.getElementById('checkoutReceiptFileName');
+      const btnRemove = document.getElementById('btnRemoveCheckoutReceipt');
+
+      expect(dropzone).not.toBeNull();
+      expect(promptEl.style.display).not.toBe('none');
+      expect(previewEl.style.display).toBe('none');
+
+      // Clic en dropzone simula clic en input
+      const clickSpy = vi.spyOn(input, 'click');
+      dropzone.click();
+      expect(clickSpy).toHaveBeenCalled();
+
+      // Drag & drop events
+      dropzone.dispatchEvent(new Event('dragover'));
+      expect(dropzone.style.borderColor).toBe('var(--cerulean)');
+      dropzone.dispatchEvent(new Event('dragleave'));
+      expect(dropzone.style.borderColor).toBe('var(--border-color)');
+
+      // Selección de imagen válida JPG
+      const validFile = new File(['fake-jpg-content'], 'boleta_bi.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(input, 'files', { value: [validFile], configurable: true });
+      input.dispatchEvent(new Event('change'));
+
+      // Esperar microtasks para lectura asíncrona
+      await new Promise(r => setTimeout(r, 50));
+      expect(previewEl.style.display).toBe('flex');
+      expect(nameEl.textContent).toBe('boleta_bi.jpg');
+
+      // Remover comprobante seleccionado
+      btnRemove.click();
+      expect(previewEl.style.display).toBe('none');
+      expect(promptEl.style.display).toBe('block');
+
+      clickSpy.mockRestore();
+    });
+
+    it('valida formato inválido y soporta PDF o drop directo de archivo en checkout', async () => {
+      openCheckoutModal(cartStore.getTotals());
+      const dropzone = document.getElementById('checkoutReceiptDropzone');
+      const input = document.getElementById('checkoutReceiptInput');
+      const errorEl = document.getElementById('checkoutReceiptError');
+      const iconEl = document.getElementById('checkoutReceiptIcon');
+      const previewEl = document.getElementById('checkoutReceiptPreview');
+
+      // Archivo inválido .exe
+      const invalidFile = new File(['fake-exe'], 'virus.exe', { type: 'application/x-msdownload' });
+      Object.defineProperty(input, 'files', { value: [invalidFile], configurable: true });
+      input.dispatchEvent(new Event('change'));
+
+      expect(errorEl.style.display).toBe('block');
+      expect(errorEl.textContent).toContain('Formato de comprobante no soportado');
+
+      // Drop de archivo PDF válido
+      const pdfFile = new File(['fake-pdf'], 'transferencia.pdf', { type: 'application/pdf' });
+      const dropEvent = new Event('drop');
+      Object.defineProperty(dropEvent, 'dataTransfer', {
+        value: { files: [pdfFile] }
+      });
+      dropzone.dispatchEvent(dropEvent);
+
+      await new Promise(r => setTimeout(r, 50));
+      expect(errorEl.style.display).toBe('none');
+      expect(previewEl.style.display).toBe('flex');
+      expect(iconEl.style.display).toBe('inline-block');
+    });
+
+    it('sube el comprobante a storage y lo envía en el pedido y mensaje de WhatsApp', async () => {
+      const uploadSpy = vi.spyOn(fileUploader, 'uploadFileToStorage').mockResolvedValueOnce({
+        success: true,
+        fileUrl: 'https://pub-r2.dev/assets/payments/boleta_bancaria_ok.jpg',
+      });
+
+      openCheckoutModal(cartStore.getTotals());
+      const input = document.getElementById('checkoutReceiptInput');
+      const validFile = new File(['fake-jpg'], 'boleta_bancaria_ok.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(input, 'files', { value: [validFile], configurable: true });
+      input.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 30));
+
+      document.getElementById('custName').value = 'Juan Pérez';
+      document.getElementById('custPhone').value = '+502 5555-9999';
+
+      const form = document.getElementById('checkoutForm');
+      await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(uploadSpy).toHaveBeenCalledWith(validFile, expect.objectContaining({ context: 'payments' }));
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('boleta_bancaria_ok.jpg'), '_blank');
+
+      const latestOrder = ordersStore.getOrders()[0];
+      expect(latestOrder.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_bancaria_ok.jpg');
+      expect(latestOrder.paymentReceiptFileName).toBe('boleta_bancaria_ok.jpg');
+
+      uploadSpy.mockRestore();
+    });
+
+    it('tolera fallos de red al subir comprobante continuando con la creación del pedido', async () => {
+      const uploadSpy = vi.spyOn(fileUploader, 'uploadFileToStorage').mockRejectedValueOnce(new Error('R2 Network Fail'));
+
+      openCheckoutModal(cartStore.getTotals());
+      const input = document.getElementById('checkoutReceiptInput');
+      const validFile = new File(['fake-jpg'], 'boleta_offline.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(input, 'files', { value: [validFile], configurable: true });
+      input.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 30));
+
+      const form = document.getElementById('checkoutForm');
+      await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(window.open).toHaveBeenCalled();
+      const latestOrder = ordersStore.getOrders()[0];
+      expect(latestOrder.paymentReceiptFileName).toBe('boleta_offline.jpg');
+
+      uploadSpy.mockRestore();
+    });
   });
 });

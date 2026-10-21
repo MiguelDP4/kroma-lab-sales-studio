@@ -9,6 +9,9 @@ import { apiClient as defaultApiClient } from './api-client.js';
 export const ALLOWED_EXTENSIONS = ['.png', '.tif', '.tiff', '.pdf', '.svg', '.ai', '.psd'];
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 Megabytes
 
+export const ALLOWED_RECEIPT_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf'];
+export const MAX_RECEIPT_SIZE_BYTES = 20 * 1024 * 1024; // 20 Megabytes
+
 export function formatFileSize(bytes) {
   if (typeof bytes !== 'number' || bytes < 0) return '0 B';
   if (bytes === 0) return '0 B';
@@ -44,6 +47,42 @@ export function validatePrintFile(file) {
     return {
       valid: false,
       error: `El archivo supera el límite de 100 MB (tamaño: ${formatFileSize(size)}). Si es muy pesado, envíalo por enlace de Drive o WeTransfer.`,
+    };
+  }
+
+  return {
+    valid: true,
+    fileData: {
+      name,
+      size,
+      sizeFormatted: formatFileSize(size),
+      extension: ext,
+      type: file.type || 'application/octet-stream',
+      lastModified: file.lastModified || Date.now(),
+    },
+  };
+}
+
+export function validateReceiptFile(file) {
+  if (!file) {
+    return { valid: false, error: 'No se seleccionó ningún archivo de comprobante.' };
+  }
+
+  const name = file.name || 'comprobante_desconocido';
+  const size = file.size || 0;
+  const ext = getFileExtension(name);
+
+  if (!ALLOWED_RECEIPT_EXTENSIONS.includes(ext)) {
+    return {
+      valid: false,
+      error: `Formato de comprobante no soportado (${ext || 'desconocido'}). Sube imágenes JPG, PNG o documentos PDF.`,
+    };
+  }
+
+  if (size > MAX_RECEIPT_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `El comprobante supera el límite de 20 MB (tamaño: ${formatFileSize(size)}). Comprime el archivo antes de subirlo.`,
     };
   }
 
@@ -104,8 +143,9 @@ export async function uploadFileToStorage(file, options = {}) {
     throw new Error('Cliente API de almacenamiento no disponible.');
   }
 
+  const isPayment = context === 'payments' || Boolean(options.isReceipt);
   // 1. Validar archivo
-  const validation = validatePrintFile(file);
+  const validation = isPayment ? validateReceiptFile(file) : validatePrintFile(file);
   if (!validation.valid) {
     throw new Error(validation.error);
   }
@@ -163,15 +203,20 @@ export async function uploadFileToStorage(file, options = {}) {
   // 4. Confirmar y vincular si corresponde en la base de datos
   let confirmation = null;
   if (presigned.fileKey && presigned.publicUrl) {
-    try {
-      confirmation = await apiClient.storage.confirmUpload({
+        try {
+      const confirmPayload = {
         fileKey: presigned.fileKey,
         fileUrl: presigned.publicUrl,
         fileName: file.name,
         fileSizeBytes: file.size,
         quoteId: quoteId || null,
         orderId: orderId || null,
-      });
+      };
+      if (isPayment) {
+        confirmPayload.isReceipt = true;
+        confirmPayload.context = 'payments';
+      }
+      confirmation = await apiClient.storage.confirmUpload(confirmPayload);
     } catch (confirmErr) {
       console.warn('Advertencia al confirmar subida en base de datos:', confirmErr);
     }
@@ -246,4 +291,16 @@ export async function uploadCanvasSnapshotToStorage(dataUrl, filename = 'esquema
     console.warn('[Storage] Error al subir snapshot a almacenamiento:', err);
     return null;
   }
+}
+
+/**
+ * Sube una boleta o comprobante de pago bancario a Cloudflare R2 / Storage
+ * con validación de formatos (JPG, PNG, PDF) y tamaño máximo de 20MB.
+ */
+export async function uploadPaymentReceiptToStorage(file, options = {}) {
+  return uploadFileToStorage(file, {
+    ...options,
+    context: 'payments',
+    isReceipt: true,
+  });
 }

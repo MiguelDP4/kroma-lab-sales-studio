@@ -10,6 +10,7 @@ import { ORDER_STATUS, BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 import { calculateOrderProfitability } from '../modules/profitability-engine.js';
 import { printDocument } from '../modules/print-helper.js';
+import { uploadFileToStorage, readFileAsDataURL, validateReceiptFile, formatFileSize } from '../modules/file-uploader.js';
 
 export function formatOrderWhatsAppMessage(order) {
   if (!order) return '';
@@ -31,6 +32,9 @@ export function formatOrderWhatsAppMessage(order) {
   }
   if (snapUrls.length > 0) {
     waOrderLinks += `\n📐 *Montaje:* ${snapUrls.join(' | ')}`;
+  }
+  if (order.paymentReceiptUrl) {
+    waOrderLinks += `\n🧾 *Boleta:* ${order.paymentReceiptUrl}`;
   }
   return `*KROMA LAB — Pedido #${order.id}*\nHola, deseo consultar el estado de este pedido.${waOrderLinks}`;
 }
@@ -334,6 +338,39 @@ export const ordersView = {
           </div>
         </div>
       </div>
+
+      <!-- MODAL: VISOR LIGHTBOX DE COMPROBANTE DE PAGO BANCARIO -->
+      <div id="receiptLightboxModal" class="modal-backdrop" style="display: none; z-index: 10001;">
+        <div class="modal-card" style="width: min(760px, 96vw); max-height: 94vh; padding: 1.25rem;">
+          <div class="modal-header" style="margin-bottom: 0.75rem;">
+            <div>
+              <span class="badge" style="color: #10b981; border-color: #10b981;">Comprobante de Pago</span>
+              <h3 id="receiptLightboxTitle" style="font-size: 1.15rem; font-weight: 800; margin-top: 0.25rem;">
+                Inspección de Boleta Bancaria
+              </h3>
+            </div>
+            <button type="button" class="btn-close-modal" id="btnCloseReceiptLightbox" aria-label="Cerrar visor">✕</button>
+          </div>
+          <div id="receiptLightboxContainer" style="background: #090e1c; border-radius: var(--radius-sm); border: 1px solid var(--border-color); padding: 0.75rem; display: flex; justify-content: center; align-items: center; overflow: auto; max-height: 68vh; min-height: 200px;">
+            <img id="receiptLightboxImg" src="" alt="Comprobante Bancario" style="max-width: 100%; height: auto; object-fit: contain; border-radius: 4px; display: none;">
+            <div id="receiptLightboxPdf" style="display: none; text-align: center; padding: 2rem;">
+              <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">📄</span>
+              <p style="font-size: 0.95rem; color: #fff; margin-bottom: 1.25rem;">Documento PDF adjunto como comprobante bancario.</p>
+              <a id="receiptLightboxPdfLink" href="" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                <span>Abrir PDF en pestaña nueva ↗</span>
+              </a>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">
+              💡 Verifica número de boleta, fecha y monto depositado antes de autorizar producción.
+            </span>
+            <button type="button" class="btn btn-secondary" id="btnDismissReceiptLightbox" style="min-height: 38px;">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   },
 
@@ -374,6 +411,47 @@ export const ordersView = {
 
     if (btnCloseWorkshopModal) btnCloseWorkshopModal.addEventListener('click', () => toggleModal(workshopModal, false));
     if (btnCancelWorkshopModal) btnCancelWorkshopModal.addEventListener('click', () => toggleModal(workshopModal, false));
+    // Lightbox modal para comprobante de pago bancario
+    const receiptLightboxModal = document.getElementById('receiptLightboxModal');
+    const receiptLightboxTitle = document.getElementById('receiptLightboxTitle');
+    const receiptLightboxImg = document.getElementById('receiptLightboxImg');
+    const receiptLightboxPdf = document.getElementById('receiptLightboxPdf');
+    const receiptLightboxPdfLink = document.getElementById('receiptLightboxPdfLink');
+    const btnCloseReceiptLightbox = document.getElementById('btnCloseReceiptLightbox');
+    const btnDismissReceiptLightbox = document.getElementById('btnDismissReceiptLightbox');
+
+    function openReceiptLightbox(url, name = 'Comprobante Bancario') {
+      if (!receiptLightboxModal || !url) return;
+      if (receiptLightboxTitle) receiptLightboxTitle.textContent = name;
+      const isPdf = url.toLowerCase().includes('.pdf');
+      if (isPdf) {
+        if (receiptLightboxImg) receiptLightboxImg.style.display = 'none';
+        if (receiptLightboxPdf) receiptLightboxPdf.style.display = 'block';
+        if (receiptLightboxPdfLink) receiptLightboxPdfLink.href = url;
+      } else {
+        if (receiptLightboxPdf) receiptLightboxPdf.style.display = 'none';
+        if (receiptLightboxImg) {
+          receiptLightboxImg.src = url;
+          receiptLightboxImg.style.display = 'block';
+        }
+      }
+      receiptLightboxModal.style.display = 'block';
+    }
+
+    function closeReceiptLightbox() {
+      if (receiptLightboxModal) {
+        receiptLightboxModal.style.display = 'none';
+      }
+    }
+
+    if (btnCloseReceiptLightbox) btnCloseReceiptLightbox.addEventListener('click', closeReceiptLightbox);
+    if (btnDismissReceiptLightbox) btnDismissReceiptLightbox.addEventListener('click', closeReceiptLightbox);
+    if (receiptLightboxModal) {
+      receiptLightboxModal.addEventListener('click', (e) => {
+        if (e.target === receiptLightboxModal) closeReceiptLightbox();
+      });
+    }
+
     // Lightbox modal para snapshot técnico de bobina
     const snapshotModal = document.getElementById('orderSnapshotLightboxModal');
     const snapshotImg = document.getElementById('orderSnapshotLightboxImg');
@@ -402,10 +480,106 @@ export const ordersView = {
     }
 
     if (detailModal) {
-      detailModal.addEventListener('click', (e) => {
-        const target = e.target.closest('.btn-expand-order-snapshot, .order-snapshot-img');
-        if (target && target.dataset.snapshot) {
-          openOrderSnapshot(target.dataset.snapshot);
+      detailModal.addEventListener('click', async (e) => {
+        // Snapshot lightbox
+        const snapTarget = e.target.closest('.btn-expand-order-snapshot, .order-snapshot-img');
+        if (snapTarget && snapTarget.dataset.snapshot) {
+          openOrderSnapshot(snapTarget.dataset.snapshot);
+          return;
+        }
+
+        // Receipt lightbox
+        const receiptTarget = e.target.closest('.btn-view-receipt-lightbox, .order-receipt-thumbnail');
+        if (receiptTarget && receiptTarget.dataset.receipt) {
+          openReceiptLightbox(receiptTarget.dataset.receipt, receiptTarget.dataset.name || 'Comprobante Bancario');
+          return;
+        }
+
+        // Trigger upload / replace receipt
+        const triggerUpload = e.target.closest('.btn-trigger-upload-receipt, .btn-trigger-replace-receipt');
+        if (triggerUpload && triggerUpload.dataset.orderId) {
+          const fileInput = document.getElementById(`modalReceiptFileInput_${triggerUpload.dataset.orderId}`);
+          if (fileInput) fileInput.click();
+          return;
+        }
+
+        // Staff quick action: Anticipo 50%
+        const btnPartial = e.target.closest('.btn-quick-pay-partial');
+        if (btnPartial && btnPartial.dataset.orderId) {
+          const o = ordersStore.getOrderById(btnPartial.dataset.orderId);
+          if (o) {
+            const half = Number(((o.metrics?.grandTotalQ || 0) * 0.5).toFixed(2));
+            await ordersStore.attachPaymentReceipt(o.id, { amountPaidQ: half, paymentStatus: PAYMENT_STATUS.PARTIAL });
+            showOrderDetailsModal(o.id);
+          }
+          return;
+        }
+
+        // Staff quick action: Pagado 100%
+        const btnFull = e.target.closest('.btn-quick-pay-full');
+        if (btnFull && btnFull.dataset.orderId) {
+          const o = ordersStore.getOrderById(btnFull.dataset.orderId);
+          if (o) {
+            const full = Number((o.metrics?.grandTotalQ || 0).toFixed(2));
+            await ordersStore.attachPaymentReceipt(o.id, { amountPaidQ: full, paymentStatus: PAYMENT_STATUS.PAID });
+            showOrderDetailsModal(o.id);
+          }
+          return;
+        }
+
+        // Staff quick action: Aprobar para producción
+        const btnApprove = e.target.closest('.btn-quick-approve-production');
+        if (btnApprove && btnApprove.dataset.orderId) {
+          const o = ordersStore.getOrderById(btnApprove.dataset.orderId);
+          if (o) {
+            ordersStore.updateProductionStatus(o.id, ORDER_STATUS.IN_AUDLEY_QUEUE);
+            showOrderDetailsModal(o.id);
+          }
+          return;
+        }
+      });
+
+      // Handle file input change for receipt upload inside detail modal
+      detailModal.addEventListener('change', async (e) => {
+        if (e.target && e.target.classList.contains('modal-receipt-input')) {
+          const fileInput = e.target;
+          const orderId = fileInput.dataset.orderId;
+          const order = ordersStore.getOrderById(orderId);
+          if (!order || !fileInput.files || fileInput.files.length === 0) return;
+
+          const file = fileInput.files[0];
+          const validation = validateReceiptFile(file);
+          const statusEl = document.getElementById(`modalReceiptStatus_${orderId}`);
+          if (!validation.valid) {
+            if (statusEl) {
+              statusEl.style.color = '#ef4444';
+              statusEl.textContent = validation.error;
+            }
+            return;
+          }
+
+          if (statusEl) {
+            statusEl.style.color = 'var(--cerulean)';
+            statusEl.textContent = 'Subiendo comprobante...';
+          }
+
+          try {
+            const res = await uploadFileToStorage(file, {
+              context: 'payments',
+              orderId: order.backendId || order.id,
+            });
+            await ordersStore.attachPaymentReceipt(order.id, {
+              paymentReceiptUrl: res?.fileUrl || null,
+              paymentReceiptFileName: file.name,
+            });
+            showOrderDetailsModal(order.id);
+          } catch (err) {
+            console.warn('[OrdersView] Error subiendo boleta:', err);
+            if (statusEl) {
+              statusEl.style.color = '#ef4444';
+              statusEl.textContent = 'Error al subir: ' + err.message;
+            }
+          }
         }
       });
     }
@@ -684,6 +858,15 @@ export const ordersView = {
               <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">
                 ${new Date(order.createdAt).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
+              ${order.paymentReceiptUrl ? `
+                <div style="margin-top: 0.25rem;">
+                  <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.72rem; padding: 2px 6px;">📄 Boleta</span>
+                </div>
+              ` : `
+                <div style="margin-top: 0.25rem;">
+                  <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.72rem; padding: 2px 6px;">⏳ Boleta Pendiente</span>
+                </div>
+              `}
             </td>
 
             ${isStaff ? `
@@ -855,6 +1038,92 @@ export const ordersView = {
               <span>Total Estimado:</span>
               <span>Q${order.metrics.grandTotalQ.toFixed(2)}</span>
             </div>
+          </div>
+
+
+          <!-- SECCIÓN DE COMPROBANTE DE PAGO BANCARIO -->
+          <div class="order-receipt-section" style="margin-top: 1rem; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
+              <strong style="font-size: 0.92rem; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
+                <span>🧾</span>
+                <span>Comprobante de Pago Bancario:</span>
+              </strong>
+              ${order.paymentReceiptUrl ? `
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.75rem;">
+                  ✓ Verificado / Adjunto
+                </span>
+              ` : `
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; font-size: 0.75rem;">
+                  ⏳ Pendiente de Boleta
+                </span>
+              `}
+            </div>
+
+            ${order.paymentReceiptUrl ? `
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; background: rgba(2, 132, 199, 0.05); padding: 0.65rem 0.75rem; border-radius: 4px; border: 1px solid rgba(2, 132, 199, 0.15);">
+                <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 180px;">
+                  ${(order.paymentReceiptUrl.toLowerCase().endsWith('.pdf') || (order.paymentReceiptFileName && order.paymentReceiptFileName.toLowerCase().endsWith('.pdf'))) ? `
+                    <span style="font-size: 2rem;">📄</span>
+                  ` : `
+                    <img src="${order.paymentReceiptUrl}" alt="Boleta de Pago" class="order-receipt-thumbnail" data-receipt="${order.paymentReceiptUrl}" data-name="${order.paymentReceiptFileName || 'Comprobante'}" style="width: 60px; height: 45px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); cursor: pointer;" title="Clic para ampliar boleta">
+                  `}
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); word-break: break-all;">
+                      ${order.paymentReceiptFileName || 'comprobante_bancario'}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                      Abono: Q${Number(order.amountPaidQ || 0).toFixed(2)} de Q${Number(order.metrics?.grandTotalQ || 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-secondary btn-view-receipt-lightbox" data-receipt="${order.paymentReceiptUrl}" data-name="${order.paymentReceiptFileName || 'Comprobante'}" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; min-height: 38px;">
+                    <span>🔍 Ver Comprobante</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-trigger-replace-receipt" data-order-id="${order.id}" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; min-height: 38px;">
+                    <span>🔄 Cambiar</span>
+                  </button>
+                  <input type="file" id="modalReceiptFileInput_${order.id}" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" class="modal-receipt-input" data-order-id="${order.id}">
+                </div>
+              </div>
+            ` : `
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.65rem;">
+                Aún no se ha adjuntado comprobante. Realiza tu depósito o transferencia a nuestras cuentas autorizadas:
+                <div style="font-size: 0.78rem; line-height: 1.5; margin-top: 0.35rem; color: var(--text-primary);">
+                  <div>• <strong>BI Monetaria:</strong> <code style="font-weight: 700;">144-002931-2</code></div>
+                  <div>• <strong>BAC Monetaria:</strong> <code style="font-weight: 700;">90-341902-1</code></div>
+                  <div>• <strong>Banrural Monetaria:</strong> <code style="font-weight: 700;">3033-09182-1</code></div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">Miguel Angel Dubois / Kroma Lab</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <input type="file" id="modalReceiptFileInput_${order.id}" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" class="modal-receipt-input" data-order-id="${order.id}">
+                <button type="button" class="btn btn-primary btn-trigger-upload-receipt" data-order-id="${order.id}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; min-height: 40px;">
+                  <span>📎 Adjuntar Boleta (JPG, PNG, PDF)</span>
+                </button>
+                <span id="modalReceiptStatus_${order.id}" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+              </div>
+            `}
+
+            <!-- Acciones Rápidas para Staff -->
+            ${isStaff ? `
+              <div style="margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--cerulean);">⚡ Acciones Rápidas de Cobranza (Staff):</span>
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-secondary btn-quick-pay-partial" data-order-id="${order.id}" style="font-size: 0.76rem; padding: 0.25rem 0.55rem; min-height: 34px;">
+                    <span>✓ Anticipo 50%</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-quick-pay-full" data-order-id="${order.id}" style="font-size: 0.76rem; padding: 0.25rem 0.55rem; min-height: 34px;">
+                    <span>✓ Pagado 100%</span>
+                  </button>
+                  ${order.productionStatus === ORDER_STATUS.PENDING_REVIEW ? `
+                    <button type="button" class="btn btn-primary btn-quick-approve-production" data-order-id="${order.id}" style="font-size: 0.76rem; padding: 0.25rem 0.65rem; min-height: 34px; background: #0284c7; border-color: #0284c7;">
+                      <span>⚡ Aprobar para Producción</span>
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           ${isStaff ? (() => {
