@@ -29,6 +29,8 @@ const createOrderSchema = z.object({
   fileName: z.string().optional(),
   fileSizeBytes: z.number().int().optional(),
   notes: z.string().optional(),
+  canvasSnapshot: z.string().optional(),
+  rotationDeg: z.number().int().optional(),
 });
 
 const updateStatusSchema = z.object({

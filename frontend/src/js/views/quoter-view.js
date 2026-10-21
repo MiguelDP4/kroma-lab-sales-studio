@@ -48,6 +48,17 @@ export const quoterView = {
             </div>
           </div>
 
+          <!-- Controles de relación de aspecto y rotación (visible cuando hay imagen en previsualizador) -->
+          <div id="aspectRatioRow" style="display: none; margin-top: -0.25rem; margin-bottom: 1.25rem; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <label class="checkbox-wrapper" for="optKeepAspectRatio" style="margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); min-height: 44px;">
+              <input type="checkbox" id="optKeepAspectRatio" checked style="width: 20px; height: 20px; accent-color: var(--cerulean); cursor: pointer;">
+              <span>🔒 Mantener relación de aspecto</span>
+            </label>
+            <button type="button" id="btnRotateImage" class="btn btn-secondary" style="min-height: 44px; font-size: 0.85rem; padding: 0.4rem 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;" title="Rotar diseño 90° e intercambiar ancho y alto">
+              <span>🔄 Rotar 90°</span>
+            </button>
+          </div>
+
           <!-- Presets Rápidos -->
           <div class="form-group">
             <span class="form-label" style="margin-bottom: 0.35rem;">Medidas comunes de referencia:</span>
@@ -107,18 +118,34 @@ export const quoterView = {
                 <div class="dropzone-text">
                   <strong>Arrastra tu archivo aquí</strong> o <span class="dropzone-link">haz clic para explorar</span>
                 </div>
-                <span class="dropzone-hint">Formatos: PNG transparente, TIFF, PDF, SVG, AI (Máx. 50 MB)</span>
+                <span class="dropzone-hint">Formatos: PNG transparente, TIFF, PDF, SVG, AI (Máx. 100 MB)</span>
               </div>
 
-              <div id="dropzoneFileSelected" class="dropzone-selected" style="display: none;">
-                <div class="dropzone-thumb-wrap" id="dropzoneThumbWrap">
-                  <span id="dropzoneThumbIcon">📄</span>
+              <div id="dropzoneFileSelected" class="dropzone-selected" style="display: none; flex-direction: column; align-items: stretch; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%;">
+                  <div class="dropzone-thumb-wrap" id="dropzoneThumbWrap">
+                    <span id="dropzoneThumbIcon">📄</span>
+                  </div>
+                  <div class="dropzone-file-info" style="flex: 1;">
+                    <div class="dropzone-file-name" id="dropzoneFileName">archivo.png</div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.78rem;">
+                      <span id="dropzoneFileSize" style="color: var(--text-muted);">1.2 MB</span>
+                      <span id="dropzoneUploadBadge" class="badge" style="font-size: 0.7rem; display: none;">☁️ R2</span>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-remove-file" id="btnRemoveFile" title="Quitar archivo" style="min-width: 44px; min-height: 44px;">✕</button>
                 </div>
-                <div class="dropzone-file-info">
-                  <div class="dropzone-file-name" id="dropzoneFileName">archivo.png</div>
-                  <div class="dropzone-file-size" id="dropzoneFileSize">1.2 MB</div>
+
+                <!-- Barra de Progreso de Subida Real -->
+                <div id="dropzoneProgressWrap" style="display: none; width: 100%;">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                    <span id="dropzoneProgressLabel">Subiendo archivo a Cloudflare R2...</span>
+                    <span id="dropzoneProgressPercent" style="font-family: var(--font-mono); font-weight: 700;">0%</span>
+                  </div>
+                  <div style="height: 6px; background: var(--border-color); border-radius: 999px; overflow: hidden;">
+                    <div id="dropzoneProgressBar" style="height: 100%; width: 0%; background: var(--cerulean); transition: width 0.15s ease-out;"></div>
+                  </div>
                 </div>
-                <button type="button" class="btn-remove-file" id="btnRemoveFile" title="Quitar archivo">✕</button>
               </div>
             </div>
             <div id="dropzoneError" class="dropzone-error-msg" style="display: none;"></div>

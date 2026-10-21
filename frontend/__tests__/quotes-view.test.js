@@ -169,6 +169,14 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
       const feedback = document.getElementById('quotesViewFeedback');
       expect(feedback.textContent).toContain('Fallo de conexión');
     });
+
+    // Caso cuando el error lanzado no tiene mensaje
+    vi.spyOn(quotesStore, 'convertToOrder').mockRejectedValueOnce({});
+    btnConvert.click();
+    await vi.waitFor(() => {
+      const feedback = document.getElementById('quotesViewFeedback');
+      expect(feedback.textContent).toContain('Error al convertir cotización');
+    });
   });
 
   it('muestra mensaje de error si falla la eliminación de una cotización', () => {
@@ -185,6 +193,33 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
 
     const feedback = document.getElementById('quotesViewFeedback');
     expect(feedback.textContent).toContain('Error de prueba al eliminar');
+
+    // Caso cuando el error lanzado no tiene mensaje
+    vi.spyOn(quotesStore, 'deleteQuote').mockImplementationOnce(() => {
+      throw {};
+    });
+    btnDelete.click();
+    expect(feedback.textContent).toContain('Error al eliminar cotización');
+  });
+
+  it('elimina cotización sin nombre asignando texto por defecto en diálogo de confirmación', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const newQ = quotesStore.createQuote({
+      projectName: '',
+      leadName: 'Anónimo',
+      leadPhone: '+502 5555-1111',
+    });
+    newQ.projectName = null;
+    newQ.code = null;
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    const btnDelete = document.querySelector(`.btn-delete-quote[data-quote-id="${newQ.id}"]`);
+    if (btnDelete) {
+      btnDelete.click();
+      expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('esta cotización'));
+    }
   });
 
   it('ignora clics en áreas neutrales del contenedor de cotizaciones', () => {
@@ -196,5 +231,85 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     container.click();
     const feedback = document.getElementById('quotesViewFeedback');
     expect(feedback.style.display).toBe('none');
+  });
+
+  it('renderiza el recuadro de snapshot y permite abrirlo y cerrarlo en el lightbox', () => {
+    quotesStore.createQuote({
+      projectName: 'Proyecto con Snapshot',
+      leadName: 'Cliente Bobina',
+      leadPhone: '+502 5555-7777',
+      widthCm: 6,
+      heightCm: 6,
+      qty: 60,
+      linearMeters: 1.0,
+      canvasSnapshot: 'data:image/png;base64,mockFullSnapshotData',
+    });
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    const snapshotBox = document.querySelector('.quote-snapshot-box');
+    expect(snapshotBox).not.toBeNull();
+
+    const btnExpand = document.querySelector('.btn-expand-snapshot');
+    expect(btnExpand).not.toBeNull();
+
+    // Abrir Lightbox al pulsar botón expandir
+    btnExpand.click();
+    const modal = document.getElementById('snapshotLightboxModal');
+    const img = document.getElementById('snapshotLightboxImg');
+    expect(modal.style.display).toBe('block');
+    expect(img.src).toContain('mockFullSnapshotData');
+
+    // Cerrar al pulsar botón X
+    const btnClose = document.getElementById('btnCloseSnapshotLightbox');
+    btnClose.click();
+    expect(modal.style.display).toBe('none');
+
+    // Abrir al pulsar thumbnail de la imagen
+    const thumb = document.querySelector('.quote-snapshot-thumb');
+    thumb.click();
+    expect(modal.style.display).toBe('block');
+
+    // Cerrar al hacer clic en el backdrop
+    modal.click();
+    expect(modal.style.display).toBe('none');
+
+    // Abrir y cerrar con el botón cerrar inferior
+    thumb.click();
+    expect(modal.style.display).toBe('block');
+    const btnDismiss = document.getElementById('btnDismissSnapshotLightbox');
+    btnDismiss.click();
+    expect(modal.style.display).toBe('none');
+  });
+
+  it('incluye enlaces al arte del cliente y al montaje del canvas en el botón de compartir por WhatsApp', () => {
+    quotesStore.quotes = [
+      {
+        id: 'q-wa-test',
+        code: 'COT-WA-001',
+        projectName: 'Prueba WhatsApp Links',
+        leadName: 'María López',
+        leadPhone: '50255551234',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 100,
+        linearMeters: 1.0,
+        totalPriceQ: 140,
+        withCutting: false,
+        status: 'SAVED',
+        fileUrl: 'https://pub-r2.dev/assets/quotes/maria_logo.png',
+        canvasSnapshotUrl: 'https://pub-r2.dev/assets/quotes/maria_esquema.png',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    const waBtn = document.querySelector('a.btn-whatsapp');
+    expect(waBtn).not.toBeNull();
+    const href = waBtn.getAttribute('href');
+    const decoded = decodeURIComponent(href);
+    expect(decoded).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/assets/quotes/maria_logo.png');
+    expect(decoded).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/assets/quotes/maria_esquema.png');
   });
 });

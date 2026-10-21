@@ -149,5 +149,61 @@ describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
       expect(msg).toContain('TOTAL ESTIMADO');
       expect(msg).toContain('Q');
     });
+
+    it('incluye enlaces HTTP/HTTPS de arte del cliente y de montaje en bobina si están disponibles', () => {
+      const items = [
+        {
+          title: 'Sticker Premium',
+          widthCm: 6,
+          heightCm: 6,
+          qty: 100,
+          includeCutting: true,
+          fileUrl: 'https://pub-r2.dev/assets/quotes/diseno_premium.png',
+          canvasSnapshotUrl: 'https://pub-r2.dev/assets/orders/bobina_6x6cm.png',
+        },
+      ];
+      const totals = calculateCartTotals(items);
+      const msg = formatWhatsAppCartOrder(totals, { name: 'Empresa Demo', phone: '+502 5555-1234' });
+
+      expect(msg).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/assets/quotes/diseno_premium.png');
+      expect(msg).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/assets/orders/bobina_6x6cm.png');
+    });
+
+    it('soporta fileInfo.fileUrl y canvasSnapshot directo cuando no empieza con data:', () => {
+      const items = [
+        {
+          title: 'Sticker Café',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 50,
+          includeCutting: false,
+          fileInfo: { name: 'cafe.png', fileUrl: 'https://pub-r2.dev/cafe.png' },
+          canvasSnapshot: 'https://pub-r2.dev/bobina_cafe.png',
+        },
+      ];
+      const totals = calculateCartTotals(items);
+      const msg = formatWhatsAppCartOrder(totals);
+
+      expect(msg).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/cafe.png');
+      expect(msg).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/bobina_cafe.png');
+    });
+
+    it('omite enlaces base64 (data:image) del texto de WhatsApp para evitar sobrepasar límites de URL', () => {
+      const items = [
+        {
+          title: 'Sticker Local',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 50,
+          includeCutting: false,
+          canvasSnapshot: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAE...',
+        },
+      ];
+      const totals = calculateCartTotals(items);
+      const msg = formatWhatsAppCartOrder(totals);
+
+      expect(msg).not.toContain('data:image/png');
+      expect(msg).not.toContain('• 📐 *Montaje en bobina:*');
+    });
   });
 });

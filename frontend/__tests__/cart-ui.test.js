@@ -11,6 +11,7 @@ import { cartStore } from '../src/js/modules/cart-store.js';
 import { clientsStore } from '../src/js/modules/clients-store.js';
 import { ordersStore } from '../src/js/modules/orders-store.js';
 import { store } from '../src/js/store.js';
+import * as fileUploader from '../src/js/modules/file-uploader.js';
 
 describe('Cart UI — Componentes de Carrito y Checkout', () => {
   beforeEach(() => {
@@ -165,6 +166,46 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
 
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
     });
+
+    it('sube instantáneas de canvas a R2 y formatea pedido a WhatsApp con los enlaces de arte y bobina', async () => {
+      initCartDrawer();
+      const spy = vi.spyOn(fileUploader, 'uploadCanvasSnapshotToStorage').mockResolvedValue('https://pub-r2.dev/assets/orders/bobina_cart.png');
+      cartStore.addItem({
+        widthCm: 5,
+        heightCm: 5,
+        qty: 100,
+        fileUrl: 'https://pub-r2.dev/arte.png',
+        canvasSnapshot: 'data:image/png;base64,mockSnap',
+      });
+
+      const btnWhatsApp = document.getElementById('btnCartWhatsApp');
+      await btnWhatsApp.click();
+
+      expect(spy).toHaveBeenCalled();
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
+      const calledUrl = window.open.mock.calls[window.open.mock.calls.length - 1][0];
+      const decoded = decodeURIComponent(calledUrl);
+      expect(decoded).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/arte.png');
+      expect(decoded).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/assets/orders/bobina_cart.png');
+      spy.mockRestore();
+    });
+
+    it('maneja error en uploadCanvasSnapshotToStorage al presionar WhatsApp en el carrito sin bloquear el envío', async () => {
+      initCartDrawer();
+      const spy = vi.spyOn(fileUploader, 'uploadCanvasSnapshotToStorage').mockRejectedValue(new Error('Network error'));
+      cartStore.addItem({
+        widthCm: 5,
+        heightCm: 5,
+        qty: 50,
+        canvasSnapshot: 'data:image/png;base64,mockSnap',
+      });
+
+      const btnWhatsApp = document.getElementById('btnCartWhatsApp');
+      await btnWhatsApp.click();
+
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
+      spy.mockRestore();
+    });
   });
 
   describe('Checkout Modal', () => {
@@ -195,6 +236,45 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('Carlos%20Rivera'), '_blank');
+    });
+
+    it('sube instantáneas en base64 de ítems a R2 al enviar checkout form', async () => {
+      const spy = vi.spyOn(fileUploader, 'uploadCanvasSnapshotToStorage').mockResolvedValue('https://pub-r2.dev/assets/orders/bobina_checkout.png');
+      cartStore.clearCart();
+      cartStore.addItem({
+        widthCm: 5,
+        heightCm: 5,
+        qty: 50,
+        canvasSnapshot: 'data:image/png;base64,sample',
+      });
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const form = document.getElementById('checkoutForm');
+      await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(spy).toHaveBeenCalled();
+      expect(window.open).toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('maneja error en uploadCanvasSnapshotToStorage al enviar checkout form de forma resiliente', async () => {
+      const spy = vi.spyOn(fileUploader, 'uploadCanvasSnapshotToStorage').mockRejectedValue(new Error('Checkout upload fail'));
+      cartStore.clearCart();
+      cartStore.addItem({
+        widthCm: 5,
+        heightCm: 5,
+        qty: 50,
+        canvasSnapshot: 'data:image/png;base64,sample',
+      });
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const form = document.getElementById('checkoutForm');
+      await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(window.open).toHaveBeenCalled();
+      spy.mockRestore();
     });
 
     it('inicializa el modal de checkout con datos prellenados si el usuario ha iniciado sesión', () => {

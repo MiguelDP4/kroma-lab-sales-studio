@@ -6,6 +6,8 @@
 
 import { store } from '../store.js';
 import { quotesStore } from '../modules/quotes-store.js';
+import { uploadFileToStorage, uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
+import { generateCanvasSnapshot } from '../modules/roll-simulator.js';
 
 let modalInitialized = false;
 let currentQuoteData = null;
@@ -53,6 +55,12 @@ export function initSaveQuoteModal() {
           </div>
           <div id="saveQuoteCuttingSummary" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
             Entrega: Rollo continuo sin corte
+          </div>
+          <div id="saveQuoteSnapshotWrap" style="display: none; margin-top: 0.65rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; align-items: center; gap: 0.75rem;">
+            <img id="saveQuoteSnapshotImg" src="" alt="Montaje en bobina" style="width: 100px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+            <span style="font-size: 0.78rem; color: var(--text-secondary);">
+              📐 <strong>Disposición técnica en bobina registrada</strong>
+            </span>
           </div>
         </div>
 
@@ -169,16 +177,32 @@ export function openSaveQuoteModal(quoteData = null) {
   const totalEl = document.getElementById('saveQuoteTotalSummary');
   const cuttingEl = document.getElementById('saveQuoteCuttingSummary');
 
+  const lm = Number(currentQuoteData.linearMeters ?? currentQuoteData.billableMeters ?? 1.0);
+  const total = Number(currentQuoteData.totalPriceQ ?? 140.0);
+  const cutPrice = Number(currentQuoteData.cuttingPriceQ ?? currentQuoteData.cuttingTotalQ ?? 0.0);
+
   if (specsEl) {
-    specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${currentQuoteData.linearMeters.toFixed(2)} m`;
+    specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
   }
   if (totalEl) {
-    totalEl.textContent = `Q${currentQuoteData.totalPriceQ.toFixed(2)}`;
+    totalEl.textContent = `Q${total.toFixed(2)}`;
   }
   if (cuttingEl) {
     cuttingEl.textContent = currentQuoteData.withCutting
-      ? `✂️ Con despiece individual (+Q${currentQuoteData.cuttingPriceQ.toFixed(2)})`
+      ? `✂️ Con despiece individual (+Q${cutPrice.toFixed(2)})`
       : '📦 Entrega en rollo continuo sin corte';
+  }
+
+  // Previsualización del snapshot de la bobina si está disponible
+  const snapshotWrap = document.getElementById('saveQuoteSnapshotWrap');
+  const snapshotImg = document.getElementById('saveQuoteSnapshotImg');
+  if (snapshotWrap && snapshotImg) {
+    if (currentQuoteData.canvasSnapshot) {
+      snapshotImg.src = currentQuoteData.canvasSnapshot;
+      snapshotWrap.style.display = 'flex';
+    } else {
+      snapshotWrap.style.display = 'none';
+    }
   }
 
   // Pre-llenar datos de usuario logeado si está autenticado
@@ -237,6 +261,9 @@ export function getCurrentQuoterSpecs() {
   const stickersPerRow = parseInt(document.getElementById('resStickersPerRow')?.textContent || '1', 10) || 1;
   const rows = parseInt(document.getElementById('resRows')?.textContent || '1', 10) || 1;
 
+  const rollCanvas = typeof document !== 'undefined' ? document.getElementById('rollCanvas') : null;
+  const canvasSnapshot = rollCanvas ? generateCanvasSnapshot(rollCanvas, { widthCm, heightCm, qty, linearMeters, stickersPerRow, rows }) : null;
+
   return {
     widthCm,
     heightCm,
@@ -250,10 +277,12 @@ export function getCurrentQuoterSpecs() {
     cuttingPriceQ: withCutting ? Math.max(qty * 0.35, 25.0) : 0,
     totalPriceQ,
     finishType: 'GLOSSY_VARNISH',
+    canvasSnapshot,
+    rotationDeg: 0,
   };
 }
 
-export function handleSaveQuoteSubmit(e) {
+export async function handleSaveQuoteSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
 
   const projectName = document.getElementById('saveQuoteProjectName')?.value?.trim();
@@ -277,6 +306,49 @@ export function handleSaveQuoteSubmit(e) {
   }
 
   const specs = currentQuoteData || getCurrentQuoterSpecs();
+  const submitBtn = document.getElementById('btnSubmitSaveQuote');
+
+  // Estrategia 1 (Lazy Upload): Si el usuario adjuntó un archivo y no se ha subido aún, subir ahora a R2
+  if (specs.rawFile && !specs.fileUrl) {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>⏳ Subiendo a R2...</span>`;
+    }
+    showSaveQuoteFeedback('☁️ Subiendo archivo a Cloudflare R2...', 'info');
+
+    try {
+      const uploadRes = await uploadFileToStorage(specs.rawFile, {
+        context: 'quotes',
+      });
+      specs.fileUrl = uploadRes.fileUrl;
+      specs.fileKey = uploadRes.fileKey;
+      specs.provider = uploadRes.provider;
+    } catch (uploadErr) {
+      console.warn('[Storage] Error al subir archivo a R2 desde modal de cotización:', uploadErr);
+      specs.provider = 'local';
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>💾 Guardar Cotización</span>`;
+      }
+    }
+  }
+
+  // Si la instantánea del canvas es un base64 y no se ha subido aún, subir ahora a R2
+  if (specs.canvasSnapshot && specs.canvasSnapshot.startsWith('data:') && !specs.canvasSnapshotUrl) {
+    try {
+      const snapUrl = await uploadCanvasSnapshotToStorage(
+        specs.canvasSnapshot,
+        `esquema_${specs.widthCm}x${specs.heightCm}cm.png`,
+        { context: 'quotes' }
+      );
+      if (snapUrl) {
+        specs.canvasSnapshotUrl = snapUrl;
+      }
+    } catch (snapErr) {
+      console.warn('[Storage] Error al subir canvas snapshot en modal cotización:', snapErr);
+    }
+  }
 
   const newQuote = quotesStore.createQuote({
     projectName,
@@ -286,6 +358,13 @@ export function handleSaveQuoteSubmit(e) {
     companyName,
     notes,
     ...specs,
+    canvasSnapshot: specs.canvasSnapshot || null,
+    canvasSnapshotUrl: specs.canvasSnapshotUrl || null,
+    rotationDeg: specs.rotationDeg || 0,
+    fileName: specs.fileName || (specs.rawFile ? specs.rawFile.name : null),
+    fileUrl: specs.fileUrl || null,
+    fileKey: specs.fileKey || null,
+    fileSizeBytes: specs.fileSizeBytes || (specs.rawFile ? specs.rawFile.size : null),
   });
 
   showSaveQuoteFeedback(`✅ ¡Cotización ${newQuote.code} guardada exitosamente!`, 'success');

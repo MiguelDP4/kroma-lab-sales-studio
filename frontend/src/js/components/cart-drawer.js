@@ -7,6 +7,7 @@ import { cartStore } from '../modules/cart-store.js';
 import { formatWhatsAppCartOrder } from '../modules/cart-engine.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { openCheckoutModal } from './checkout-modal.js';
+import { uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
 
 export function initCartDrawer() {
   let drawerContainer = document.getElementById('cartDrawerContainer');
@@ -254,7 +255,25 @@ function attachCartEventListeners(items, totals) {
   // Enviar por WhatsApp
   const btnWhatsApp = document.getElementById('btnCartWhatsApp');
   if (btnWhatsApp) {
-    btnWhatsApp.addEventListener('click', () => {
+    btnWhatsApp.addEventListener('click', async () => {
+      if (totals.items && Array.isArray(totals.items)) {
+        for (const item of totals.items) {
+          if (!item.canvasSnapshotUrl && item.canvasSnapshot && item.canvasSnapshot.startsWith('data:')) {
+            try {
+              const snapUrl = await uploadCanvasSnapshotToStorage(
+                item.canvasSnapshot,
+                `bobina_${item.widthCm}x${item.heightCm}cm.png`,
+                { context: 'orders' }
+              );
+              if (snapUrl) {
+                item.canvasSnapshotUrl = snapUrl;
+              }
+            } catch (err) {
+              console.warn('[Storage] Error subiendo snapshot en cart drawer:', err);
+            }
+          }
+        }
+      }
       const text = formatWhatsAppCartOrder(totals);
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
