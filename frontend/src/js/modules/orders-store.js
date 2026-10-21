@@ -24,6 +24,7 @@ export const PAYMENT_STATUS_LABELS = {
 };
 
 export const PRODUCTION_STATUS_LABELS = {
+  [ORDER_STATUS.PENDING_REVIEW]: { label: 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
   [ORDER_STATUS.IN_AUDLEY_QUEUE]: { label: 'En Cola Audley', color: 'var(--cerulean)', bg: 'rgba(28, 114, 147, 0.15)' },
   [ORDER_STATUS.PRINTING]: { label: 'Imprimiendo UV', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
   [ORDER_STATUS.LAMINATING_CUTTING]: { label: 'Laminado y Corte', color: 'var(--baltic-blue)', bg: 'rgba(6, 90, 130, 0.2)' },
@@ -412,7 +413,7 @@ class OrdersStore {
         grandTotalQ: parseFloat(cartTotals.grandTotalQ) || 140.0,
         hasCutting: Boolean(cartTotals.hasCutting),
       },
-      productionStatus: ORDER_STATUS.IN_AUDLEY_QUEUE,
+      productionStatus: ORDER_STATUS.PENDING_REVIEW,
       paymentStatus: PAYMENT_STATUS.PENDING,
       paymentMethod: 'TRANSFER',
       workshopNotes: workshopNotes || customer.notes || '',

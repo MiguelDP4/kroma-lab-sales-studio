@@ -85,6 +85,7 @@ export const ordersView = {
             
             <select id="filterProductionStatus" class="input-control" style="max-width: 190px;">
               <option value="ALL">Producción: Todos</option>
+              <option value="${ORDER_STATUS.PENDING_REVIEW}">Por Confirmar</option>
               <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}">En Cola Audley</option>
               <option value="${ORDER_STATUS.PRINTING}">Imprimiendo UV</option>
               <option value="${ORDER_STATUS.LAMINATING_CUTTING}">Laminado y Corte</option>
@@ -672,7 +673,7 @@ export const ordersView = {
           ? `${order.items[0].title} (${order.items[0].qty} uds)`
           : 'Diseños varios';
 
-        const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus];
+        const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus] || { label: order.productionStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
         const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
         const orderWaMsg = formatOrderWhatsAppMessage(order);
 
@@ -711,6 +712,7 @@ export const ordersView = {
             <td>
               ${isStaff ? `
                 <select class="select-status select-prod-status" data-order-id="${order.id}" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color};">
+                  <option value="${ORDER_STATUS.PENDING_REVIEW}" ${order.productionStatus === ORDER_STATUS.PENDING_REVIEW ? 'selected' : ''}>Por Confirmar</option>
                   <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}" ${order.productionStatus === ORDER_STATUS.IN_AUDLEY_QUEUE ? 'selected' : ''}>En Cola Audley</option>
                   <option value="${ORDER_STATUS.PRINTING}" ${order.productionStatus === ORDER_STATUS.PRINTING ? 'selected' : ''}>Imprimiendo UV</option>
                   <option value="${ORDER_STATUS.LAMINATING_CUTTING}" ${order.productionStatus === ORDER_STATUS.LAMINATING_CUTTING ? 'selected' : ''}>Laminado y Corte</option>
@@ -770,7 +772,7 @@ export const ordersView = {
       if (titleEl) titleEl.textContent = order.customer.company || order.customer.name;
 
       if (contentEl) {
-        const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus];
+        const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus] || { label: order.productionStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
         const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
         const orderWaMsg = formatOrderWhatsAppMessage(order);
 
