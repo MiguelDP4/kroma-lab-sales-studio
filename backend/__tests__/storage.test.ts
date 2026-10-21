@@ -359,19 +359,20 @@ describe('Storage & Cloudflare R2 Presigned URLs API (/api/storage)', () => {
     });
 
     it('maneja excepción en unlinkSync al eliminar archivo local retornando false', async () => {
+      const localService = new StorageService({});
       const testKey = `assets/unlink-fail-${Date.now()}.png`;
-      storageService.saveLocalFile(testKey, Buffer.from('DUMMY'));
+      localService.saveLocalFile(testKey, Buffer.from('DUMMY'));
 
       vi.spyOn(fs, 'unlinkSync').mockImplementationOnce(() => {
         throw new Error('EPERM: Permission denied');
       });
 
-      const deleted = await storageService.deleteObject(testKey);
+      const deleted = await localService.deleteObject(testKey);
       expect(deleted).toBe(false);
 
       // Limpieza real
       vi.restoreAllMocks();
-      await storageService.deleteObject(testKey);
+      await localService.deleteObject(testKey);
     });
 
     it('valida fallback local en StorageService no configurado con R2', async () => {

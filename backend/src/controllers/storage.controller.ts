@@ -10,16 +10,16 @@ const presignedUrlSchema = z.object({
   fileType: z.string().min(1, 'El tipo MIME es requerido.'),
   fileSizeBytes: z.number().positive('El tamaño debe ser mayor a 0 bytes.'),
   context: z.enum(['orders', 'quotes', 'general']).optional().default('general'),
-  referenceCode: z.string().optional(),
+  referenceCode: z.string().nullable().optional(),
 });
 
 const confirmUploadSchema = z.object({
   fileKey: z.string().min(1, 'El fileKey es requerido.'),
   fileUrl: z.string().min(1, 'La URL del archivo es requerida.'),
   fileName: z.string().min(1, 'El nombre del archivo es requerido.'),
-  fileSizeBytes: z.number().nonnegative().optional(),
-  orderId: z.string().optional(),
-  quoteId: z.string().optional(),
+  fileSizeBytes: z.number().nonnegative().nullable().optional(),
+  orderId: z.string().nullable().optional(),
+  quoteId: z.string().nullable().optional(),
 });
 
 export async function getPresignedUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
