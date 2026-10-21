@@ -749,6 +749,11 @@ sequenceDiagram
    * Al guardar la cotización (`btnSaveQuote`), se genera un composite canvas en alta resolución (`image/png`) que integra un encabezado técnico oscuro de taller con datos clave: ancho, alto, cantidad de copias, piezas por fila, metros lineales y fecha de cotización.
    * El snapshot se almacena junto al registro de la cotización (`canvasSnapshot`) y se visualiza tanto en el modal de confirmación como en las tarjetas de cotizaciones (`quotes-view.js`).
    * Permite al operador de taller (Arte Modelo Dubois / Kroma Lab) o al cliente pulsar "🔍 Ampliar" para abrir un lightbox modal de alta fidelidad y verificar de inmediato en qué orientación y posición exacta solicitó el cliente la impresión.
+9. **Persistencia y Visor de Montaje Técnico en Pedidos y Hoja de Taller Audley:**
+   * Al crear o confirmar un pedido (desde el carrito multi-diseño, checkout modal o al convertir una cotización desde `quotesStore.convertToOrder`), se genera y almacena la instantánea técnica (`canvasSnapshot`) y los grados de rotación (`rotationDeg`) directamente en el ítem y en la orden.
+   * En la **Ficha de Detalle del Pedido** (`orders-view.js` / `showOrderDetailsModal`): se renderiza un recuadro de previsualización técnica (`order-canvas-snapshot-box`) con thumbnail, datos de tirada en bobina de 28 cm, grados de rotación, botón "🔍 Ampliar" y botón de descarga directa del arte original desde Cloudflare R2.
+   * En la **Hoja de Taller Audley UV DTF** (`orders-view.js` / `showWorkshopSheetModal`): se incorporó la sección destacada de taller `Montaje Técnico en Bobina Audley (Orientación Requerida)` para que el técnico/operador de la impresora Audley (e.g. en Photoprint RIP) configure exactamente la misma orientación, acomodo de filas y rotación requerida por el cliente antes de lanzar la impresión.
+   * Se incluyó el visor lightbox interactivo (`#orderSnapshotLightboxModal`) con soporte táctil, cierre por backdrop o tecla escape, garantizando una inspección minuciosa tanto en escritorio como en móviles (Mobile-First).
 
 ---
 

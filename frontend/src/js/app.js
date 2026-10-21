@@ -731,14 +731,25 @@ export function initQuoter() {
         }
       }
 
+      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const rollCanvas = document.getElementById('rollCanvas');
+      const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+
       cartStore.addItem({
         title: `Stickers ${w} × ${h} cm`,
         widthCm: w,
         heightCm: h,
         qty: q,
         includeCutting: cut,
+        actualLinearMeters: calculated.actualLinearMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
         fileInfo: currentAttachedFile ? { ...currentAttachedFile } : null,
+        fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
         previewUrl: currentPreviewUrl,
+        canvasSnapshot: canvasSnapshot || null,
+        rotationDeg: currentRotation || 0,
       });
 
       clearDropzoneFile();

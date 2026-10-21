@@ -423,4 +423,185 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
     expect(document.getElementById('workshopSheetContainer').textContent).toContain('Archivo RIP directo');
     expect(document.getElementById('workshopSheetContainer').textContent).toContain('Barniz con Relieve 3D');
   });
+
+  it('renderiza el snapshot técnico en el modal de detalle del pedido y permite ampliarlo en lightbox', () => {
+    ordersStore.createOrder({
+      customer: { name: 'Cliente Snapshot Detalle' },
+      items: [
+        {
+          title: 'Stickers Detalle',
+          widthCm: 8,
+          heightCm: 5,
+          qty: 100,
+          canvasSnapshot: 'data:image/png;base64,snapshotDetalle',
+          rotationDeg: 90,
+          fileInfo: { name: 'arte_detalle.png', fileUrl: 'https://r2.dev/arte_detalle.png' },
+        }
+      ],
+      cartTotals: {
+        totalBillableMeters: 2.0,
+        grandTotalQ: 280,
+        canvasSnapshot: 'data:image/png;base64,snapshotDetalle',
+      },
+    });
+
+    const searchInput = document.getElementById('orderSearchInput');
+    searchInput.value = 'Cliente Snapshot Detalle';
+    searchInput.dispatchEvent(new Event('input'));
+
+    const rows = document.querySelectorAll('#ordersTableBody tr');
+    expect(rows.length).toBe(1);
+
+    const btnView = rows[0].querySelector('.btn-view-order');
+    btnView.click();
+
+    expect(document.getElementById('orderDetailModal').style.display).toBe('block');
+    const snapshotBox = document.querySelector('.order-canvas-snapshot-box');
+    expect(snapshotBox).not.toBeNull();
+    expect(snapshotBox.textContent).toContain('Vista de Bobina (28 cm)');
+    expect(snapshotBox.textContent).toContain('90°');
+
+    const downloadLink = document.querySelector('.btn-download-r2');
+    expect(downloadLink).not.toBeNull();
+    expect(downloadLink.getAttribute('href')).toBe('https://r2.dev/arte_detalle.png');
+
+    // Click en botón de ampliar snapshot
+    const btnExpand = document.querySelector('.btn-expand-order-snapshot');
+    expect(btnExpand).not.toBeNull();
+    btnExpand.click();
+
+    const lightbox = document.getElementById('orderSnapshotLightboxModal');
+    expect(lightbox.style.display).toBe('block');
+    const lightboxImg = document.getElementById('orderSnapshotLightboxImg');
+    expect(lightboxImg.getAttribute('src')).toBe('data:image/png;base64,snapshotDetalle');
+
+    // Cerrar lightbox
+    document.getElementById('btnCloseOrderSnapshotLightbox').click();
+    expect(lightbox.style.display).toBe('none');
+
+    // Click en imagen thumbnail de snapshot
+    const thumbImg = document.querySelector('.order-snapshot-img');
+    thumbImg.click();
+    expect(lightbox.style.display).toBe('block');
+
+    document.getElementById('btnDismissOrderSnapshotLightbox').click();
+    expect(lightbox.style.display).toBe('none');
+
+    // Cerrar modal de detalle
+    document.getElementById('btnOkDetailModal').click();
+  });
+
+  it('renderiza la sección de montaje técnico en la Hoja de Taller Audley y abre lightbox al hacer clic', () => {
+    ordersStore.createOrder({
+      customer: { name: 'Cliente Taller Audley' },
+      items: [
+        {
+          title: 'Diseño Taller 1',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 50,
+          canvasSnapshot: 'data:image/png;base64,snapshotTaller',
+          rotationDeg: 0,
+          fileInfo: { name: 'taller_rip.png', fileUrl: 'https://r2.dev/taller_rip.png' },
+        }
+      ],
+      cartTotals: {
+        totalBillableMeters: 1.0,
+        grandTotalQ: 140,
+        canvasSnapshot: 'data:image/png;base64,snapshotTaller',
+      },
+    });
+
+    const searchInput = document.getElementById('orderSearchInput');
+    searchInput.value = 'Cliente Taller Audley';
+    searchInput.dispatchEvent(new Event('input'));
+
+    const rows = document.querySelectorAll('#ordersTableBody tr');
+    expect(rows.length).toBe(1);
+
+    const btnSheet = rows[0].querySelector('.btn-workshop-sheet');
+    btnSheet.click();
+
+    const workshopContainer = document.getElementById('workshopSheetContainer');
+    expect(workshopContainer.textContent).toContain('Montaje Técnico en Bobina Audley');
+    expect(workshopContainer.textContent).toContain('Orientación Requerida');
+
+    const workshopThumb = document.querySelector('.workshop-snapshot-img');
+    expect(workshopThumb).not.toBeNull();
+    expect(workshopThumb.getAttribute('src')).toBe('data:image/png;base64,snapshotTaller');
+
+    // Click en la imagen para abrir lightbox
+    workshopThumb.click();
+    const lightbox = document.getElementById('orderSnapshotLightboxModal');
+    expect(lightbox.style.display).toBe('block');
+
+    // Cerrar lightbox haciendo clic en el backdrop
+    lightbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(lightbox.style.display).toBe('none');
+
+    document.getElementById('btnCancelWorkshopModal').click();
+  });
+
+  it('cubre ramas adicionales de snapshot y lightbox en ordersView', () => {
+    ordersStore.createOrder({
+      customer: { name: 'Cliente Mixto' },
+      items: [
+        {
+          title: 'Item Con Snapshot',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 20,
+          canvasSnapshot: 'data:image/png;base64,snapMixto',
+          rotationDeg: 90,
+          fileUrl: 'https://r2.dev/direct_file.png',
+        },
+        {
+          title: 'Item Sin Snapshot',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 10,
+          canvasSnapshot: null,
+          rotationDeg: 0,
+        }
+      ],
+      cartTotals: {
+        totalBillableMeters: 1.0,
+        grandTotalQ: 140,
+        canvasSnapshot: null,
+      },
+    });
+
+    const searchInput = document.getElementById('orderSearchInput');
+    searchInput.value = 'Cliente Mixto';
+    searchInput.dispatchEvent(new Event('input'));
+
+    const rows = document.querySelectorAll('#ordersTableBody tr');
+    expect(rows.length).toBe(1);
+
+    // Abrir detalle
+    const btnView = rows[0].querySelector('.btn-view-order');
+    btnView.click();
+
+    const detailModal = document.getElementById('orderDetailModal');
+    detailModal.click();
+
+    // Abrir hoja de taller
+    document.getElementById('btnOkDetailModal').click();
+    const btnSheet = rows[0].querySelector('.btn-workshop-sheet');
+    btnSheet.click();
+
+    const workshopModal = document.getElementById('workshopSheetModal');
+    workshopModal.click();
+
+    const lightbox = document.getElementById('orderSnapshotLightboxModal');
+    lightbox.style.display = 'block';
+    const innerCard = lightbox.querySelector('.modal-card');
+    innerCard.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(lightbox.style.display).toBe('block');
+
+    lightbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(lightbox.style.display).toBe('none');
+
+    document.getElementById('btnCancelWorkshopModal').click();
+  });
 });

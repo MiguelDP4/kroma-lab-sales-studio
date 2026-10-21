@@ -283,6 +283,32 @@ export const ordersView = {
           </form>
         </div>
       </div>
+
+      <!-- MODAL: VISOR LIGHTBOX DE MONTAJE EN BOBINA (SNAPSHOT TÉCNICO) -->
+      <div id="orderSnapshotLightboxModal" class="modal-backdrop" style="display: none; z-index: 10000;">
+        <div class="modal-card" style="width: min(880px, 96vw); max-height: 94vh; padding: 1.25rem;">
+          <div class="modal-header" style="margin-bottom: 0.75rem;">
+            <div>
+              <span class="badge" style="color: var(--cerulean); border-color: var(--cerulean);">Montaje Técnico</span>
+              <h3 style="font-size: 1.15rem; font-weight: 800; margin-top: 0.25rem;">
+                Disposición en Bobina Audley (28 cm útiles)
+              </h3>
+            </div>
+            <button type="button" class="btn-close-modal" id="btnCloseOrderSnapshotLightbox" aria-label="Cerrar visor">✕</button>
+          </div>
+          <div style="background: #090e1c; border-radius: var(--radius-sm); border: 1px solid var(--border-color); padding: 0.75rem; display: flex; justify-content: center; align-items: center; overflow: auto; max-height: 70vh;">
+            <img id="orderSnapshotLightboxImg" src="" alt="Esquema técnico de bobina" style="max-width: 100%; height: auto; object-fit: contain; border-radius: 4px;">
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">
+              💡 Este esquema representa la orientación y distribución requerida en el software RIP Photoprint.
+            </span>
+            <button type="button" class="btn btn-secondary" id="btnDismissOrderSnapshotLightbox" style="min-height: 38px;">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   },
 
@@ -323,6 +349,51 @@ export const ordersView = {
 
     if (btnCloseWorkshopModal) btnCloseWorkshopModal.addEventListener('click', () => toggleModal(workshopModal, false));
     if (btnCancelWorkshopModal) btnCancelWorkshopModal.addEventListener('click', () => toggleModal(workshopModal, false));
+    // Lightbox modal para snapshot técnico de bobina
+    const snapshotModal = document.getElementById('orderSnapshotLightboxModal');
+    const snapshotImg = document.getElementById('orderSnapshotLightboxImg');
+    const btnCloseSnapshot = document.getElementById('btnCloseOrderSnapshotLightbox');
+    const btnDismissSnapshot = document.getElementById('btnDismissOrderSnapshotLightbox');
+
+    function openOrderSnapshot(url) {
+      if (snapshotModal && snapshotImg && url) {
+        snapshotImg.src = url;
+        snapshotModal.style.display = 'block';
+      }
+    }
+
+    function closeOrderSnapshot() {
+      if (snapshotModal) {
+        snapshotModal.style.display = 'none';
+      }
+    }
+
+    if (btnCloseSnapshot) btnCloseSnapshot.addEventListener('click', closeOrderSnapshot);
+    if (btnDismissSnapshot) btnDismissSnapshot.addEventListener('click', closeOrderSnapshot);
+    if (snapshotModal) {
+      snapshotModal.addEventListener('click', (e) => {
+        if (e.target === snapshotModal) closeOrderSnapshot();
+      });
+    }
+
+    if (detailModal) {
+      detailModal.addEventListener('click', (e) => {
+        const target = e.target.closest('.btn-expand-order-snapshot, .order-snapshot-img');
+        if (target && target.dataset.snapshot) {
+          openOrderSnapshot(target.dataset.snapshot);
+        }
+      });
+    }
+
+    if (workshopModal) {
+      workshopModal.addEventListener('click', (e) => {
+        const target = e.target.closest('.btn-expand-order-snapshot, .workshop-snapshot-img');
+        if (target && target.dataset.snapshot) {
+          openOrderSnapshot(target.dataset.snapshot);
+        }
+      });
+    }
+
     if (btnPrintWorkshopSheet) btnPrintWorkshopSheet.addEventListener('click', () => {
       const container = document.getElementById('workshopSheetContainer');
       if (container && container.innerHTML.trim()) {
@@ -702,14 +773,43 @@ export const ordersView = {
           <div style="margin-bottom: 1rem;">
             <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem;">Diseños incluidos en el pedido:</h4>
             ${order.items.map((it, idx) => `
-              <div style="background: var(--bg-surface-elevated); padding: 0.75rem 1rem; border-radius: 4px; border: 1px solid var(--border-color); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <strong>${idx + 1}. ${it.title}</strong>
-                  <div style="font-size: 0.82rem; color: var(--text-secondary);">
-                    ${it.widthCm} × ${it.heightCm} cm • ${it.qty} unidades • ${it.includeCutting ? '✂️ Con corte' : '📜 En rollo'}
+              <div style="background: var(--bg-surface-elevated); padding: 0.75rem 1rem; border-radius: 4px; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                  <div>
+                    <strong>${idx + 1}. ${it.title}</strong>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                      ${it.widthCm} × ${it.heightCm} cm • ${it.qty} unidades • ${it.includeCutting ? '✂️ Con corte' : '📜 En rollo'}${it.rotationDeg ? ` • 🔄 Rotado ${it.rotationDeg}°` : ''}
+                    </div>
                   </div>
+                  <span class="badge" style="font-size: 0.75rem;">${it.actualLinearMeters.toFixed(2)} m</span>
                 </div>
-                <span class="badge" style="font-size: 0.75rem;">${it.actualLinearMeters.toFixed(2)} m</span>
+
+                ${(it.canvasSnapshot || order.canvasSnapshot) ? `
+                  <div class="order-canvas-snapshot-box" style="margin-top: 0.65rem; padding: 0.5rem 0.75rem; background: rgba(2, 132, 199, 0.06); border: 1px solid rgba(2, 132, 199, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 180px;">
+                      <img src="${it.canvasSnapshot || order.canvasSnapshot}" alt="Montaje en Bobina" class="order-snapshot-img" data-snapshot="${it.canvasSnapshot || order.canvasSnapshot}" style="width: 80px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; cursor: pointer;" title="Clic para ampliar vista técnica de bobina">
+                      <div>
+                        <div style="font-size: 0.82rem; font-weight: 700; color: var(--cerulean); display: flex; align-items: center; gap: 0.3rem;">
+                          <span>📐 Vista de Bobina (28 cm)</span>
+                        </div>
+                        <div style="font-size: 0.74rem; color: var(--text-muted);">
+                          ${it.stickersPerRow || 1}/fila • ${it.rows || 1} filas${it.rotationDeg ? ` (${it.rotationDeg}°)` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-expand-order-snapshot" data-snapshot="${it.canvasSnapshot || order.canvasSnapshot}" style="font-size: 0.78rem; padding: 0.3rem 0.65rem; min-height: 38px; display: inline-flex; align-items: center; gap: 0.35rem;">
+                      <span>🔍 Ampliar</span>
+                    </button>
+                  </div>
+                ` : ''}
+
+                ${(it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl) ? `
+                  <div style="margin-top: 0.5rem; font-size: 0.82rem;">
+                    <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.1); color: #10b981; font-weight: 600; text-decoration: none;">
+                      <span>⬇️ Descargar Arte Original (${it.fileInfo?.name || it.fileName || order.fileName || 'R2'})</span>
+                    </a>
+                  </div>
+                ` : ''}
               </div>
             `).join('')}
           </div>
@@ -841,6 +941,48 @@ export const ordersView = {
                 `).join('')}
               </tbody>
             </table>
+
+            <!-- MONTAJE TÉCNICO Y DISPOSICIÓN EN BOBINA AUDLEY -->
+            ${(order.items.some(it => it.canvasSnapshot) || order.canvasSnapshot) ? `
+              <div class="workshop-snapshot-section" style="margin: 1.25rem 0; padding: 1rem; border: 1px solid #0284c7; background: #f0f9ff; border-radius: 6px;">
+                <div style="margin-bottom: 0.75rem;">
+                  <strong style="font-size: 0.95rem; text-transform: uppercase; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
+                    <span>📐</span>
+                    <span>Montaje Técnico en Bobina Audley (Orientación Requerida):</span>
+                  </strong>
+                  <div style="font-size: 0.8rem; color: #475569; margin-top: 0.2rem;">
+                    Disposición configurada sobre los 28 cm útiles de bobina. Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                  ${order.items.map((it, idx) => {
+                    const snap = it.canvasSnapshot || order.canvasSnapshot;
+                    if (!snap) return '';
+                    return `
+                      <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: 6px; padding: 0.75rem; text-align: center;">
+                        <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 0.4rem;">
+                          ${idx + 1}. ${it.title} (${it.stickersPerRow}/fila × ${it.rows} filas${it.rotationDeg ? ` • 🔄 ${it.rotationDeg}°` : ''})
+                        </div>
+                        <div style="background: #090e1c; border-radius: 4px; padding: 4px; display: inline-block; max-width: 100%;">
+                          <img src="${snap}" alt="Esquema Bobina" class="workshop-snapshot-img" data-snapshot="${snap}" style="max-width: 100%; max-height: 200px; object-fit: contain; cursor: pointer; display: block;" title="Haz clic para ampliar">
+                        </div>
+                        <div style="margin-top: 0.5rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+                          <button type="button" class="btn btn-secondary btn-expand-order-snapshot" data-snapshot="${snap}" style="font-size: 0.76rem; padding: 0.25rem 0.55rem; min-height: 32px;">
+                            <span>🔍 Ampliar Esquema</span>
+                          </button>
+                          ${(it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl) ? `
+                            <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 0.76rem; padding: 0.25rem 0.55rem; border-radius: 4px; background: #0284c7; color: #ffffff; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                              <span>⬇️ Archivo RIP</span>
+                            </a>
+                          ` : ''}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
 
             <div style="border: 1px solid #e2e8f0; background: #f8fafc; padding: 1rem; border-radius: 6px;">
               <strong style="font-size: 0.85rem; text-transform: uppercase; color: #0f172a;">Control de Calidad del Operador (Checklist):</strong>

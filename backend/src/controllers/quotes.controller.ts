@@ -23,6 +23,11 @@ export const createQuoteSchema = z.object({
   finishType: z.string().optional().default('GLOSSY_VARNISH'),
   notes: z.string().optional(),
   source: z.string().optional().default('web'),
+  fileUrl: z.string().optional(),
+  fileName: z.string().optional(),
+  fileSizeBytes: z.number().int().optional(),
+  canvasSnapshot: z.string().optional(),
+  rotationDeg: z.number().int().optional(),
 });
 
 export const updateQuoteSchema = z.object({
@@ -248,6 +253,9 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
         cuttingPriceQ: quote.cuttingPriceQ,
         totalAmountQ: quote.totalPriceQ,
         amountPaidQ: 0,
+        fileUrl: quote.fileUrl,
+        fileName: quote.fileName,
+        fileSizeBytes: quote.fileSizeBytes,
         notes: orderNotes,
       },
     });
