@@ -1090,9 +1090,9 @@ export const ordersView = {
               <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.65rem;">
                 Aún no se ha adjuntado comprobante. Realiza tu depósito o transferencia a nuestras cuentas autorizadas:
                 <div style="font-size: 0.78rem; line-height: 1.5; margin-top: 0.35rem; color: var(--text-primary);">
-                  <div>• <strong>BI Monetaria:</strong> <code style="font-weight: 700;">144-002931-2</code></div>
-                  <div>• <strong>BAC Monetaria:</strong> <code style="font-weight: 700;">90-341902-1</code></div>
-                  <div>• <strong>Banrural Monetaria:</strong> <code style="font-weight: 700;">3033-09182-1</code></div>
+                  <div>• <strong>Banco Industrial (Ahorro):</strong> <code style="font-weight: 700;">4422909</code></div>
+                  <div>• <strong>Banco G&T Continental (Ahorro):</strong> <code style="font-weight: 700;">01080279685</code></div>
+                  <div>• <strong>BAC Credomatic (Ahorro):</strong> <code style="font-weight: 700;">972095707</code></div>
                   <div style="font-size: 0.72rem; color: var(--text-muted);">Miguel Angel Dubois / Kroma Lab</div>
                 </div>
               </div>
