@@ -62,6 +62,28 @@ describe('QuotesStore — Almacén Reactivo de Cotizaciones Guardadas', () => {
     expect(quotesStore.getQuoteById(newQuote.id)).toBeDefined();
   });
 
+  it('crea una nueva cotización con canvasSnapshot y rotationDeg y la preserva', () => {
+    const fakeSnapshot = 'data:image/png;base64,mockCanvasSnapshot123';
+    const newQuote = quotesStore.createQuote({
+      projectName: 'Stickers Rotados 90deg',
+      leadName: 'Juan Pérez',
+      leadPhone: '+502 5555-8888',
+      widthCm: 8,
+      heightCm: 5,
+      qty: 100,
+      linearMeters: 1.5,
+      canvasSnapshot: fakeSnapshot,
+      rotationDeg: 90,
+    });
+
+    expect(newQuote.canvasSnapshot).toBe(fakeSnapshot);
+    expect(newQuote.rotationDeg).toBe(90);
+
+    const fetched = quotesStore.getQuoteById(newQuote.id);
+    expect(fetched.canvasSnapshot).toBe(fakeSnapshot);
+    expect(fetched.rotationDeg).toBe(90);
+  });
+
   it('despacha la creación a apiClient.quotes.create y asigna backendId', async () => {
     const createSpy = vi.spyOn(apiClient.quotes, 'create').mockResolvedValueOnce({
       success: true,
@@ -168,10 +190,36 @@ describe('QuotesStore — Almacén Reactivo de Cotizaciones Guardadas', () => {
     expect(q.convertedOrderId).toBeDefined();
     expect(q.convertedOrderCode).toBeDefined();
 
-    // Comprobar que la orden existe en ordersStore
+    // Comprobar que la orden existe en ordersStore y transfiere el snapshot técnico
     const orderInStore = ordersStore.getOrderById(q.convertedOrderId);
     expect(orderInStore).not.toBeNull();
     expect(orderInStore.customer.name).toBe('Rodrigo Méndez');
+  });
+
+  it('transfiere canvasSnapshot, rotationDeg y fileUrl a la orden generada al convertir una cotización', async () => {
+    vi.spyOn(apiClient.quotes, 'convertToOrder').mockRejectedValueOnce(new Error('Offline'));
+    const quoteWithSnapshot = quotesStore.createQuote({
+      projectName: 'Proyecto Técnico',
+      leadName: 'Juan Técnico',
+      canvasSnapshot: 'data:image/png;base64,snapshotTechnical123',
+      rotationDeg: 90,
+      fileUrl: 'https://r2.dev/arte_cliente.png',
+      fileName: 'arte_cliente.png',
+      widthCm: 8,
+      heightCm: 5,
+      qty: 60,
+    });
+
+    const res = await quotesStore.convertToOrder(quoteWithSnapshot.id);
+    expect(res.success).toBe(true);
+
+    const convertedOrder = ordersStore.getOrderById(res.quote.convertedOrderId);
+    expect(convertedOrder).not.toBeNull();
+    expect(convertedOrder.canvasSnapshot).toBe('data:image/png;base64,snapshotTechnical123');
+    expect(convertedOrder.items[0].canvasSnapshot).toBe('data:image/png;base64,snapshotTechnical123');
+    expect(convertedOrder.items[0].rotationDeg).toBe(90);
+    expect(convertedOrder.items[0].fileUrl).toBe('https://r2.dev/arte_cliente.png');
+    expect(convertedOrder.items[0].fileName).toBe('arte_cliente.png');
   });
 
   it('lanza error al convertir cotización inexistente', async () => {

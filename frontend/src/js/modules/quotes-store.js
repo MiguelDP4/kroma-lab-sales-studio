@@ -178,6 +178,12 @@ class QuotesStore {
       convertedOrderCode: q.convertedOrderCode || null,
       notes: q.notes || '',
       source: q.source || 'web',
+      fileUrl: q.fileUrl || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileUrl) || null,
+      fileName: q.fileName || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileName) || null,
+      fileSizeBytes: q.fileSizeBytes || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileSizeBytes) || null,
+      canvasSnapshot: q.canvasSnapshot || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshot) || null,
+      canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshotUrl) || null,
+      rotationDeg: q.rotationDeg !== undefined && q.rotationDeg !== null ? Number(q.rotationDeg) : ((this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.rotationDeg) || 0),
       createdAt: q.createdAt,
       updatedAt: q.updatedAt || q.createdAt,
     };
@@ -226,6 +232,13 @@ class QuotesStore {
     const source = data?.source || 'web';
 
     const projectName = data?.projectName?.trim() || `Cotización ${widthCm}×${heightCm} cm (${qty} pcs)`;
+    const fileUrl = data?.fileUrl || null;
+    const fileKey = data?.fileKey || null;
+    const fileName = data?.fileName || null;
+    const fileSizeBytes = data?.fileSizeBytes ? Number(data.fileSizeBytes) : null;
+    const provider = data?.provider || (fileUrl ? 'cloudflare-r2' : (fileKey ? 'cloudflare-r2' : null));
+    const canvasSnapshot = data?.canvasSnapshot || null;
+    const rotationDeg = Number(data?.rotationDeg) || 0;
 
     const count = this.quotes.length + 1;
     const code = `COT-2026-${String(count).padStart(3, '0')}`;
@@ -257,6 +270,14 @@ class QuotesStore {
       convertedOrderCode: null,
       notes,
       source,
+      fileUrl,
+      fileKey,
+      fileName,
+      fileSizeBytes,
+      provider,
+      canvasSnapshot,
+      canvasSnapshotUrl: data?.canvasSnapshotUrl || (canvasSnapshot && !canvasSnapshot.startsWith('data:') ? canvasSnapshot : null) || null,
+      rotationDeg,
       createdAt: now,
       updatedAt: now,
     };
@@ -287,6 +308,9 @@ class QuotesStore {
         finishType,
         notes,
         source,
+        fileUrl,
+        fileName,
+        fileSizeBytes,
       }).then(res => {
         if (res && res.quote) {
           newQuote.backendId = res.quote.id;
@@ -409,6 +433,8 @@ class QuotesStore {
         cuttingTotalQ: quote.cuttingPriceQ,
         grandTotalQ: quote.totalPriceQ,
         hasCutting: quote.withCutting,
+        canvasSnapshot: quote.canvasSnapshot || null,
+        rotationDeg: quote.rotationDeg || 0,
       },
       items: [{
         title: quote.projectName,
@@ -420,6 +446,11 @@ class QuotesStore {
         rows: quote.rows,
         includeCutting: quote.withCutting,
         finishType: quote.finishType,
+        fileInfo: quote.fileUrl ? { name: quote.fileName || 'diseño.png', fileUrl: quote.fileUrl } : null,
+        fileUrl: quote.fileUrl || null,
+        fileName: quote.fileName || null,
+        canvasSnapshot: quote.canvasSnapshot || null,
+        rotationDeg: quote.rotationDeg || 0,
       }],
       workshopNotes: `Convertido desde cotización ${quote.code} | Proyecto: ${quote.projectName}`,
     });

@@ -12,12 +12,12 @@ import { usersStore } from './modules/users-store.js';
 
 import { store } from './store.js';
 import { calculateQuote } from './modules/quoter-engine.js';
-import { drawRollCanvas } from './modules/roll-simulator.js';
+import { drawRollCanvas, generateCanvasSnapshot } from './modules/roll-simulator.js';
 import { BUSINESS_CONFIG } from '../shared/business-config.js';
 import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
-import { validatePrintFile, readFileAsDataURL } from './modules/file-uploader.js';
+import { validatePrintFile, readFileAsDataURL, uploadFileToStorage, uploadCanvasSnapshotToStorage } from './modules/file-uploader.js';
 import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
@@ -54,7 +54,6 @@ export const routes = [
 ];
 
 export const router = new Router(routes, 'app');
-
 
 export async function initBackendSync() {
   try {
@@ -93,6 +92,45 @@ export function initApp() {
 }
 
 /**
+ * Estado en memoria para imagen activa, rotación y relación de aspecto del simulador de bobina
+ */
+let currentPreviewImg = null;
+let currentRotation = 0;
+let currentImageAspectRatio = null;
+
+export function getActivePreviewImg() {
+  return currentPreviewImg;
+}
+
+export function getActiveRotation() {
+  return currentRotation;
+}
+
+export function getActiveImageAspectRatio() {
+  return currentImageAspectRatio;
+}
+
+export function setActivePreviewImg(img, rotation = 0) {
+  currentPreviewImg = img;
+  currentRotation = rotation;
+  if (img && (img.naturalWidth || img.width)) {
+    const nw = img.naturalWidth || img.width || 1;
+    const nh = img.naturalHeight || img.height || 1;
+    currentImageAspectRatio = nh / nw;
+  } else {
+    currentImageAspectRatio = null;
+  }
+  redrawRollCanvas();
+}
+
+export function redrawRollCanvas() {
+  const canvas = document.getElementById('rollCanvas');
+  if (canvas && store.state.activeQuote) {
+    drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark', currentPreviewImg, currentRotation);
+  }
+}
+
+/**
  * Inicialización y sincronización del switch de tema (Dark/Light)
  */
 function initTheme() {
@@ -115,10 +153,7 @@ function updateThemeUI(theme) {
     icon.textContent = theme === 'dark' ? '☀️' : '🌙';
   }
   // Re-dibujar canvas al cambiar el tema para adaptar el contraste
-  const canvas = document.getElementById('rollCanvas');
-  if (canvas && store.state.activeQuote) {
-    drawRollCanvas(canvas, store.state.activeQuote, theme === 'dark');
-  }
+  redrawRollCanvas();
 }
 
 /**
@@ -258,6 +293,7 @@ export function syncNavbarRole(role) {
     if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'C';
     if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
   } else {
+    // Visitante no registrado
     if (userChipName) userChipName.textContent = 'Visitante';
     if (userChipAvatar) userChipAvatar.textContent = '👤';
     if (sidebarUserName) sidebarUserName.textContent = 'Visitante';
@@ -379,12 +415,14 @@ function initNavbarRoleSync() {
   syncNavbarRole(lastSyncedRole);
 }
 
-
 export function initQuoter() {
   const widthInput = document.getElementById('stickerWidth');
   const heightInput = document.getElementById('stickerHeight');
   const qtyInput = document.getElementById('stickerQty');
   const cuttingCheckbox = document.getElementById('optCutting');
+  const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+  const btnRotate = document.getElementById('btnRotateImage');
+  const aspectRatioRow = document.getElementById('aspectRatioRow');
 
   if (!widthInput || !heightInput || !qtyInput) return;
 
@@ -397,18 +435,63 @@ export function initQuoter() {
     const quote = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
     store.setActiveQuote(quote);
     renderQuoteResults(quote);
-
-    const canvas = document.getElementById('rollCanvas');
-    if (canvas) {
-      drawRollCanvas(canvas, quote, store.state.theme === 'dark');
-    }
+    redrawRollCanvas();
   }
 
-  widthInput.addEventListener('input', handleCalculate);
-  heightInput.addEventListener('input', handleCalculate);
+  widthInput.addEventListener('input', () => {
+    if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
+      const w = parseFloat(widthInput.value);
+      if (!isNaN(w) && w > 0) {
+        heightInput.value = (w * currentImageAspectRatio).toFixed(1);
+      }
+    }
+    handleCalculate();
+  });
+
+  heightInput.addEventListener('input', () => {
+    if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio && currentImageAspectRatio > 0) {
+      const h = parseFloat(heightInput.value);
+      if (!isNaN(h) && h > 0) {
+        const newW = Math.min(BUSINESS_CONFIG.printableWidthCm, h / currentImageAspectRatio);
+        widthInput.value = newW.toFixed(1);
+      }
+    }
+    handleCalculate();
+  });
+
   qtyInput.addEventListener('input', handleCalculate);
   if (cuttingCheckbox) {
     cuttingCheckbox.addEventListener('change', handleCalculate);
+  }
+
+  if (keepAspectCheckbox) {
+    keepAspectCheckbox.addEventListener('change', () => {
+      if (keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
+        const w = parseFloat(widthInput.value) || 5;
+        heightInput.value = (w * currentImageAspectRatio).toFixed(1);
+        handleCalculate();
+      }
+    });
+  }
+
+  if (btnRotate) {
+    btnRotate.addEventListener('click', () => {
+      currentRotation = (currentRotation + 90) % 360;
+
+      if (currentImageAspectRatio && currentImageAspectRatio > 0) {
+        currentImageAspectRatio = 1 / currentImageAspectRatio;
+      }
+
+      const oldW = parseFloat(widthInput.value) || 5;
+      const oldH = parseFloat(heightInput.value) || 5;
+      const newW = Math.min(BUSINESS_CONFIG.printableWidthCm, oldH);
+      const newH = oldW;
+
+      widthInput.value = newW.toFixed(1);
+      heightInput.value = newH.toFixed(1);
+
+      handleCalculate();
+    });
   }
 
   // Configurar botones de presets rápidos
@@ -423,17 +506,55 @@ export function initQuoter() {
     });
   });
 
+  // Zona de Carga de Archivos de Impresión (Dropzone)
+  let currentAttachedFile = null;
+  let currentRawFile = null;
+  let currentPreviewUrl = null;
+
   // Botón de WhatsApp
   const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
   if (btnWhatsApp) {
-    btnWhatsApp.addEventListener('click', () => {
-      sendWhatsAppQuote(store.state.activeQuote);
+    btnWhatsApp.addEventListener('click', async () => {
+      let fileUrl = currentAttachedFile ? currentAttachedFile.fileUrl : null;
+      if (currentRawFile && currentAttachedFile && !fileUrl) {
+        try {
+          const uploadRes = await uploadFileToStorage(currentRawFile, { context: 'quotes' });
+          currentAttachedFile.fileKey = uploadRes.fileKey;
+          currentAttachedFile.fileUrl = uploadRes.fileUrl;
+          currentAttachedFile.provider = uploadRes.provider;
+          fileUrl = uploadRes.fileUrl;
+        } catch (uploadErr) {
+          console.warn('[Storage] Error al subir archivo para cotización WhatsApp:', uploadErr);
+        }
+      }
+
+      const rollCanvas = document.getElementById('rollCanvas');
+      const calculated = store.state.activeQuote;
+      let canvasSnapshotUrl = null;
+      if (rollCanvas && calculated) {
+        try {
+          const snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
+          if (snapshotBase64) {
+            canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
+              snapshotBase64,
+              `esquema_${calculated.widthCm}x${calculated.heightCm}cm.png`,
+              { context: 'quotes' }
+            );
+          }
+        } catch (snapErr) {
+          console.warn('[Storage] Error al subir snapshot canvas para cotización WhatsApp:', snapErr);
+        }
+      }
+
+      const quoteToSend = {
+        ...store.state.activeQuote,
+        fileUrl,
+        canvasSnapshotUrl,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+      };
+      sendWhatsAppQuote(quoteToSend);
     });
   }
-
-  // Zona de Carga de Archivos de Impresión (Dropzone)
-  let currentAttachedFile = null;
-  let currentPreviewUrl = null;
 
   const dropzone = document.getElementById('quoterDropzone');
   const fileInput = document.getElementById('quoterFileInput');
@@ -444,14 +565,30 @@ export function initQuoter() {
   const thumbWrap = document.getElementById('dropzoneThumbWrap');
   const btnRemoveFile = document.getElementById('btnRemoveFile');
   const errorMsgEl = document.getElementById('dropzoneError');
+  const progressWrap = document.getElementById('dropzoneProgressWrap');
+  const progressBar = document.getElementById('dropzoneProgressBar');
+  const progressPercent = document.getElementById('dropzoneProgressPercent');
+  const progressLabel = document.getElementById('dropzoneProgressLabel');
+  const uploadBadge = document.getElementById('dropzoneUploadBadge');
 
   function clearDropzoneFile() {
     currentAttachedFile = null;
+    currentRawFile = null;
     currentPreviewUrl = null;
+    currentPreviewImg = null;
+    currentRotation = 0;
+    currentImageAspectRatio = null;
+
+    if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+
+    redrawRollCanvas();
+
     if (fileInput) fileInput.value = '';
     if (emptyState) emptyState.style.display = 'flex';
     if (selectedState) selectedState.style.display = 'none';
     if (errorMsgEl) errorMsgEl.style.display = 'none';
+    if (progressWrap) progressWrap.style.display = 'none';
+    if (uploadBadge) uploadBadge.style.display = 'none';
   }
 
   async function handleFileSelected(file) {
@@ -466,12 +603,22 @@ export function initQuoter() {
     }
 
     if (errorMsgEl) errorMsgEl.style.display = 'none';
-    currentAttachedFile = validation.fileData;
+    currentRawFile = file;
+    currentAttachedFile = {
+      ...validation.fileData,
+      fileKey: null,
+      fileUrl: null,
+      provider: 'pending',
+    };
 
     try {
       currentPreviewUrl = await readFileAsDataURL(file);
     } catch (_) {
       currentPreviewUrl = null;
+    }
+
+    if (!currentAttachedFile || currentAttachedFile.name !== validation.fileData.name) {
+      return;
     }
 
     if (fileNameEl) fileNameEl.textContent = currentAttachedFile.name;
@@ -487,6 +634,58 @@ export function initQuoter() {
 
     if (emptyState) emptyState.style.display = 'none';
     if (selectedState) selectedState.style.display = 'flex';
+
+    // Estrategia 1 (Lazy Upload): No subir al bucket de Cloudflare R2 todavía.
+    // Se mantiene en memoria del navegador para previsualización con cero latencia
+    if (uploadBadge) {
+      uploadBadge.style.display = 'inline-block';
+      uploadBadge.textContent = '📁 Listo para cotizar';
+      uploadBadge.style.background = 'rgba(2, 132, 199, 0.15)';
+      uploadBadge.style.color = 'var(--cerulean)';
+    }
+
+    if (progressWrap) {
+      progressWrap.style.display = 'none';
+    }
+
+    // Cargar imagen en memoria para renderizado en la bobina
+    if (currentPreviewUrl && typeof Image !== 'undefined') {
+      const img = new Image();
+      img.onload = () => {
+        currentPreviewImg = img;
+        currentRotation = 0;
+        const nw = img.naturalWidth || img.width || 1;
+        const nh = img.naturalHeight || img.height || 1;
+        currentImageAspectRatio = nh / nw;
+
+        if (aspectRatioRow) {
+          aspectRatioRow.style.display = 'flex';
+        }
+
+        if (keepAspectCheckbox && keepAspectCheckbox.checked) {
+          const currentW = parseFloat(widthInput.value) || 5;
+          const newH = Math.round((currentW * currentImageAspectRatio) * 10) / 10;
+          heightInput.value = (newH).toFixed(1);
+          handleCalculate();
+        } else {
+          redrawRollCanvas();
+        }
+      };
+      img.onerror = () => {
+        currentPreviewImg = null;
+        currentRotation = 0;
+        currentImageAspectRatio = null;
+        if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+        redrawRollCanvas();
+      };
+      img.src = currentPreviewUrl;
+    } else {
+      currentPreviewImg = null;
+      currentRotation = 0;
+      currentImageAspectRatio = null;
+      if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+      redrawRollCanvas();
+    }
   }
 
   if (dropzone && fileInput) {
@@ -527,11 +726,63 @@ export function initQuoter() {
   // Botón Agregar al Carrito
   const btnAddToCart = document.getElementById('btnAddToCart');
   if (btnAddToCart) {
-    btnAddToCart.addEventListener('click', () => {
+    btnAddToCart.addEventListener('click', async () => {
       const w = parseFloat(widthInput.value) || 5;
       const h = parseFloat(heightInput.value) || 5;
       const q = parseInt(qtyInput.value, 10) || 50;
       const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+      // Estrategia 1 (Lazy Upload): Si hay un archivo seleccionado y aún no se ha subido a R2, subir ahora
+      if (currentRawFile && currentAttachedFile && !currentAttachedFile.fileUrl) {
+        if (progressWrap && progressBar && progressPercent) {
+          progressWrap.style.display = 'block';
+          progressBar.style.width = '0%';
+          progressPercent.textContent = '0%';
+          if (progressLabel) progressLabel.textContent = 'Subiendo a Cloudflare R2...';
+        }
+
+        try {
+          const uploadRes = await uploadFileToStorage(currentRawFile, {
+            context: 'quotes',
+            onProgress: ({ percent }) => {
+              if (progressBar) progressBar.style.width = `${percent}%`;
+              if (progressPercent) progressPercent.textContent = `${percent}%`;
+            },
+          });
+
+          currentAttachedFile.fileKey = uploadRes.fileKey;
+          currentAttachedFile.fileUrl = uploadRes.fileUrl;
+          currentAttachedFile.provider = uploadRes.provider;
+
+          if (uploadBadge) {
+            uploadBadge.style.display = 'inline-block';
+            uploadBadge.textContent = uploadRes.provider === 'cloudflare-r2' ? '☁️ R2 Activo' : '💾 Local';
+            uploadBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+            uploadBadge.style.color = '#10b981';
+          }
+        } catch (uploadErr) {
+          console.warn('[Storage] Error al subir archivo en carrito a R2:', uploadErr);
+          currentAttachedFile.provider = 'local';
+        } finally {
+          if (progressWrap) progressWrap.style.display = 'none';
+        }
+      }
+
+      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const rollCanvas = document.getElementById('rollCanvas');
+      const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+      let canvasSnapshotUrl = null;
+      if (canvasSnapshot) {
+        try {
+          canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
+            canvasSnapshot,
+            `bobina_${w}x${h}cm.png`,
+            { context: 'orders' }
+          );
+        } catch (snapErr) {
+          console.warn('[Storage] Error al subir snapshot canvas al carrito:', snapErr);
+        }
+      }
 
       cartStore.addItem({
         title: `Stickers ${w} × ${h} cm`,
@@ -539,8 +790,16 @@ export function initQuoter() {
         heightCm: h,
         qty: q,
         includeCutting: cut,
-        fileInfo: currentAttachedFile,
+        actualLinearMeters: calculated.actualLinearMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        fileInfo: currentAttachedFile ? { ...currentAttachedFile } : null,
+        fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
         previewUrl: currentPreviewUrl,
+        canvasSnapshot: canvasSnapshot || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
+        rotationDeg: currentRotation || 0,
       });
 
       clearDropzoneFile();
@@ -558,29 +817,36 @@ export function initQuoter() {
       const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
 
       const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const rollCanvas = document.getElementById('rollCanvas');
+      const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+
       openSaveQuoteModal({
         widthCm: w,
         heightCm: h,
         qty: q,
-        linearMeters: calculated.linearMeters,
+        linearMeters: calculated.billableMeters,
         stickersPerRow: calculated.stickersPerRow,
         rows: calculated.rows,
         withCutting: cut,
-        unitRateQ: calculated.unitRateQ,
+        unitRateQ: calculated.tierRate,
         materialPriceQ: calculated.materialPriceQ,
-        cuttingPriceQ: calculated.cuttingPriceQ,
+        cuttingPriceQ: calculated.cuttingTotalQ,
         totalPriceQ: calculated.totalPriceQ,
+        rawFile: currentRawFile || null,
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
+        fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
+        fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
+        provider: currentAttachedFile ? currentAttachedFile.provider : null,
+        canvasSnapshot,
+        rotationDeg: currentRotation,
       });
     });
   }
 
   // Redimensionado responsivo del canvas
   window.addEventListener('resize', () => {
-    const canvas = document.getElementById('rollCanvas');
-    if (canvas && store.state.activeQuote) {
-      drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark');
-    }
+    redrawRollCanvas();
   });
 
   // Cálculo inicial
@@ -665,6 +931,12 @@ export function sendWhatsAppQuote(quote) {
     ? `• *Corte / Acabado:* Sí, corte recto con máquinas de precisión ${cutDetail}\n`
     : `• *Corte / Acabado:* No (Entrega estándar en rollo continuo)\n`;
 
+  const clientArtUrl = quote.fileUrl || quote.fileInfo?.fileUrl || null;
+  const clientArtText = clientArtUrl ? `• 🖼️ *Arte del cliente:* ${clientArtUrl}\n` : '';
+
+  const snapUrl = quote.canvasSnapshotUrl || (quote.canvasSnapshot && !quote.canvasSnapshot.startsWith('data:') ? quote.canvasSnapshot : null);
+  const snapText = snapUrl ? `• 📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+
   const text = `*KROMA LAB — Cotización UV DTF*\n\n` +
     `Hola, deseo consultar la siguiente cotización:\n` +
     `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
@@ -673,6 +945,8 @@ export function sendWhatsAppQuote(quote) {
     `• *Metros requeridos:* ${quote.billableMeters.toFixed(2)} m\n` +
     `• *Tarifa material:* Q${quote.tierRate.toFixed(2)} / m\n` +
     cuttingText +
+    clientArtText +
+    snapText +
     `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
     `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 

@@ -57,6 +57,55 @@ describe('Orders Store — Almacén Reactivo de Pedidos', () => {
     expect(fallbackOrder.metrics.grandTotalQ).toBe(140.0);
   });
 
+  it('preserva y almacena canvasSnapshot, rotationDeg y fileUrl al crear una orden y al mapear desde backend', () => {
+    const orderWithSnapshot = ordersStore.createOrder({
+      customer: { name: 'Empresa Técnica' },
+      cartTotals: {
+        canvasSnapshot: 'data:image/png;base64,sampleSnapOrder',
+        rotationDeg: 90,
+      },
+      items: [
+        {
+          title: 'Logo 5x5',
+          widthCm: 5,
+          heightCm: 5,
+          qty: 100,
+          canvasSnapshot: 'data:image/png;base64,sampleSnapOrder',
+          rotationDeg: 90,
+          fileUrl: 'https://r2.dev/logo5x5.png',
+          fileName: 'logo5x5.png',
+        }
+      ],
+    });
+
+    expect(orderWithSnapshot.canvasSnapshot).toBe('data:image/png;base64,sampleSnapOrder');
+    expect(orderWithSnapshot.rotationDeg).toBe(90);
+    expect(orderWithSnapshot.fileUrl).toBe('https://r2.dev/logo5x5.png');
+    expect(orderWithSnapshot.items[0].canvasSnapshot).toBe('data:image/png;base64,sampleSnapOrder');
+    expect(orderWithSnapshot.items[0].rotationDeg).toBe(90);
+
+    // Mapeo desde Backend conservando snapshots locales previos
+    const mapped = ordersStore._mapBackendOrder({
+      id: orderWithSnapshot.id,
+      code: orderWithSnapshot.id,
+      customerName: 'Empresa Técnica',
+      widthCm: 5,
+      heightCm: 5,
+      qty: 100,
+      linearMeters: 1.0,
+      materialPriceQ: 140,
+      totalAmountQ: 140,
+      status: 'IN_AUDLEY_QUEUE',
+      paymentStatus: 'PENDING',
+    });
+
+    expect(mapped.canvasSnapshot).toBe('data:image/png;base64,sampleSnapOrder');
+    expect(mapped.rotationDeg).toBe(90);
+    expect(mapped.fileUrl).toBe('https://r2.dev/logo5x5.png');
+    expect(mapped.items[0].canvasSnapshot).toBe('data:image/png;base64,sampleSnapOrder');
+    expect(mapped.items[0].rotationDeg).toBe(90);
+  });
+
   it('actualiza el estado de producción de una orden', () => {
     expect(ordersStore.updateProductionStatus('KL-00042', ORDER_STATUS.PRINTING)).toBe(true);
     const order = ordersStore.getOrderById('KL-00042');

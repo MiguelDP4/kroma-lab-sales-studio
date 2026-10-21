@@ -119,6 +119,10 @@ model Quote {
   status             String   @default("SAVED") // DRAFT, SAVED, CONVERTED, EXPIRED
   convertedOrderId   String?  // ID de orden generada si fue convertida
   convertedOrderCode String?  // Código de orden ej. "KL-2026-042"
+  // Archivo de diseño adjunto (Cloudflare R2)
+  fileUrl            String?
+  fileName           String?
+  fileSizeBytes      Int?
   notes              String?
   source             String?  // "web", "whatsapp", "direct"
 

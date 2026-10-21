@@ -127,6 +127,26 @@ export const quotesView = {
         <div id="quotesListContainer" style="display: flex; flex-direction: column; gap: 1rem;">
           ${renderQuotesCards(quotes)}
         </div>
+
+        <!-- Modal Lightbox para Ampliar Snapshot de Bobina -->
+        <div id="snapshotLightboxModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-label="Montaje en bobina">
+          <div class="modal-card" style="width: min(800px, 95vw); max-height: 92vh; padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">
+                📐 Disposición de Impresión en Bobina Audley (28 cm)
+              </h3>
+              <button type="button" id="btnCloseSnapshotLightbox" class="btn-close-modal" style="min-width: 44px; min-height: 44px;" aria-label="Cerrar ampliación">✕</button>
+            </div>
+            <div style="text-align: center; background: #090e1c; border-radius: var(--radius-sm); padding: 0.5rem; overflow: auto; border: 1px solid var(--border-color);">
+              <img id="snapshotLightboxImg" src="" alt="Montaje completo" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 2px;">
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+              <button type="button" id="btnDismissSnapshotLightbox" class="btn btn-secondary" style="min-height: 44px;">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   },
@@ -183,6 +203,11 @@ function renderQuotesCards(quotes) {
     }) : 'Reciente';
 
     // Generar texto para WhatsApp
+    const clientArtUrl = q.fileUrl || null;
+    const clientArtText = clientArtUrl ? `🖼️ *Arte del cliente:* ${clientArtUrl}\n` : '';
+    const snapUrl = q.canvasSnapshotUrl || (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null);
+    const snapText = snapUrl ? `📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+
     const waText = encodeURIComponent(
       `¡Hola! Te comparto la cotización formal de Kroma Lab UV DTF:\n` +
       `📌 *Proyecto:* ${q.projectName}\n` +
@@ -190,6 +215,8 @@ function renderQuotesCards(quotes) {
       `📏 *Medidas:* ${q.widthCm} x ${q.heightCm} cm (${q.qty} piezas)\n` +
       `📐 *Metros lineales:* ${Number(q.linearMeters).toFixed(2)} m\n` +
       `✂️ *Corte:* ${q.withCutting ? 'Despiece individual incluido' : 'En rollo continuo'}\n` +
+      clientArtText +
+      snapText +
       `💰 *Total:* Q${Number(q.totalPriceQ).toFixed(2)}\n\n` +
       `¿Deseas que lo ingresemos a cola de impresión?`
     );
@@ -252,6 +279,27 @@ function renderQuotesCards(quotes) {
             ✨ Barniz Relieve 3D
           </span>
         </div>
+
+        <!-- Previsualización del montaje en bobina (Snapshot técnico) -->
+        ${q.canvasSnapshot ? `
+          <div class="quote-snapshot-box" style="margin-top: -0.25rem; margin-bottom: 1rem; background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px;">
+              <img src="${q.canvasSnapshot}" alt="Montaje en bobina" class="quote-snapshot-thumb" data-snapshot="${q.canvasSnapshot}" style="width: 100px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; cursor: pointer;" title="Haz clic para ampliar la disposición en bobina">
+              <div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem;">
+                  <span>📐 Disposición en Bobina Audley</span>
+                  <span class="badge" style="font-size: 0.68rem; padding: 0.1rem 0.4rem; color: var(--cerulean); border-color: var(--cerulean);">28 cm</span>
+                </div>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">
+                  ${q.stickersPerRow} por fila • ${q.rows} filas • ${q.widthCm}×${q.heightCm} cm
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-expand-snapshot" data-snapshot="${q.canvasSnapshot}" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Ver montaje técnico en tamaño completo">
+              <span>🔍 Ampliar</span>
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Notas si existen -->
         ${q.notes ? `
@@ -355,7 +403,52 @@ function attachQuotesViewEvents() {
         handleDeleteQuote(quoteId);
         return;
       }
+
+      // 4. Ampliar Snapshot de Bobina en Lightbox
+      const btnSnapshot = e.target.closest('.btn-expand-snapshot, .quote-snapshot-thumb');
+      if (btnSnapshot) {
+        const snapshotUrl = btnSnapshot.dataset.snapshot;
+        if (snapshotUrl) {
+          openSnapshotLightbox(snapshotUrl);
+        }
+        return;
+      }
     });
+  }
+
+  // Escuchas para cerrar el Lightbox del Snapshot
+  const modalLightbox = document.getElementById('snapshotLightboxModal');
+  const btnCloseLightbox = document.getElementById('btnCloseSnapshotLightbox');
+  const btnDismissLightbox = document.getElementById('btnDismissSnapshotLightbox');
+
+  if (btnCloseLightbox) {
+    btnCloseLightbox.addEventListener('click', closeSnapshotLightbox);
+  }
+  if (btnDismissLightbox) {
+    btnDismissLightbox.addEventListener('click', closeSnapshotLightbox);
+  }
+  if (modalLightbox) {
+    modalLightbox.addEventListener('click', (e) => {
+      if (e.target === modalLightbox) {
+        closeSnapshotLightbox();
+      }
+    });
+  }
+}
+
+export function openSnapshotLightbox(imgUrl) {
+  const modal = document.getElementById('snapshotLightboxModal');
+  const img = document.getElementById('snapshotLightboxImg');
+  if (modal && img) {
+    img.src = imgUrl;
+    modal.style.display = 'block';
+  }
+}
+
+export function closeSnapshotLightbox() {
+  const modal = document.getElementById('snapshotLightboxModal');
+  if (modal) {
+    modal.style.display = 'none';
   }
 }
 

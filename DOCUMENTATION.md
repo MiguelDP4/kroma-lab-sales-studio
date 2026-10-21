@@ -610,15 +610,22 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
+| **Almacenamiento** | `GET /api/storage/status` | Estado operativo de almacenamiento (R2 o fallback local) y límites |
+| **Almacenamiento** | `POST /api/storage/presigned-url` | Generación de Pre-signed URL S3 (`PUT`) para subida directa cliente a R2 |
+| **Almacenamiento** | `POST /api/storage/confirm-upload` | Confirmación y vinculación de asset a `Order` o `Quote` |
+| **Almacenamiento** | `GET /api/storage/download-url` | URL temporal prefirmada de descarga para operador RIP Photoprint |
+| **Almacenamiento** | `DELETE /api/storage/:key` | Eliminación de archivo (`ADMIN` / `EMPLOYEE`) |
+| **Almacenamiento** | `PUT /api/storage/local-upload/:key` | Endpoint de subida binaria para desarrollo local offline |
+| **Almacenamiento** | `GET /api/storage/local-file/:key` | Endpoint de descarga binaria para desarrollo local offline |
 
 ### Calidad de Código y Pruebas Unitarias del Backend
 
-* **105 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 12 suites de pruebas).
+* **135 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 13 suites de pruebas).
 * **Métricas de Cobertura de Código (> 85% obligatoria):**
-  * Declaraciones (Statements): **98.27%**
-  * Ramas (Branches): **87.65%**
-  * Funciones (Functions): **100%**
-  * Líneas (Lines): **98.27%**
+  * Declaraciones (Statements): **97.54%**
+  * Ramas (Branches): **85.84%**
+  * Funciones (Functions): **100.00%**
+  * Líneas (Lines): **97.54%**
 
 ### Cliente HTTP Frontend (`api-client.js`)
 
@@ -674,18 +681,79 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
    * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
 11. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **632 pruebas unitarias pasando al 100% en 35 suites** de Vitest.
+   * **641 pruebas unitarias pasando al 100% en 35 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
-     * Declaraciones (Statements): **99.54%**
-     * Ramas (Branches): **85.07%**
-     * Funciones (Functions): **99.75%**
-     * Líneas (Lines): **99.54%**
+     * Declaraciones (Statements): **99.35%**
+     * Ramas (Branches): **85.13%**
+     * Funciones (Functions): **99.51%**
+     * Líneas (Lines): **99.35%**
 
 ---
 
-## 9. Almacenamiento de Archivos de Impresión (Cloudflare R2)
+## 9. Almacenamiento de Archivos de Impresión (Cloudflare R2 con Pre-signed URLs)
 
-* Los archivos `.PNG` y `.TIFF` a 300 DPI se almacenan directamente en un bucket de **Cloudflare R2** mediante URLs prefirmadas (Pre-signed S3 URLs) generadas por el backend, eliminando cualquier saturación de ancho de banda en el servidor de Render y garantizando **$0 de costo de transferencia (egress)**.
+### Arquitectura de Subida Directa ($0 Egress Fees)
+
+Para manejar artes pesados de impresión UV DTF (archivos TIFF, PNG transparentes a 300 DPI, PDF vectoriales, AI y PSD de hasta 100 MB) sin saturar la memoria RAM ni el ancho de banda del backend en Render, la plataforma implementa una arquitectura **Direct-to-Cloudflare R2** mediante URLs pre-firmadas S3 (AWS SDK v3 `@aws-sdk/client-s3` y `@aws-sdk/s3-request-presigner`):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Navegador / Cliente
+    participant Backend as Backend Express API
+    participant R2 as Cloudflare R2 Storage (S3 API)
+    participant RIP as Operador Taller Audley (Photoprint)
+
+    Cliente->>Backend: POST /api/storage/presigned-url (metadata: nombre, tamaño, contexto)
+    Backend->>Backend: Valida formato (.png, .tiff, .pdf, .svg, .ai, .psd) y tamaño (≤100 MB)
+    Backend->>R2: Genera PutObjectCommand pre-firmado (expira en 1 hora)
+    Backend-->>Cliente: Retorna uploadUrl (S3 PUT), publicUrl, fileKey y provider
+    Cliente->>R2: PUT directo con binario y progreso XMLHttpRequest (0% a 100%)
+    R2-->>Cliente: HTTP 200 OK
+    Cliente->>Backend: POST /api/storage/confirm-upload (vincula asset a Quote / Order)
+    Backend->>Backend: Actualiza fileUrl, fileName y fileSizeBytes en SQLite / PostgreSQL
+    RIP->>Backend: Consulta Hoja de Taller Audley
+    RIP->>R2: Descarga directa del archivo de alta resolución a 300 DPI para ripeo en Photoprint
+```
+
+### Características Técnicas del Servicio de Almacenamiento (`StorageService`)
+1. **Detección Automática de Credenciales y Fallback Local:**
+   * Si las variables `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET_NAME` están presentes en `.env`, inicializa el cliente `S3Client` apuntando al endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`.
+   * Si no están configuradas (entorno de desarrollo offline o pruebas CI), entra en modo **Fallback Local**, almacenando los archivos en la carpeta `uploads/` del backend mediante los endpoints `/api/storage/local-upload/:key` y `/api/storage/local-file/:key`.
+2. **Validación Estricta de Formatos y Seguridad:**
+   * Extensiones permitidas: `.png`, `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
+   * Límite de tamaño: **100 MB** por archivo.
+   * Sanitización de nombres de archivo y prefijos contextuales estructurados: `assets/quotes/<correlativo>/<timestamp>-<archivo>` o `assets/orders/<correlativo>/<timestamp>-<archivo>`.
+3. **Estrategia 1: Subida Diferida (Lazy Upload) contra "Window Shoppers":**
+   * Al seleccionar o arrastrar un archivo en el dropzone, este **NO** se sube inmediatamente al bucket de Cloudflare R2. Se valida localmente en memoria y genera un Data URL instantáneo para visualización inmediata con cero latencia (`📁 Listo para cotizar`).
+   * La subida binaria con Pre-signed URL a R2 se difiere hasta que el cliente asume un compromiso comercial real: al pulsar **"Guardar Cotización"** (en `save-quote-modal.js`) o **"Agregar al Carrito"** (en `app.js`).
+   * Evita almacenar archivos huérfanos o basura de usuarios que abandonan la página sin cotizar ni comprar.
+4. **Ilustración Fotorrealista en la Bobina Audley (`roll-simulator.js`):**
+   * El arte subido por el usuario se proyecta directamente sobre el canvas del simulador de bobina Audley (28 cm útiles), repitiéndose en cuadrícula según las dimensiones y acomodo calculados (`stickersPerRow` y `rows`).
+   * Si el archivo es un PNG transparente, el fondo transparente se respeta sobre el film de la bobina; si tiene fondo sólido, se proyecta idéntico al original.
+   * Cuenta con recorte perimetral curvo (`ctx.clip()`), línea exterior de troquelado/corte y brillo superior de barniz UV DTF (`rgba(255, 255, 255, 0.22)`).
+   * En caso de no adjuntar archivo o formatos no gráficos (PDF/AI), mantiene la representación vectorial azul tradicional.
+5. **Integración Frontend (`file-uploader.js` & Dropzone):**
+   * Función `uploadFileToStorage(file, options)` con barra de progreso visual en tiempo real y badge de estado `☁️ R2 Activo`.
+   * Prevención de condiciones de carrera si el usuario remueve o cambia el archivo mientras la subida está en curso.
+   * Vinculación automática con `cartStore`, `saveQuoteModal`, `quotesStore` y visualización de botón de descarga directa en `orders-view.js` (Ficha de Pedido y Hoja de Taller Audley).
+6. **Bloqueo y Adaptación de Relación de Aspecto ("Mantener relación de aspecto"):**
+   * Checkbox accesible y táctil (`min-height: 44px`, `#optKeepAspectRatio`) ubicado debajo de los campos de ancho y alto, visible únicamente cuando se ha cargado una imagen en el previsualizador.
+   * Al cargar el arte gráfico, se calcula la relación de aspecto natural (`naturalHeight / naturalWidth`), se preserva el ancho elegido por el cliente y se adapta el alto automáticamente sin distorsiones ni deformaciones ópticas.
+   * Modificar el ancho recalcula el alto proporcionalmente; modificar el alto ajusta el ancho respetando el límite físico de 28 cm útiles de bobina Audley.
+7. **Rotación Interactiva de Diseño 90° (`#btnRotateImage`):**
+   * Botón táctil ergonómico (`min-height: 44px`) que permite girar el arte 90° en el canvas de la bobina.
+   * Al presionar rotar, las dimensiones se intercambian automáticamente (`[ancho, alto] = [alto, ancho]`), limitando el nuevo ancho a 28 cm si el alto anterior era mayor, e invirtiendo la relación de aspecto.
+   * En el canvas de bobina, la imagen se renderiza centrada y rotada mediante `ctx.translate` y `ctx.rotate`, llenando con precisión el nuevo espacio sin alterar las proporciones originales.
+8. **Instantánea Técnica de Bobina Guardada con la Cotización (`generateCanvasSnapshot`):**
+   * Al guardar la cotización (`btnSaveQuote`), se genera un composite canvas en alta resolución (`image/png`) que integra un encabezado técnico oscuro de taller con datos clave: ancho, alto, cantidad de copias, piezas por fila, metros lineales y fecha de cotización.
+   * El snapshot se almacena junto al registro de la cotización (`canvasSnapshot`) y se visualiza tanto en el modal de confirmación como en las tarjetas de cotizaciones (`quotes-view.js`).
+   * Permite al operador de taller (Arte Modelo Dubois / Kroma Lab) o al cliente pulsar "🔍 Ampliar" para abrir un lightbox modal de alta fidelidad y verificar de inmediato en qué orientación y posición exacta solicitó el cliente la impresión.
+9. **Persistencia y Visor de Montaje Técnico en Pedidos y Hoja de Taller Audley:**
+   * Al crear o confirmar un pedido (desde el carrito multi-diseño, checkout modal o al convertir una cotización desde `quotesStore.convertToOrder`), se genera y almacena la instantánea técnica (`canvasSnapshot`) y los grados de rotación (`rotationDeg`) directamente en el ítem y en la orden.
+   * En la **Ficha de Detalle del Pedido** (`orders-view.js` / `showOrderDetailsModal`): se renderiza un recuadro de previsualización técnica (`order-canvas-snapshot-box`) con thumbnail, datos de tirada en bobina de 28 cm, grados de rotación, botón "🔍 Ampliar" y botón de descarga directa del arte original desde Cloudflare R2.
+   * En la **Hoja de Taller Audley UV DTF** (`orders-view.js` / `showWorkshopSheetModal`): se incorporó la sección destacada de taller `Montaje Técnico en Bobina Audley (Orientación Requerida)` para que el técnico/operador de la impresora Audley (e.g. en Photoprint RIP) configure exactamente la misma orientación, acomodo de filas y rotación requerida por el cliente antes de lanzar la impresión.
+   * Se incluyó el visor lightbox interactivo (`#orderSnapshotLightboxModal`) con soporte táctil, cierre por backdrop o tecla escape, garantizando una inspección minuciosa tanto en escritorio como en móviles (Mobile-First).
 
 ---
 
