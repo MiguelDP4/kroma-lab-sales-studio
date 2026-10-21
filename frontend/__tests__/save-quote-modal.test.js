@@ -202,6 +202,7 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
   });
 
   it('sube el archivo a Cloudflare R2 con Lazy Upload al enviar el formulario', async () => {
+    vi.useFakeTimers();
     const rawFile = new File(['dummy content'], 'sticker-logo.png', { type: 'image/png' });
     openSaveQuoteModal({
       widthCm: 6,
@@ -232,9 +233,13 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     expect(quote).toBeDefined();
     expect(quote.fileUrl).toBe('https://r2.kroma.gt/quotes/mock-key.png');
     expect(quote.fileKey).toBe('quotes/mock-key.png');
+
+    vi.advanceTimersByTime(800);
+    vi.useRealTimers();
   });
 
   it('maneja fallo en la subida a R2 manteniendo el guardado local de la cotización', async () => {
+    vi.useFakeTimers();
     fileUploader.uploadFileToStorage.mockRejectedValueOnce(new Error('Network upload failure'));
 
     const rawFile = new File(['offline'], 'offline-art.png', { type: 'image/png' });
@@ -264,6 +269,60 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     const quote = quotesStore.filterQuotes('Proyecto Offline')[0];
     expect(quote).toBeDefined();
     expect(quote.provider).toBe('local');
+
+    vi.advanceTimersByTime(800);
+    vi.useRealTimers();
+  });
+
+  it('muestra y oculta la vista previa del snapshot técnico de la bobina', () => {
+    // Caso con snapshot presente
+    openSaveQuoteModal({
+      widthCm: 8,
+      heightCm: 5,
+      qty: 100,
+      canvasSnapshot: 'data:image/png;base64,mockSnapshotData',
+      rotationDeg: 90,
+    });
+
+    const wrap = document.getElementById('saveQuoteSnapshotWrap');
+    const img = document.getElementById('saveQuoteSnapshotImg');
+    expect(wrap.style.display).toBe('flex');
+    expect(img.src).toContain('mockSnapshotData');
+
+    // Caso sin snapshot
+    openSaveQuoteModal({
+      widthCm: 5,
+      heightCm: 5,
+      qty: 50,
+      canvasSnapshot: null,
+    });
+    expect(wrap.style.display).toBe('none');
+  });
+
+  it('persiste canvasSnapshot y rotationDeg en quotesStore al guardar', async () => {
+    vi.useFakeTimers();
+    const fakeSnapshot = 'data:image/png;base64,mockCanvasBase64';
+    openSaveQuoteModal({
+      widthCm: 10,
+      heightCm: 5,
+      qty: 50,
+      canvasSnapshot: fakeSnapshot,
+      rotationDeg: 90,
+    });
+
+    document.getElementById('saveQuoteProjectName').value = 'Stickers Con Canvas';
+    document.getElementById('saveQuoteLeadName').value = 'Roberto Castillo';
+    document.getElementById('saveQuoteLeadPhone').value = '+502 5555-3333';
+
+    const ok = await handleSaveQuoteSubmit({ preventDefault: vi.fn() });
+    expect(ok).toBe(true);
+
+    const quote = quotesStore.filterQuotes('Stickers Con Canvas')[0];
+    expect(quote.canvasSnapshot).toBe(fakeSnapshot);
+    expect(quote.rotationDeg).toBe(90);
+
+    vi.advanceTimersByTime(800);
+    vi.useRealTimers();
   });
 
   it('no vuelve a inicializar si el modal ya existe en el DOM', () => {

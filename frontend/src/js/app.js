@@ -12,7 +12,7 @@ import { usersStore } from './modules/users-store.js';
 
 import { store } from './store.js';
 import { calculateQuote } from './modules/quoter-engine.js';
-import { drawRollCanvas } from './modules/roll-simulator.js';
+import { drawRollCanvas, generateCanvasSnapshot } from './modules/roll-simulator.js';
 import { BUSINESS_CONFIG } from '../shared/business-config.js';
 import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
@@ -92,23 +92,41 @@ export function initApp() {
 }
 
 /**
- * Estado en memoria para imagen activa del simulador de bobina
+ * Estado en memoria para imagen activa, rotación y relación de aspecto del simulador de bobina
  */
 let currentPreviewImg = null;
+let currentRotation = 0;
+let currentImageAspectRatio = null;
 
 export function getActivePreviewImg() {
   return currentPreviewImg;
 }
 
-export function setActivePreviewImg(img) {
+export function getActiveRotation() {
+  return currentRotation;
+}
+
+export function getActiveImageAspectRatio() {
+  return currentImageAspectRatio;
+}
+
+export function setActivePreviewImg(img, rotation = 0) {
   currentPreviewImg = img;
+  currentRotation = rotation;
+  if (img && (img.naturalWidth || img.width)) {
+    const nw = img.naturalWidth || img.width || 1;
+    const nh = img.naturalHeight || img.height || 1;
+    currentImageAspectRatio = nh / nw;
+  } else {
+    currentImageAspectRatio = null;
+  }
   redrawRollCanvas();
 }
 
 export function redrawRollCanvas() {
   const canvas = document.getElementById('rollCanvas');
   if (canvas && store.state.activeQuote) {
-    drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark', currentPreviewImg);
+    drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark', currentPreviewImg, currentRotation);
   }
 }
 
@@ -402,6 +420,9 @@ export function initQuoter() {
   const heightInput = document.getElementById('stickerHeight');
   const qtyInput = document.getElementById('stickerQty');
   const cuttingCheckbox = document.getElementById('optCutting');
+  const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+  const btnRotate = document.getElementById('btnRotateImage');
+  const aspectRatioRow = document.getElementById('aspectRatioRow');
 
   if (!widthInput || !heightInput || !qtyInput) return;
 
@@ -417,11 +438,60 @@ export function initQuoter() {
     redrawRollCanvas();
   }
 
-  widthInput.addEventListener('input', handleCalculate);
-  heightInput.addEventListener('input', handleCalculate);
+  widthInput.addEventListener('input', () => {
+    if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
+      const w = parseFloat(widthInput.value);
+      if (!isNaN(w) && w > 0) {
+        heightInput.value = (w * currentImageAspectRatio).toFixed(1);
+      }
+    }
+    handleCalculate();
+  });
+
+  heightInput.addEventListener('input', () => {
+    if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio && currentImageAspectRatio > 0) {
+      const h = parseFloat(heightInput.value);
+      if (!isNaN(h) && h > 0) {
+        const newW = Math.min(BUSINESS_CONFIG.printableWidthCm, h / currentImageAspectRatio);
+        widthInput.value = newW.toFixed(1);
+      }
+    }
+    handleCalculate();
+  });
+
   qtyInput.addEventListener('input', handleCalculate);
   if (cuttingCheckbox) {
     cuttingCheckbox.addEventListener('change', handleCalculate);
+  }
+
+  if (keepAspectCheckbox) {
+    keepAspectCheckbox.addEventListener('change', () => {
+      if (keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
+        const w = parseFloat(widthInput.value) || 5;
+        heightInput.value = (w * currentImageAspectRatio).toFixed(1);
+        handleCalculate();
+      }
+    });
+  }
+
+  if (btnRotate) {
+    btnRotate.addEventListener('click', () => {
+      currentRotation = (currentRotation + 90) % 360;
+
+      if (currentImageAspectRatio && currentImageAspectRatio > 0) {
+        currentImageAspectRatio = 1 / currentImageAspectRatio;
+      }
+
+      const oldW = parseFloat(widthInput.value) || 5;
+      const oldH = parseFloat(heightInput.value) || 5;
+      const newW = Math.min(BUSINESS_CONFIG.printableWidthCm, oldH);
+      const newH = oldW;
+
+      widthInput.value = newW.toFixed(1);
+      heightInput.value = newH.toFixed(1);
+
+      handleCalculate();
+    });
   }
 
   // Configurar botones de presets rápidos
@@ -469,6 +539,11 @@ export function initQuoter() {
     currentRawFile = null;
     currentPreviewUrl = null;
     currentPreviewImg = null;
+    currentRotation = 0;
+    currentImageAspectRatio = null;
+
+    if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+
     redrawRollCanvas();
 
     if (fileInput) fileInput.value = '';
@@ -541,15 +616,37 @@ export function initQuoter() {
       const img = new Image();
       img.onload = () => {
         currentPreviewImg = img;
-        redrawRollCanvas();
+        currentRotation = 0;
+        const nw = img.naturalWidth || img.width || 1;
+        const nh = img.naturalHeight || img.height || 1;
+        currentImageAspectRatio = nh / nw;
+
+        if (aspectRatioRow) {
+          aspectRatioRow.style.display = 'flex';
+        }
+
+        if (keepAspectCheckbox && keepAspectCheckbox.checked) {
+          const currentW = parseFloat(widthInput.value) || 5;
+          const newH = Math.round((currentW * currentImageAspectRatio) * 10) / 10;
+          heightInput.value = (newH).toFixed(1);
+          handleCalculate();
+        } else {
+          redrawRollCanvas();
+        }
       };
       img.onerror = () => {
         currentPreviewImg = null;
+        currentRotation = 0;
+        currentImageAspectRatio = null;
+        if (aspectRatioRow) aspectRatioRow.style.display = 'none';
         redrawRollCanvas();
       };
       img.src = currentPreviewUrl;
     } else {
       currentPreviewImg = null;
+      currentRotation = 0;
+      currentImageAspectRatio = null;
+      if (aspectRatioRow) aspectRatioRow.style.display = 'none';
       redrawRollCanvas();
     }
   }
@@ -659,6 +756,9 @@ export function initQuoter() {
       const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
 
       const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const rollCanvas = document.getElementById('rollCanvas');
+      const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+
       openSaveQuoteModal({
         widthCm: w,
         heightCm: h,
@@ -677,6 +777,8 @@ export function initQuoter() {
         fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
         fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
         provider: currentAttachedFile ? currentAttachedFile.provider : null,
+        canvasSnapshot,
+        rotationDeg: currentRotation,
       });
     });
   }

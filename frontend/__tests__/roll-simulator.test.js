@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { roundRect, drawRollCanvas } from '../src/js/modules/roll-simulator.js';
+import { roundRect, drawRollCanvas, generateCanvasSnapshot } from '../src/js/modules/roll-simulator.js';
 
 describe('Roll Simulator — Canvas y Gráficos', () => {
   it('ejecuta roundRect trazando las esquinas en el contexto 2D', () => {
@@ -265,5 +265,227 @@ describe('Roll Simulator — Canvas y Gráficos', () => {
     expect(() => drawRollCanvas({}, null)).not.toThrow();
     expect(() => drawRollCanvas(null, {})).not.toThrow();
     expect(() => drawRollCanvas({ getContext: () => null }, {})).not.toThrow();
+  });
+
+  it('dibuja imagen con rotación de 90° e intercambia dimensiones relativas de renderizado', () => {
+    const ctx = {
+      scale: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      strokeRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      arcTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      clip: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      drawImage: vi.fn(),
+    };
+
+    const canvas = {
+      getContext: vi.fn().mockReturnValue(ctx),
+      getBoundingClientRect: vi.fn().mockReturnValue({ width: 580, height: 200 }),
+      width: 0,
+      height: 0,
+    };
+
+    const quote = {
+      widthCm: 8,
+      heightCm: 5,
+      qty: 1,
+      stickersPerRow: 1,
+      rows: 1,
+    };
+
+    const mockImage = {
+      complete: true,
+      naturalWidth: 800,
+      naturalHeight: 500,
+    };
+
+    drawRollCanvas(canvas, quote, true, mockImage, 90);
+
+    expect(ctx.translate).toHaveBeenCalled();
+    expect(ctx.rotate).toHaveBeenCalledWith((90 * Math.PI) / 180);
+    expect(ctx.drawImage).toHaveBeenCalledWith(
+      mockImage,
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number)
+    );
+  });
+
+  it('dibuja imagen con rotación de 180° sin intercambiar ejes', () => {
+    const ctx = {
+      scale: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      strokeRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      arcTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      clip: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      drawImage: vi.fn(),
+    };
+
+    const canvas = {
+      getContext: vi.fn().mockReturnValue(ctx),
+      getBoundingClientRect: vi.fn().mockReturnValue({ width: 580, height: 200 }),
+      width: 0,
+      height: 0,
+    };
+
+    const quote = {
+      widthCm: 8,
+      heightCm: 5,
+      qty: 1,
+      stickersPerRow: 1,
+      rows: 1,
+    };
+
+    const mockImage = {
+      complete: true,
+      naturalWidth: 800,
+      naturalHeight: 500,
+    };
+
+    drawRollCanvas(canvas, quote, true, mockImage, 180);
+
+    expect(ctx.rotate).toHaveBeenCalledWith((180 * Math.PI) / 180);
+    expect(ctx.drawImage).toHaveBeenCalled();
+  });
+
+  it('generateCanvasSnapshot genera un composite canvas con encabezado técnico y retorna dataURL', () => {
+    const mockCtx = {
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      drawImage: vi.fn(),
+    };
+
+    const originalCreateElement = document.createElement;
+    document.createElement = vi.fn().mockImplementation((tag) => {
+      if (tag === 'canvas') {
+        return {
+          getContext: vi.fn().mockReturnValue(mockCtx),
+          toDataURL: vi.fn().mockReturnValue('data:image/png;base64,mockCompositeDataUrl'),
+          width: 0,
+          height: 0,
+        };
+      }
+      return originalCreateElement.call(document, tag);
+    });
+
+    const sourceCanvas = {
+      width: 580,
+      height: 200,
+      toDataURL: vi.fn().mockReturnValue('data:image/png;base64,mockSourceUrl'),
+    };
+
+    const quote = {
+      widthCm: 5,
+      heightCm: 5,
+      qty: 50,
+      stickersPerRow: 5,
+      rows: 10,
+      linearMeters: 1.0,
+      billableMeters: 1.0,
+    };
+
+    const snapshot = generateCanvasSnapshot(sourceCanvas, quote);
+    expect(snapshot).toBe('data:image/png;base64,mockCompositeDataUrl');
+    expect(mockCtx.fillRect).toHaveBeenCalled();
+    expect(mockCtx.fillText).toHaveBeenCalledWith(
+      expect.stringContaining('KROMA LAB — DISPOSICIÓN EN BOBINA AUDLEY'),
+      expect.any(Number),
+      expect.any(Number)
+    );
+    expect(mockCtx.drawImage).toHaveBeenCalledWith(sourceCanvas, 0, 64);
+
+    document.createElement = originalCreateElement;
+  });
+
+  it('generateCanvasSnapshot maneja canvas o quote nulo retornando null', () => {
+    expect(generateCanvasSnapshot(null, null)).toBeNull();
+    expect(generateCanvasSnapshot({}, null)).toBeNull();
+    expect(generateCanvasSnapshot(null, {})).toBeNull();
+  });
+
+  it('generateCanvasSnapshot usa fallback seguro cuando getContext o createElement falla', () => {
+    const sourceCanvas = {
+      width: 580,
+      height: 200,
+      toDataURL: vi.fn().mockReturnValue('data:image/png;base64,fallbackUrl'),
+    };
+
+    const originalCreateElement = document.createElement;
+    document.createElement = vi.fn().mockReturnValue(null);
+
+    const snapshot = generateCanvasSnapshot(sourceCanvas, { widthCm: 5, heightCm: 5, qty: 10 });
+    expect(snapshot).toBe('data:image/png;base64,fallbackUrl');
+
+    document.createElement = originalCreateElement;
+  });
+
+  it('generateCanvasSnapshot usa fallback seguro cuando getContext retorna null', () => {
+    const sourceCanvas = {
+      width: 580,
+      height: 200,
+      toDataURL: vi.fn().mockReturnValue('data:image/png;base64,fallbackUrlContextNull'),
+    };
+
+    const originalCreateElement = document.createElement;
+    document.createElement = vi.fn().mockImplementation((tag) => {
+      if (tag === 'canvas') {
+        return {
+          getContext: vi.fn().mockReturnValue(null),
+          width: 0,
+          height: 0,
+        };
+      }
+      return originalCreateElement.call(document, tag);
+    });
+
+    const snapshot = generateCanvasSnapshot(sourceCanvas, { widthCm: 5, heightCm: 5, qty: 10 });
+    expect(snapshot).toBe('data:image/png;base64,fallbackUrlContextNull');
+
+    document.createElement = originalCreateElement;
+  });
+
+  it('generateCanvasSnapshot captura errores inesperados y retorna null', () => {
+    const brokenCanvas = {
+      width: 580,
+      height: 200,
+    };
+    const originalCreateElement = document.createElement;
+    document.createElement = vi.fn().mockImplementation((tag) => {
+      if (tag === 'canvas') {
+        return {
+          getContext: vi.fn().mockImplementation(() => {
+            throw new Error('Canvas boom');
+          }),
+        };
+      }
+      return originalCreateElement.call(document, tag);
+    });
+
+    const res = generateCanvasSnapshot(brokenCanvas, { widthCm: 5, heightCm: 5, qty: 10 });
+    expect(res).toBeNull();
+
+    document.createElement = originalCreateElement;
   });
 });

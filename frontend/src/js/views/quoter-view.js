@@ -48,6 +48,17 @@ export const quoterView = {
             </div>
           </div>
 
+          <!-- Controles de relación de aspecto y rotación (visible cuando hay imagen en previsualizador) -->
+          <div id="aspectRatioRow" style="display: none; margin-top: -0.25rem; margin-bottom: 1.25rem; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <label class="checkbox-wrapper" for="optKeepAspectRatio" style="margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); min-height: 44px;">
+              <input type="checkbox" id="optKeepAspectRatio" checked style="width: 20px; height: 20px; accent-color: var(--cerulean); cursor: pointer;">
+              <span>🔒 Mantener relación de aspecto</span>
+            </label>
+            <button type="button" id="btnRotateImage" class="btn btn-secondary" style="min-height: 44px; font-size: 0.85rem; padding: 0.4rem 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;" title="Rotar diseño 90° e intercambiar ancho y alto">
+              <span>🔄 Rotar 90°</span>
+            </button>
+          </div>
+
           <!-- Presets Rápidos -->
           <div class="form-group">
             <span class="form-label" style="margin-bottom: 0.35rem;">Medidas comunes de referencia:</span>

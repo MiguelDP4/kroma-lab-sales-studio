@@ -7,6 +7,7 @@
 import { store } from '../store.js';
 import { quotesStore } from '../modules/quotes-store.js';
 import { uploadFileToStorage } from '../modules/file-uploader.js';
+import { generateCanvasSnapshot } from '../modules/roll-simulator.js';
 
 let modalInitialized = false;
 let currentQuoteData = null;
@@ -54,6 +55,12 @@ export function initSaveQuoteModal() {
           </div>
           <div id="saveQuoteCuttingSummary" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
             Entrega: Rollo continuo sin corte
+          </div>
+          <div id="saveQuoteSnapshotWrap" style="display: none; margin-top: 0.65rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; align-items: center; gap: 0.75rem;">
+            <img id="saveQuoteSnapshotImg" src="" alt="Montaje en bobina" style="width: 100px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+            <span style="font-size: 0.78rem; color: var(--text-secondary);">
+              📐 <strong>Disposición técnica en bobina registrada</strong>
+            </span>
           </div>
         </div>
 
@@ -186,6 +193,18 @@ export function openSaveQuoteModal(quoteData = null) {
       : '📦 Entrega en rollo continuo sin corte';
   }
 
+  // Previsualización del snapshot de la bobina si está disponible
+  const snapshotWrap = document.getElementById('saveQuoteSnapshotWrap');
+  const snapshotImg = document.getElementById('saveQuoteSnapshotImg');
+  if (snapshotWrap && snapshotImg) {
+    if (currentQuoteData.canvasSnapshot) {
+      snapshotImg.src = currentQuoteData.canvasSnapshot;
+      snapshotWrap.style.display = 'flex';
+    } else {
+      snapshotWrap.style.display = 'none';
+    }
+  }
+
   // Pre-llenar datos de usuario logeado si está autenticado
   const user = store.state.user;
   const projectInput = document.getElementById('saveQuoteProjectName');
@@ -242,6 +261,9 @@ export function getCurrentQuoterSpecs() {
   const stickersPerRow = parseInt(document.getElementById('resStickersPerRow')?.textContent || '1', 10) || 1;
   const rows = parseInt(document.getElementById('resRows')?.textContent || '1', 10) || 1;
 
+  const rollCanvas = typeof document !== 'undefined' ? document.getElementById('rollCanvas') : null;
+  const canvasSnapshot = rollCanvas ? generateCanvasSnapshot(rollCanvas, { widthCm, heightCm, qty, linearMeters, stickersPerRow, rows }) : null;
+
   return {
     widthCm,
     heightCm,
@@ -255,6 +277,8 @@ export function getCurrentQuoterSpecs() {
     cuttingPriceQ: withCutting ? Math.max(qty * 0.35, 25.0) : 0,
     totalPriceQ,
     finishType: 'GLOSSY_VARNISH',
+    canvasSnapshot,
+    rotationDeg: 0,
   };
 }
 
@@ -318,6 +342,8 @@ export async function handleSaveQuoteSubmit(e) {
     companyName,
     notes,
     ...specs,
+    canvasSnapshot: specs.canvasSnapshot || null,
+    rotationDeg: specs.rotationDeg || 0,
     fileName: specs.fileName || (specs.rawFile ? specs.rawFile.name : null),
     fileUrl: specs.fileUrl || null,
     fileKey: specs.fileKey || null,
