@@ -6,14 +6,23 @@ export default defineConfig({
     environment: 'node',
     fileParallelism: false,
     testTimeout: 15000,
+    env: {
+      NODE_ENV: 'test',
+      DATABASE_URL: 'file:./test.db',
+    },
+    setupFiles: ['./vitest.setup.ts'],
+    globalSetup: ['./vitest.global-setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
         'src/index.ts',
         'src/db/seed.ts',
+        'src/db/prisma.ts',
         '*.config.ts',
         'vitest.config.ts',
+        'vitest.setup.ts',
+        'vitest.global-setup.ts',
         'dist/**',
         '**/*.test.ts',
         'node_modules/**',

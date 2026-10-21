@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { quotesView, resetQuotesViewFilters } from '../src/js/views/quotes-view.js';
 import { quotesStore } from '../src/js/modules/quotes-store.js';
+import { store } from '../src/js/store.js';
 
 describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orden', () => {
   beforeEach(() => {
     localStorage.clear();
     quotesStore.resetToDefaults();
     resetQuotesViewFilters();
+    store.state.user = { role: 'ADMIN', name: 'Miguel Dubois' };
     vi.spyOn(quotesStore, 'syncWithApi').mockResolvedValue([]);
     document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
   });
@@ -177,6 +179,16 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
       const feedback = document.getElementById('quotesViewFeedback');
       expect(feedback.textContent).toContain('Error al convertir cotización');
     });
+  });
+
+  it('no muestra el botón de convertir a producción si el usuario es CUSTOMER', () => {
+    store.state.user = { role: 'CUSTOMER', name: 'Cliente B2B' };
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    const btnConvert = document.querySelector('.btn-convert-quote');
+    expect(btnConvert).toBeNull();
+    expect(document.body.innerHTML).toContain('Pendiente de Confirmación');
   });
 
   it('muestra mensaje de error si falla la eliminación de una cotización', () => {

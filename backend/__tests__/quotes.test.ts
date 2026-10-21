@@ -175,6 +175,15 @@ describe('Quotes API (/api/quotes)', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rechaza con 403 si un cliente CUSTOMER intenta convertir una cotización a orden de producción', async () => {
+    const res = await request(app)
+      .post(`/api/quotes/${createdQuoteId}/convert`)
+      .set('Authorization', `Bearer ${customerToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
   it('elimina una cotización guardada', async () => {
     // Crear cotización temporal para eliminar
     const tempRes = await request(app)

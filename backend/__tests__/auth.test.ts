@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { prisma } from '../src/db/prisma';
 import request from 'supertest';
 import { createApp } from '../src/app';
 import { seedDatabase } from '../src/db/seed';
@@ -12,6 +13,11 @@ describe('Auth API (/api/auth)', () => {
 
   beforeAll(async () => {
     await seedDatabase();
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { email: { contains: '@pruebas.gt' } } });
+    await prisma.customer.deleteMany({ where: { companyName: 'Empresa Test S.A.' } });
   });
 
   it('inicia sesión exitosamente con credenciales válidas de Admin', async () => {
