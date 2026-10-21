@@ -112,6 +112,10 @@ model Order {
   fileSizeBytes  Int?
   notes          String?
 
+  // Comprobante de pago o transferencia bancaria (Cloudflare R2)
+  paymentReceiptUrl      String?
+  paymentReceiptFileName String?
+
   dispatchNotes  DispatchNote[]
   payments       Payment[]
 
@@ -250,9 +254,10 @@ model WorkshopConfig {
   rateTier5             Decimal  @default(95.0) @db.Decimal(10, 2)
   cuttingFeePerPieceQ   Decimal  @default(0.08) @db.Decimal(10, 2)
 
-  bankBiAccount         String   @default("144-002931-2")
-  bankBacAccount        String   @default("90-341902-1")
-  bankBanruralAccount   String   @default("3033-09182-1")
+  bankBiAccount         String   @default("5371667253")
+  bankBacAccount        String?
+  bankGytAccount        String?
+  bankBanruralAccount   String?
   whatsappNumber        String   @default("+502 5555-0000")
 
   filmACostPerM         Decimal  @default(6.30) @db.Decimal(10, 2)

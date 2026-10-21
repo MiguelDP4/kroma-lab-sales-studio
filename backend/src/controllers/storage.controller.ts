@@ -9,7 +9,7 @@ const presignedUrlSchema = z.object({
   fileName: z.string().min(1, 'El nombre de archivo es requerido.'),
   fileType: z.string().min(1, 'El tipo MIME es requerido.'),
   fileSizeBytes: z.number().positive('El tamaño debe ser mayor a 0 bytes.'),
-  context: z.enum(['orders', 'quotes', 'general']).optional().default('general'),
+  context: z.enum(['orders', 'quotes', 'payments', 'general']).optional().default('general'),
   referenceCode: z.string().nullable().optional(),
 });
 
@@ -20,6 +20,8 @@ const confirmUploadSchema = z.object({
   fileSizeBytes: z.number().nonnegative().nullable().optional(),
   orderId: z.string().nullable().optional(),
   quoteId: z.string().nullable().optional(),
+  isReceipt: z.boolean().optional(),
+  context: z.string().optional(),
 });
 
 export async function getPresignedUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -49,14 +51,24 @@ export async function confirmUpload(req: AuthenticatedRequest, res: Response, ne
     if (data.orderId) {
       const order = await prisma.order.findUnique({ where: { id: data.orderId } });
       if (order) {
-        await prisma.order.update({
-          where: { id: data.orderId },
-          data: {
-            fileUrl: data.fileUrl,
-            fileName: data.fileName,
-            fileSizeBytes: data.fileSizeBytes,
-          },
-        });
+        if (data.isReceipt || data.context === 'payments') {
+          await prisma.order.update({
+            where: { id: data.orderId },
+            data: {
+              paymentReceiptUrl: data.fileUrl,
+              paymentReceiptFileName: data.fileName,
+            },
+          });
+        } else {
+          await prisma.order.update({
+            where: { id: data.orderId },
+            data: {
+              fileUrl: data.fileUrl,
+              fileName: data.fileName,
+              fileSizeBytes: data.fileSizeBytes,
+            },
+          });
+        }
       }
     }
 

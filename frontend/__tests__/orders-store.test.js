@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ordersStore, PAYMENT_STATUS } from '../src/js/modules/orders-store.js';
+import { apiClient } from '../src/js/modules/api-client.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
 
 describe('Orders Store — Almacén Reactivo de Pedidos', () => {
@@ -181,6 +182,84 @@ describe('Orders Store — Almacén Reactivo de Pedidos', () => {
 
     getItemSpy.mockRestore();
     setItemSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+  it('gestiona comprobantes de pago bancarios al crear y adjuntar boletas', async () => {
+    // 1. Crear orden con boleta inicial
+    const orderWithReceipt = ordersStore.createOrder({
+      customer: { name: 'Cliente con Boleta' },
+      cartTotals: {
+        totalBillableMeters: 1.0,
+        grandTotalQ: 140.0,
+      },
+      paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta_bi.jpg',
+      paymentReceiptFileName: 'boleta_bi.jpg',
+    });
+
+    expect(orderWithReceipt.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_bi.jpg');
+    expect(orderWithReceipt.paymentReceiptFileName).toBe('boleta_bi.jpg');
+
+    // 2. Mapear desde Backend conservando boleta
+    const mapped = ordersStore._mapBackendOrder({
+      id: orderWithReceipt.id,
+      code: orderWithReceipt.id,
+      customerName: 'Cliente con Boleta',
+      widthCm: 5,
+      heightCm: 5,
+      qty: 50,
+      linearMeters: 1.0,
+      materialPriceQ: 140,
+      totalAmountQ: 140,
+      status: 'PENDING_REVIEW',
+      paymentStatus: 'PARTIAL',
+      paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta_bi_actualizada.jpg',
+      paymentReceiptFileName: 'boleta_bi_actualizada.jpg',
+    });
+    expect(mapped.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_bi_actualizada.jpg');
+    expect(mapped.paymentReceiptFileName).toBe('boleta_bi_actualizada.jpg');
+
+    // 3. attachPaymentReceipt exitoso y sincronizado con API
+    const attachSpy = vi.spyOn(apiClient.orders, 'attachReceipt').mockResolvedValueOnce({
+      success: true,
+      order: {
+        id: orderWithReceipt.id,
+        paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta_confirmada.pdf',
+        paymentReceiptFileName: 'boleta_confirmada.pdf',
+        amountPaidQ: 70.0,
+        paymentStatus: PAYMENT_STATUS.PARTIAL,
+      },
+    });
+
+    const updated = await ordersStore.attachPaymentReceipt(orderWithReceipt.id, {
+      paymentReceiptUrl: 'https://pub-r2.dev/assets/payments/boleta_confirmada.pdf',
+      paymentReceiptFileName: 'boleta_confirmada.pdf',
+      amountPaidQ: 70.0,
+      paymentStatus: PAYMENT_STATUS.PARTIAL,
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_confirmada.pdf');
+    expect(updated.amountPaidQ).toBe(70.0);
+    expect(updated.paymentStatus).toBe(PAYMENT_STATUS.PARTIAL);
+    expect(attachSpy).toHaveBeenCalled();
+
+    // 4. attachPaymentReceipt tolerante a error en backend
+    attachSpy.mockRejectedValueOnce(new Error('Backend offline'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const fallbackUpdate = await ordersStore.attachPaymentReceipt(orderWithReceipt.id, {
+      amountPaidQ: 140.0,
+      paymentStatus: PAYMENT_STATUS.PAID,
+    });
+    expect(fallbackUpdate.paymentStatus).toBe(PAYMENT_STATUS.PAID);
+    expect(fallbackUpdate.amountPaidQ).toBe(140.0);
+    expect(warnSpy).toHaveBeenCalled();
+
+    // 5. attachPaymentReceipt en orden inexistente retorna null
+    const nonExistent = await ordersStore.attachPaymentReceipt('INEXISTENTE-999', { amountPaidQ: 50 });
+    expect(nonExistent).toBeNull();
+
+    attachSpy.mockRestore();
     warnSpy.mockRestore();
   });
 });
