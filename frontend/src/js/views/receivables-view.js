@@ -63,11 +63,9 @@ export const receivablesView = {
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <span style="font-size: 1.5rem;">🏦</span>
             <div>
-              <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">Cuentas Bancarias para Pagos de Clientes (Ahorros GTQ):</div>
+              <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">Cuenta Monetaria para Pagos de Clientes (GTQ):</div>
               <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                <span><strong>BI:</strong> 4422909 (Ahorro)</span>
-                <span><strong>GyT:</strong> 01080279685 (Ahorro)</span>
-                <span><strong>BAC:</strong> 972095707 (Ahorro)</span>
+                <span><strong>BI:</strong> 5371667253 (Monetaria)</span>
                 <span><em>A nombre de: Miguel Angel Dubois / Kroma Lab</em></span>
               </div>
             </div>
@@ -453,10 +451,8 @@ export const receivablesView = {
     if (btnCopyAccounts) {
       btnCopyAccounts.addEventListener('click', () => {
         const text = [
-          '🏦 *Cuentas Bancarias para Pagos — Kroma Lab UV DTF*',
-          '• Banco Industrial (Ahorro): 4422909',
-          '• Banco G&T Continental (Ahorro): 01080279685',
-          '• BAC Credomatic (Ahorro): 972095707',
+          '🏦 *Cuenta Monetaria para Pagos — Kroma Lab UV DTF*',
+          '• Banco Industrial (Monetaria): 5371667253',
           'A nombre de: Miguel Angel Dubois / Kroma Lab',
         ].join('\n');
 
