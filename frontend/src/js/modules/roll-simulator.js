@@ -24,11 +24,13 @@ export function roundRect(ctx, x, y, width, height, radius, fill = true, stroke 
 
 /**
  * Renderiza los stickers en el Canvas respetando proporciones reales.
+ * Si se proporciona imageElement cargado, dibuja el arte del usuario en cada sticker.
  * @param {HTMLCanvasElement} canvas
  * @param {object} quote Resultado de calculateQuote
  * @param {boolean} [isDark=true]
+ * @param {HTMLImageElement|ImageBitmap|HTMLCanvasElement|null} [imageElement=null]
  */
-export function drawRollCanvas(canvas, quote, isDark = true) {
+export function drawRollCanvas(canvas, quote, isDark = true, imageElement = null) {
   if (!canvas || !quote) return;
   const ctx = canvas.getContext ? canvas.getContext('2d') : null;
   if (!ctx) return;
@@ -65,6 +67,13 @@ export function drawRollCanvas(canvas, quote, isDark = true) {
   ctx.strokeRect(paddingX, 10, availableWidthPx, height - 20);
   if (ctx.setLineDash) ctx.setLineDash([]);
 
+  // Validar si la imagen está lista para dibujarse
+  const hasImage = Boolean(
+    imageElement &&
+    (imageElement.complete === undefined || imageElement.complete) &&
+    (imageElement.naturalWidth === undefined || imageElement.naturalWidth > 0 || imageElement.width > 0)
+  );
+
   // Dibujar stickers
   const itemsPerRow = quote.stickersPerRow;
   let drawnCount = 0;
@@ -88,12 +97,37 @@ export function drawRollCanvas(canvas, quote, isDark = true) {
       const x = startX + (c * (stickerWidthPx + gapPx));
       const y = 15 + (r * (stickerHeightPx + gapPx));
 
-      roundRect(ctx, x, y, stickerWidthPx, stickerHeightPx, 4, true, true);
+      if (hasImage) {
+        // Recorte redondeado del sticker para la imagen del cliente
+        if (ctx.save) ctx.save();
+        roundRect(ctx, x, y, stickerWidthPx, stickerHeightPx, 4, false, false);
+        if (ctx.clip) ctx.clip();
+        try {
+          if (ctx.drawImage) {
+            ctx.drawImage(imageElement, x, y, stickerWidthPx, stickerHeightPx);
+          }
+        } catch (_) {
+          ctx.fillStyle = isDark ? 'rgba(28, 114, 147, 0.45)' : 'rgba(6, 90, 130, 0.35)';
+          ctx.fillRect(x, y, stickerWidthPx, stickerHeightPx);
+        }
+        if (ctx.restore) ctx.restore();
 
-      // Simulación de brillo de barniz UV
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-      ctx.fillRect(x + 2, y + 2, Math.max(2, stickerWidthPx * 0.4), 3);
-      ctx.fillStyle = isDark ? 'rgba(28, 114, 147, 0.45)' : 'rgba(6, 90, 130, 0.35)';
+        // Contorno exterior fino (guía visual de troquelado/corte)
+        ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.6)' : 'rgba(2, 132, 199, 0.7)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, x, y, stickerWidthPx, stickerHeightPx, 4, false, true);
+
+        // Simulación de relieve y brillo de barniz UV DTF
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.fillRect(x + 2, y + 2, Math.max(2, stickerWidthPx * 0.4), 3);
+      } else {
+        roundRect(ctx, x, y, stickerWidthPx, stickerHeightPx, 4, true, true);
+
+        // Simulación de brillo de barniz UV
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.fillRect(x + 2, y + 2, Math.max(2, stickerWidthPx * 0.4), 3);
+        ctx.fillStyle = isDark ? 'rgba(28, 114, 147, 0.45)' : 'rgba(6, 90, 130, 0.35)';
+      }
 
       drawnCount++;
     }

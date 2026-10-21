@@ -6,6 +6,7 @@
 
 import { store } from '../store.js';
 import { quotesStore } from '../modules/quotes-store.js';
+import { uploadFileToStorage } from '../modules/file-uploader.js';
 
 let modalInitialized = false;
 let currentQuoteData = null;
@@ -169,15 +170,19 @@ export function openSaveQuoteModal(quoteData = null) {
   const totalEl = document.getElementById('saveQuoteTotalSummary');
   const cuttingEl = document.getElementById('saveQuoteCuttingSummary');
 
+  const lm = Number(currentQuoteData.linearMeters ?? currentQuoteData.billableMeters ?? 1.0);
+  const total = Number(currentQuoteData.totalPriceQ ?? 140.0);
+  const cutPrice = Number(currentQuoteData.cuttingPriceQ ?? currentQuoteData.cuttingTotalQ ?? 0.0);
+
   if (specsEl) {
-    specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${currentQuoteData.linearMeters.toFixed(2)} m`;
+    specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
   }
   if (totalEl) {
-    totalEl.textContent = `Q${currentQuoteData.totalPriceQ.toFixed(2)}`;
+    totalEl.textContent = `Q${total.toFixed(2)}`;
   }
   if (cuttingEl) {
     cuttingEl.textContent = currentQuoteData.withCutting
-      ? `✂️ Con despiece individual (+Q${currentQuoteData.cuttingPriceQ.toFixed(2)})`
+      ? `✂️ Con despiece individual (+Q${cutPrice.toFixed(2)})`
       : '📦 Entrega en rollo continuo sin corte';
   }
 
@@ -253,7 +258,7 @@ export function getCurrentQuoterSpecs() {
   };
 }
 
-export function handleSaveQuoteSubmit(e) {
+export async function handleSaveQuoteSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
 
   const projectName = document.getElementById('saveQuoteProjectName')?.value?.trim();
@@ -277,6 +282,33 @@ export function handleSaveQuoteSubmit(e) {
   }
 
   const specs = currentQuoteData || getCurrentQuoterSpecs();
+  const submitBtn = document.getElementById('btnSubmitSaveQuote');
+
+  // Estrategia 1 (Lazy Upload): Si el usuario adjuntó un archivo y no se ha subido aún, subir ahora a R2
+  if (specs.rawFile && !specs.fileUrl) {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>⏳ Subiendo a R2...</span>`;
+    }
+    showSaveQuoteFeedback('☁️ Subiendo archivo a Cloudflare R2...', 'info');
+
+    try {
+      const uploadRes = await uploadFileToStorage(specs.rawFile, {
+        context: 'quotes',
+      });
+      specs.fileUrl = uploadRes.fileUrl;
+      specs.fileKey = uploadRes.fileKey;
+      specs.provider = uploadRes.provider;
+    } catch (uploadErr) {
+      console.warn('[Storage] Error al subir archivo a R2 desde modal de cotización:', uploadErr);
+      specs.provider = 'local';
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>💾 Guardar Cotización</span>`;
+      }
+    }
+  }
 
   const newQuote = quotesStore.createQuote({
     projectName,
@@ -286,10 +318,10 @@ export function handleSaveQuoteSubmit(e) {
     companyName,
     notes,
     ...specs,
-    fileName: specs.fileName || null,
+    fileName: specs.fileName || (specs.rawFile ? specs.rawFile.name : null),
     fileUrl: specs.fileUrl || null,
     fileKey: specs.fileKey || null,
-    fileSizeBytes: specs.fileSizeBytes || null,
+    fileSizeBytes: specs.fileSizeBytes || (specs.rawFile ? specs.rawFile.size : null),
   });
 
   showSaveQuoteFeedback(`✅ ¡Cotización ${newQuote.code} guardada exitosamente!`, 'success');

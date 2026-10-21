@@ -55,7 +55,6 @@ export const routes = [
 
 export const router = new Router(routes, 'app');
 
-
 export async function initBackendSync() {
   try {
     const health = await apiClient.checkHealth();
@@ -93,6 +92,27 @@ export function initApp() {
 }
 
 /**
+ * Estado en memoria para imagen activa del simulador de bobina
+ */
+let currentPreviewImg = null;
+
+export function getActivePreviewImg() {
+  return currentPreviewImg;
+}
+
+export function setActivePreviewImg(img) {
+  currentPreviewImg = img;
+  redrawRollCanvas();
+}
+
+export function redrawRollCanvas() {
+  const canvas = document.getElementById('rollCanvas');
+  if (canvas && store.state.activeQuote) {
+    drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark', currentPreviewImg);
+  }
+}
+
+/**
  * Inicialización y sincronización del switch de tema (Dark/Light)
  */
 function initTheme() {
@@ -115,10 +135,7 @@ function updateThemeUI(theme) {
     icon.textContent = theme === 'dark' ? '☀️' : '🌙';
   }
   // Re-dibujar canvas al cambiar el tema para adaptar el contraste
-  const canvas = document.getElementById('rollCanvas');
-  if (canvas && store.state.activeQuote) {
-    drawRollCanvas(canvas, store.state.activeQuote, theme === 'dark');
-  }
+  redrawRollCanvas();
 }
 
 /**
@@ -258,6 +275,7 @@ export function syncNavbarRole(role) {
     if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'C';
     if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
   } else {
+    // Visitante no registrado
     if (userChipName) userChipName.textContent = 'Visitante';
     if (userChipAvatar) userChipAvatar.textContent = '👤';
     if (sidebarUserName) sidebarUserName.textContent = 'Visitante';
@@ -379,7 +397,6 @@ function initNavbarRoleSync() {
   syncNavbarRole(lastSyncedRole);
 }
 
-
 export function initQuoter() {
   const widthInput = document.getElementById('stickerWidth');
   const heightInput = document.getElementById('stickerHeight');
@@ -397,11 +414,7 @@ export function initQuoter() {
     const quote = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
     store.setActiveQuote(quote);
     renderQuoteResults(quote);
-
-    const canvas = document.getElementById('rollCanvas');
-    if (canvas) {
-      drawRollCanvas(canvas, quote, store.state.theme === 'dark');
-    }
+    redrawRollCanvas();
   }
 
   widthInput.addEventListener('input', handleCalculate);
@@ -433,6 +446,7 @@ export function initQuoter() {
 
   // Zona de Carga de Archivos de Impresión (Dropzone)
   let currentAttachedFile = null;
+  let currentRawFile = null;
   let currentPreviewUrl = null;
 
   const dropzone = document.getElementById('quoterDropzone');
@@ -452,7 +466,11 @@ export function initQuoter() {
 
   function clearDropzoneFile() {
     currentAttachedFile = null;
+    currentRawFile = null;
     currentPreviewUrl = null;
+    currentPreviewImg = null;
+    redrawRollCanvas();
+
     if (fileInput) fileInput.value = '';
     if (emptyState) emptyState.style.display = 'flex';
     if (selectedState) selectedState.style.display = 'none';
@@ -473,12 +491,22 @@ export function initQuoter() {
     }
 
     if (errorMsgEl) errorMsgEl.style.display = 'none';
-    currentAttachedFile = { ...validation.fileData };
+    currentRawFile = file;
+    currentAttachedFile = {
+      ...validation.fileData,
+      fileKey: null,
+      fileUrl: null,
+      provider: 'pending',
+    };
 
     try {
       currentPreviewUrl = await readFileAsDataURL(file);
     } catch (_) {
       currentPreviewUrl = null;
+    }
+
+    if (!currentAttachedFile || currentAttachedFile.name !== validation.fileData.name) {
+      return;
     }
 
     if (fileNameEl) fileNameEl.textContent = currentAttachedFile.name;
@@ -495,51 +523,34 @@ export function initQuoter() {
     if (emptyState) emptyState.style.display = 'none';
     if (selectedState) selectedState.style.display = 'flex';
 
-    // Iniciar subida directa a Cloudflare R2
-    if (progressWrap && progressBar && progressPercent) {
-      progressWrap.style.display = 'block';
-      progressBar.style.width = '0%';
-      progressPercent.textContent = '0%';
-      if (progressLabel) progressLabel.textContent = 'Subiendo a Cloudflare R2...';
+    // Estrategia 1 (Lazy Upload): No subir al bucket de Cloudflare R2 todavía.
+    // Se mantiene en memoria del navegador para previsualización con cero latencia
+    if (uploadBadge) {
+      uploadBadge.style.display = 'inline-block';
+      uploadBadge.textContent = '📁 Listo para cotizar';
+      uploadBadge.style.background = 'rgba(2, 132, 199, 0.15)';
+      uploadBadge.style.color = 'var(--cerulean)';
     }
 
-    try {
-      const uploadRes = await uploadFileToStorage(file, {
-        context: 'quotes',
-        onProgress: ({ percent }) => {
-          if (progressBar) progressBar.style.width = `${percent}%`;
-          if (progressPercent) progressPercent.textContent = `${percent}%`;
-        },
-      });
+    if (progressWrap) {
+      progressWrap.style.display = 'none';
+    }
 
-      if (!currentAttachedFile || currentAttachedFile.name !== file.name) {
-        return;
-      }
-
-      currentAttachedFile.fileKey = uploadRes.fileKey;
-      currentAttachedFile.fileUrl = uploadRes.fileUrl;
-      currentAttachedFile.provider = uploadRes.provider;
-
-      if (progressLabel) progressLabel.textContent = '✅ Subida completada';
-      if (uploadBadge) {
-        uploadBadge.style.display = 'inline-block';
-        uploadBadge.textContent = uploadRes.provider === 'cloudflare-r2' ? '☁️ R2 Activo' : '💾 Local';
-        uploadBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-        uploadBadge.style.color = '#10b981';
-      }
-      setTimeout(() => {
-        if (progressWrap) progressWrap.style.display = 'none';
-      }, 1500);
-    } catch (uploadErr) {
-      if (!currentAttachedFile || currentAttachedFile.name !== file.name) {
-        return;
-      }
-      console.warn('[Storage] Error al subir archivo a R2:', uploadErr);
-      if (errorMsgEl) {
-        errorMsgEl.textContent = `Aviso: El archivo se adjuntó localmente (${uploadErr.message}). Podrás reenviarlo por WhatsApp.`;
-        errorMsgEl.style.display = 'block';
-      }
-      if (progressWrap) progressWrap.style.display = 'none';
+    // Cargar imagen en memoria para renderizado en la bobina
+    if (currentPreviewUrl && typeof Image !== 'undefined') {
+      const img = new Image();
+      img.onload = () => {
+        currentPreviewImg = img;
+        redrawRollCanvas();
+      };
+      img.onerror = () => {
+        currentPreviewImg = null;
+        redrawRollCanvas();
+      };
+      img.src = currentPreviewUrl;
+    } else {
+      currentPreviewImg = null;
+      redrawRollCanvas();
     }
   }
 
@@ -581,11 +592,47 @@ export function initQuoter() {
   // Botón Agregar al Carrito
   const btnAddToCart = document.getElementById('btnAddToCart');
   if (btnAddToCart) {
-    btnAddToCart.addEventListener('click', () => {
+    btnAddToCart.addEventListener('click', async () => {
       const w = parseFloat(widthInput.value) || 5;
       const h = parseFloat(heightInput.value) || 5;
       const q = parseInt(qtyInput.value, 10) || 50;
       const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+      // Estrategia 1 (Lazy Upload): Si hay un archivo seleccionado y aún no se ha subido a R2, subir ahora
+      if (currentRawFile && currentAttachedFile && !currentAttachedFile.fileUrl) {
+        if (progressWrap && progressBar && progressPercent) {
+          progressWrap.style.display = 'block';
+          progressBar.style.width = '0%';
+          progressPercent.textContent = '0%';
+          if (progressLabel) progressLabel.textContent = 'Subiendo a Cloudflare R2...';
+        }
+
+        try {
+          const uploadRes = await uploadFileToStorage(currentRawFile, {
+            context: 'quotes',
+            onProgress: ({ percent }) => {
+              if (progressBar) progressBar.style.width = `${percent}%`;
+              if (progressPercent) progressPercent.textContent = `${percent}%`;
+            },
+          });
+
+          currentAttachedFile.fileKey = uploadRes.fileKey;
+          currentAttachedFile.fileUrl = uploadRes.fileUrl;
+          currentAttachedFile.provider = uploadRes.provider;
+
+          if (uploadBadge) {
+            uploadBadge.style.display = 'inline-block';
+            uploadBadge.textContent = uploadRes.provider === 'cloudflare-r2' ? '☁️ R2 Activo' : '💾 Local';
+            uploadBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+            uploadBadge.style.color = '#10b981';
+          }
+        } catch (uploadErr) {
+          console.warn('[Storage] Error al subir archivo en carrito a R2:', uploadErr);
+          currentAttachedFile.provider = 'local';
+        } finally {
+          if (progressWrap) progressWrap.style.display = 'none';
+        }
+      }
 
       cartStore.addItem({
         title: `Stickers ${w} × ${h} cm`,
@@ -593,7 +640,7 @@ export function initQuoter() {
         heightCm: h,
         qty: q,
         includeCutting: cut,
-        fileInfo: currentAttachedFile,
+        fileInfo: currentAttachedFile ? { ...currentAttachedFile } : null,
         previewUrl: currentPreviewUrl,
       });
 
@@ -616,28 +663,27 @@ export function initQuoter() {
         widthCm: w,
         heightCm: h,
         qty: q,
-        linearMeters: calculated.linearMeters,
+        linearMeters: calculated.billableMeters,
         stickersPerRow: calculated.stickersPerRow,
         rows: calculated.rows,
         withCutting: cut,
-        unitRateQ: calculated.unitRateQ,
+        unitRateQ: calculated.tierRate,
         materialPriceQ: calculated.materialPriceQ,
-        cuttingPriceQ: calculated.cuttingPriceQ,
+        cuttingPriceQ: calculated.cuttingTotalQ,
         totalPriceQ: calculated.totalPriceQ,
+        rawFile: currentRawFile || null,
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
         fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
         fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
         fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
+        provider: currentAttachedFile ? currentAttachedFile.provider : null,
       });
     });
   }
 
   // Redimensionado responsivo del canvas
   window.addEventListener('resize', () => {
-    const canvas = document.getElementById('rollCanvas');
-    if (canvas && store.state.activeQuote) {
-      drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark');
-    }
+    redrawRollCanvas();
   });
 
   // Cálculo inicial

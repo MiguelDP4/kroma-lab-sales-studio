@@ -230,8 +230,10 @@ class QuotesStore {
 
     const projectName = data?.projectName?.trim() || `Cotización ${widthCm}×${heightCm} cm (${qty} pcs)`;
     const fileUrl = data?.fileUrl || null;
+    const fileKey = data?.fileKey || null;
     const fileName = data?.fileName || null;
     const fileSizeBytes = data?.fileSizeBytes ? Number(data.fileSizeBytes) : null;
+    const provider = data?.provider || (fileUrl ? 'cloudflare-r2' : (fileKey ? 'cloudflare-r2' : null));
 
     const count = this.quotes.length + 1;
     const code = `COT-2026-${String(count).padStart(3, '0')}`;
@@ -264,8 +266,10 @@ class QuotesStore {
       notes,
       source,
       fileUrl,
+      fileKey,
       fileName,
       fileSizeBytes,
+      provider,
       createdAt: now,
       updatedAt: now,
     };
