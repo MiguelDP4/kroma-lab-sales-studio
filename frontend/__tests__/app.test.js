@@ -1,6 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { initApp, syncNavbarRole, renderQuoteResults, sendWhatsAppQuote, initMobileNav } from '../src/js/app.js';
+import {
+  initApp,
+  syncNavbarRole,
+  renderQuoteResults,
+  sendWhatsAppQuote,
+  initMobileNav,
+  redrawRollCanvas,
+  getActivePreviewImg,
+  setActivePreviewImg,
+} from '../src/js/app.js';
 import { store } from '../src/js/store.js';
+import * as fileUploader from '../src/js/modules/file-uploader.js';
+
+vi.mock('../src/js/modules/file-uploader.js', async () => {
+  const actual = await vi.importActual('../src/js/modules/file-uploader.js');
+  return {
+    ...actual,
+    uploadFileToStorage: vi.fn().mockImplementation(async (file, options) => {
+      if (options && typeof options.onProgress === 'function') {
+        options.onProgress({ loaded: 50, total: 100, percent: 50 });
+      }
+      return {
+        success: true,
+        fileKey: 'quotes/mock-key.png',
+        fileUrl: 'https://r2.kroma.gt/quotes/mock-key.png',
+        provider: 'cloudflare-r2',
+      };
+    }),
+  };
+});
 
 describe('App — Inicialización y DOM', () => {
   beforeEach(() => {
@@ -20,10 +48,21 @@ describe('App — Inicialización y DOM', () => {
       </header>
 
       <main id="app"></main>
-
     `;
     store.setTheme('dark');
     store.clearUser();
+    fileUploader.uploadFileToStorage.mockReset();
+    fileUploader.uploadFileToStorage.mockImplementation(async (file, options) => {
+      if (options && typeof options.onProgress === 'function') {
+        options.onProgress({ loaded: 50, total: 100, percent: 50 });
+      }
+      return {
+        success: true,
+        fileKey: 'quotes/mock-key.png',
+        fileUrl: 'https://r2.kroma.gt/quotes/mock-key.png',
+        provider: 'cloudflare-r2',
+      };
+    });
   });
 
   it('enlaza el botón de cambio de tema y actualiza el icono y estado al hacer clic', () => {
@@ -114,20 +153,20 @@ describe('App — Inicialización y DOM', () => {
       initApp();
 
       const toggleBtn = document.getElementById('mobileNavToggle');
-      const nav = document.getElementById('navRoleLinks');
+      const navLinks = document.getElementById('navRoleLinks');
       const icon = document.getElementById('mobileNavIcon');
 
-      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(navLinks.classList.contains('is-open')).toBe(false);
       expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
       expect(icon.textContent).toBe('☰');
 
       toggleBtn.click();
-      expect(nav.classList.contains('is-open')).toBe('true' ? true : false);
+      expect(navLinks.classList.contains('is-open')).toBe('true' ? true : false);
       expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
       expect(icon.textContent).toBe('✕');
 
       toggleBtn.click();
-      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(navLinks.classList.contains('is-open')).toBe(false);
       expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
       expect(icon.textContent).toBe('☰');
     });
@@ -137,16 +176,16 @@ describe('App — Inicialización y DOM', () => {
       syncNavbarRole('CUSTOMER');
 
       const toggleBtn = document.getElementById('mobileNavToggle');
-      const nav = document.getElementById('navRoleLinks');
+      const navLinks = document.getElementById('navRoleLinks');
       const icon = document.getElementById('mobileNavIcon');
 
       toggleBtn.click();
-      expect(nav.classList.contains('is-open')).toBe(true);
+      expect(navLinks.classList.contains('is-open')).toBe(true);
 
-      const firstLink = nav.querySelector('a');
+      const firstLink = navLinks.querySelector('a');
       firstLink.click();
 
-      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(navLinks.classList.contains('is-open')).toBe(false);
       expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
       expect(icon.textContent).toBe('☰');
     });
@@ -155,16 +194,16 @@ describe('App — Inicialización y DOM', () => {
       initApp();
 
       const toggleBtn = document.getElementById('mobileNavToggle');
-      const nav = document.getElementById('navRoleLinks');
+      const navLinks = document.getElementById('navRoleLinks');
       const icon = document.getElementById('mobileNavIcon');
 
       toggleBtn.click();
-      expect(nav.classList.contains('is-open')).toBe(true);
+      expect(navLinks.classList.contains('is-open')).toBe(true);
 
       // Clic fuera en el body/main
       document.getElementById('app').click();
 
-      expect(nav.classList.contains('is-open')).toBe(false);
+      expect(navLinks.classList.contains('is-open')).toBe(false);
       expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
       expect(icon.textContent).toBe('☰');
     });
@@ -193,7 +232,6 @@ describe('App — Inicialización y DOM', () => {
       btnWhatsApp.click();
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('whatsapp'), '_blank');
     });
-
 
     it('renderiza resultados con corte opcional activo', () => {
       initApp();
@@ -246,7 +284,7 @@ describe('App — Inicialización y DOM', () => {
       expect(drawer.classList.contains('open')).toBe(true);
     });
 
-    it('gestiona la selección y remoción de archivos en el dropzone', async () => {
+    it('gestiona la selección y remoción de archivos en el dropzone con Estrategia 1 (Lazy Upload)', async () => {
       initApp();
 
       const dropzone = document.getElementById('quoterDropzone');
@@ -254,6 +292,7 @@ describe('App — Inicialización y DOM', () => {
       const emptyState = document.getElementById('dropzoneEmptyState');
       const selectedState = document.getElementById('dropzoneFileSelected');
       const btnRemoveFile = document.getElementById('btnRemoveFile');
+      const uploadBadge = document.getElementById('dropzoneUploadBadge');
 
       // Drag events
       dropzone.dispatchEvent(new Event('dragover'));
@@ -282,6 +321,10 @@ describe('App — Inicialización y DOM', () => {
       // Verificar que se muestre el estado de archivo seleccionado
       expect(emptyState.style.display).toBe('none');
       expect(selectedState.style.display).toBe('flex');
+      expect(uploadBadge.style.display).toBe('inline-block');
+      expect(uploadBadge.textContent).toContain('Listo para cotizar');
+      // No debe haber subido a R2 aún
+      expect(fileUploader.uploadFileToStorage).not.toHaveBeenCalled();
 
       // Quitar archivo
       btnRemoveFile.click();
@@ -312,11 +355,167 @@ describe('App — Inicialización y DOM', () => {
       expect(dropzoneError.textContent).toContain('Formato no soportado');
     });
 
+    it('ejecuta Lazy Upload al presionar btnAddToCart con archivo adjunto', async () => {
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['dummy png data'], 'logo-cliente.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      btnAddToCart.click();
+      await new Promise(r => setTimeout(r, 100));
+
+      expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
+      const drawer = document.getElementById('cartDrawer');
+      expect(drawer.classList.contains('open')).toBe(true);
+    });
+
+    it('muestra badge local cuando provider retornado es local', async () => {
+      fileUploader.uploadFileToStorage.mockResolvedValueOnce({
+        success: true,
+        fileKey: 'local-key.png',
+        fileUrl: 'blob:...',
+        provider: 'local',
+      });
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['dummy png data'], 'logo-local.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      btnAddToCart.click();
+      await new Promise(r => setTimeout(r, 100));
+
+      const uploadBadge = document.getElementById('dropzoneUploadBadge');
+      expect(uploadBadge.textContent).toContain('Local');
+    });
+
+    it('maneja evento onerror al fallar carga de preview de imagen', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        constructor() {
+          setTimeout(() => {
+            if (this.onerror) this.onerror();
+          }, 10);
+        }
+      };
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['corrupt data'], 'corrupt.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 150));
+      expect(getActivePreviewImg()).toBeNull();
+      global.Image = originalImage;
+    });
+
+    it('maneja error en uploadFileToStorage al presionar btnAddToCart manteniendo fallback local', async () => {
+      fileUploader.uploadFileToStorage.mockRejectedValueOnce(new Error('R2 Error'));
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['dummy png data'], 'logo-err.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      btnAddToCart.click();
+      await new Promise(r => setTimeout(r, 100));
+
+      const drawer = document.getElementById('cartDrawer');
+      expect(drawer.classList.contains('open')).toBe(true);
+    });
+
+    it('pasa rawFile y parámetros de archivo a openSaveQuoteModal al presionar btnSaveQuote', async () => {
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['art content'], 'arte-vector.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      const btnSaveQuote = document.getElementById('btnSaveQuote');
+      btnSaveQuote.click();
+
+      const modal = document.getElementById('saveQuoteModal');
+      expect(modal.style.display).toBe('block');
+    });
+
+    it('permite gestionar imagen activa en canvas con setActivePreviewImg y redrawRollCanvas', () => {
+      initApp();
+      expect(getActivePreviewImg()).toBeNull();
+
+      const mockImg = { complete: true, naturalWidth: 200, naturalHeight: 200 };
+      setActivePreviewImg(mockImg);
+      expect(getActivePreviewImg()).toBe(mockImg);
+
+      expect(() => redrawRollCanvas()).not.toThrow();
+      setActivePreviewImg(null);
+      expect(getActivePreviewImg()).toBeNull();
+    });
+
+    it('maneja evento onload al cargar preview de imagen exitosamente', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        constructor() {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 200;
+            this.naturalHeight = 200;
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['png data'], 'valid-art.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 150));
+      expect(getActivePreviewImg()).not.toBeNull();
+      global.Image = originalImage;
+    });
+
+    it('captura error si readFileAsDataURL lanza excepción en handleFileSelected', async () => {
+      const spy = vi.spyOn(fileUploader, 'readFileAsDataURL').mockRejectedValueOnce(new Error('Read fail'));
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['fail data'], 'fail.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+      spy.mockRestore();
+    });
+
     it('maneja de forma segura initQuoter si no existen inputs en el DOM', () => {
       document.body.innerHTML = '';
       expect(() => initApp()).not.toThrow();
     });
-
 
     it('abre el enlace de WhatsApp con la cotización formateada al llamar a sendWhatsAppQuote', () => {
       window.open = vi.fn();

@@ -724,7 +724,16 @@ sequenceDiagram
    * Extensiones permitidas: `.png`, `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
    * Límite de tamaño: **100 MB** por archivo.
    * Sanitización de nombres de archivo y prefijos contextuales estructurados: `assets/quotes/<correlativo>/<timestamp>-<archivo>` o `assets/orders/<correlativo>/<timestamp>-<archivo>`.
-3. **Integración Frontend (`file-uploader.js` & Dropzone):**
+3. **Estrategia 1: Subida Diferida (Lazy Upload) contra "Window Shoppers":**
+   * Al seleccionar o arrastrar un archivo en el dropzone, este **NO** se sube inmediatamente al bucket de Cloudflare R2. Se valida localmente en memoria y genera un Data URL instantáneo para visualización inmediata con cero latencia (`📁 Listo para cotizar`).
+   * La subida binaria con Pre-signed URL a R2 se difiere hasta que el cliente asume un compromiso comercial real: al pulsar **"Guardar Cotización"** (en `save-quote-modal.js`) o **"Agregar al Carrito"** (en `app.js`).
+   * Evita almacenar archivos huérfanos o basura de usuarios que abandonan la página sin cotizar ni comprar.
+4. **Ilustración Fotorrealista en la Bobina Audley (`roll-simulator.js`):**
+   * El arte subido por el usuario se proyecta directamente sobre el canvas del simulador de bobina Audley (28 cm útiles), repitiéndose en cuadrícula según las dimensiones y acomodo calculados (`stickersPerRow` y `rows`).
+   * Si el archivo es un PNG transparente, el fondo transparente se respeta sobre el film de la bobina; si tiene fondo sólido, se proyecta idéntico al original.
+   * Cuenta con recorte perimetral curvo (`ctx.clip()`), línea exterior de troquelado/corte y brillo superior de barniz UV DTF (`rgba(255, 255, 255, 0.22)`).
+   * En caso de no adjuntar archivo o formatos no gráficos (PDF/AI), mantiene la representación vectorial azul tradicional.
+5. **Integración Frontend (`file-uploader.js` & Dropzone):**
    * Función `uploadFileToStorage(file, options)` con barra de progreso visual en tiempo real y badge de estado `☁️ R2 Activo`.
    * Prevención de condiciones de carrera si el usuario remueve o cambia el archivo mientras la subida está en curso.
    * Vinculación automática con `cartStore`, `saveQuoteModal`, `quotesStore` y visualización de botón de descarga directa en `orders-view.js` (Ficha de Pedido y Hoja de Taller Audley).
