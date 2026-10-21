@@ -48,9 +48,7 @@ export const AGING_STATUS = {
 };
 
 export const BANK_ACCOUNTS_GT = [
-  { bank: 'Banco Industrial', type: 'Ahorro GTQ', number: '4422909', name: 'Miguel Angel Dubois / Kroma Lab' },
-  { bank: 'Banco G&T Continental', type: 'Ahorro GTQ', number: '01080279685', name: 'Miguel Angel Dubois / Kroma Lab' },
-  { bank: 'BAC Credomatic', type: 'Ahorro GTQ', number: '972095707', name: 'Miguel Angel Dubois / Kroma Lab' },
+  { bank: 'Banco Industrial', type: 'Monetaria GTQ', number: '5371667253', name: 'Miguel Angel Dubois / Kroma Lab' },
 ];
 
 export const INITIAL_SEED_PAYMENTS = [
@@ -450,10 +448,8 @@ class ReceivablesStore {
       `✅ *Abonado a la fecha:* Q${detail.totalPaidQ.toFixed(2)}`,
       `⚠️ *Saldo pendiente:* Q${detail.pendingBalanceQ.toFixed(2)}`,
       '',
-      'Para tu comodidad, puedes realizar tu transferencia a nuestras cuentas autorizadas:',
-      '🏦 *Banco Industrial (Ahorro):* 4422909',
-      '🏦 *Banco G&T Continental (Ahorro):* 01080279685',
-      '🏦 *BAC Credomatic (Ahorro):* 972095707',
+      'Para tu comodidad, puedes realizar tu transferencia a nuestra cuenta monetaria autorizada:',
+      '🏦 *Banco Industrial (Monetaria):* 5371667253',
       'A nombre de: *Miguel Angel Dubois (Kroma Lab)*',
       '',
       'Por favor envíanos la fotografía de la boleta o captura de pantalla al completar tu pago. ¡Muchas gracias por tu confianza!',

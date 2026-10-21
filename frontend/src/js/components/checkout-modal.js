@@ -122,9 +122,7 @@ export function openCheckoutModal(cartTotals) {
             <span class="badge" style="font-size: 0.72rem;">Anticipo 50% o Pago 100%</span>
           </div>
           <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0.65rem;">
-            <div>• <strong>Banco Industrial (Ahorro Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">4422909</code></div>
-            <div>• <strong>Banco G&T Continental (Ahorro Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">01080279685</code></div>
-            <div>• <strong>BAC Credomatic (Ahorro Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">972095707</code></div>
+            <div>• <strong>Banco Industrial (Monetaria Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">5371667253</code></div>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Beneficiario: Miguel Angel Dubois / Kroma Lab</div>
           </div>
 

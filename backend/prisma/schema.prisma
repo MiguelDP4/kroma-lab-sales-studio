@@ -254,10 +254,10 @@ model WorkshopConfig {
   rateTier5             Decimal  @default(95.0) @db.Decimal(10, 2)
   cuttingFeePerPieceQ   Decimal  @default(0.08) @db.Decimal(10, 2)
 
-  bankBiAccount         String   @default("4422909")
-  bankBacAccount        String   @default("972095707")
-  bankGytAccount        String   @default("01080279685")
-  bankBanruralAccount   String?  @default("01080279685")
+  bankBiAccount         String   @default("5371667253")
+  bankBacAccount        String?
+  bankGytAccount        String?
+  bankBanruralAccount   String?
   whatsappNumber        String   @default("+502 5555-0000")
 
   filmACostPerM         Decimal  @default(6.30) @db.Decimal(10, 2)

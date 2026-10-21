@@ -231,10 +231,10 @@ model WorkshopConfig {
   rateTier5             Float    @default(95.0)
   cuttingFeePerPieceQ   Float    @default(0.08)
 
-  bankBiAccount         String   @default("4422909")
-  bankBacAccount        String   @default("972095707")
-  bankGytAccount        String   @default("01080279685")
-  bankBanruralAccount   String?  @default("01080279685")
+  bankBiAccount         String   @default("5371667253")
+  bankBacAccount        String?
+  bankGytAccount        String?
+  bankBanruralAccount   String?
   whatsappNumber        String   @default("+502 5555-0000")
 
   filmACostPerM         Float    @default(6.30)
