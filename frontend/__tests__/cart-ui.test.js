@@ -464,9 +464,9 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       // Verificar cuentas bancarias
       const bankBox = document.querySelector('.checkout-bank-box');
       expect(bankBox).not.toBeNull();
-      expect(bankBox.textContent).toContain('144-002931-2'); // BI
-      expect(bankBox.textContent).toContain('90-341902-1');  // BAC
-      expect(bankBox.textContent).toContain('3033-09182-1'); // Banrural
+      expect(bankBox.textContent).toContain('4422909'); // BI
+      expect(bankBox.textContent).toContain('972095707');  // BAC
+      expect(bankBox.textContent).toContain('01080279685'); // GyT
 
       const dropzone = document.getElementById('checkoutReceiptDropzone');
       const input = document.getElementById('checkoutReceiptInput');

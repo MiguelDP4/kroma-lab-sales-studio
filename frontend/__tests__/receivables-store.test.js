@@ -272,7 +272,7 @@ describe('Receivables Store — Almacén de Cuentas por Cobrar y Saldos B2B', ()
       expect(reminder.phone).toBe('50251112233');
       expect(reminder.text).toContain('KL-00041');
       expect(reminder.text).toContain('Q193.00');
-      expect(reminder.text).toContain('144-002931-2'); // Banco Industrial
+      expect(reminder.text).toContain('4422909'); // Banco Industrial
       expect(reminder.text).toContain('BAC Credomatic');
       expect(reminder.url).toContain('https://wa.me/50251112233?text=');
     });
