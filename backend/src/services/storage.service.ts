@@ -16,7 +16,7 @@ export interface PresignedUploadRequest {
   fileType: string;
   fileSizeBytes: number;
   context?: 'orders' | 'quotes' | 'general';
-  referenceCode?: string; // Ej. "KL-2026-001" o "COT-2026-001"
+  referenceCode?: string | null; // Ej. "KL-2026-001" o "COT-2026-001"
 }
 
 export interface PresignedUploadResponse {

@@ -111,13 +111,17 @@ export async function uploadFileToStorage(file, options = {}) {
   }
 
   // 2. Solicitar URL prefirmada al backend
-  const presigned = await apiClient.storage.getPresignedUrl({
+  const presignedPayload = {
     fileName: file.name,
     fileType: file.type || 'application/octet-stream',
     fileSizeBytes: file.size,
     context,
-    referenceCode,
-  });
+  };
+  if (referenceCode) {
+    presignedPayload.referenceCode = referenceCode;
+  }
+
+  const presigned = await apiClient.storage.getPresignedUrl(presignedPayload);
 
   if (!presigned || !presigned.uploadUrl) {
     throw new Error('No se pudo obtener la URL de subida prefirmada.');
@@ -165,8 +169,8 @@ export async function uploadFileToStorage(file, options = {}) {
         fileUrl: presigned.publicUrl,
         fileName: file.name,
         fileSizeBytes: file.size,
-        quoteId,
-        orderId,
+        quoteId: quoteId || null,
+        orderId: orderId || null,
       });
     } catch (confirmErr) {
       console.warn('Advertencia al confirmar subida en base de datos:', confirmErr);

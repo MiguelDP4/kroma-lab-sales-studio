@@ -31,3 +31,7 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Subidas locales
+uploads/
+backend/uploads/
