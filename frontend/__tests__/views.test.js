@@ -168,6 +168,23 @@ describe('Vistas Modulares SPA', () => {
       expect(html).toContain('optCutting');
     });
 
+    it('mantiene la jerarquia visual: medidas -> canvas bobina -> uploader -> cantidad -> corte', () => {
+      const html = quoterView.render();
+      const posWidth = html.indexOf('id="stickerWidth"');
+      const posHeight = html.indexOf('id="stickerHeight"');
+      const posCanvas = html.indexOf('id="rollCanvas"');
+      const posUploader = html.indexOf('id="quoterFileInput"');
+      const posQty = html.indexOf('id="stickerQty"');
+      const posCutting = html.indexOf('id="optCutting"');
+
+      expect(posWidth).toBeGreaterThan(0);
+      expect(posHeight).toBeGreaterThan(posWidth);
+      expect(posCanvas).toBeGreaterThan(posHeight);
+      expect(posUploader).toBeGreaterThan(posCanvas);
+      expect(posQty).toBeGreaterThan(posUploader);
+      expect(posCutting).toBeGreaterThan(posQty);
+    });
+
     it('ejecuta onMount sin errores cuando el DOM contiene los elementos', () => {
       document.body.innerHTML = quoterView.render();
       expect(typeof quoterView.onMount).toBe('function');
