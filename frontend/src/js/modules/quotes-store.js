@@ -181,6 +181,8 @@ class QuotesStore {
       fileUrl: q.fileUrl || null,
       fileName: q.fileName || null,
       fileSizeBytes: q.fileSizeBytes || null,
+      canvasSnapshot: q.canvasSnapshot || null,
+      rotationDeg: Number(q.rotationDeg) || 0,
       createdAt: q.createdAt,
       updatedAt: q.updatedAt || q.createdAt,
     };
@@ -234,6 +236,8 @@ class QuotesStore {
     const fileName = data?.fileName || null;
     const fileSizeBytes = data?.fileSizeBytes ? Number(data.fileSizeBytes) : null;
     const provider = data?.provider || (fileUrl ? 'cloudflare-r2' : (fileKey ? 'cloudflare-r2' : null));
+    const canvasSnapshot = data?.canvasSnapshot || null;
+    const rotationDeg = Number(data?.rotationDeg) || 0;
 
     const count = this.quotes.length + 1;
     const code = `COT-2026-${String(count).padStart(3, '0')}`;
@@ -270,6 +274,8 @@ class QuotesStore {
       fileName,
       fileSizeBytes,
       provider,
+      canvasSnapshot,
+      rotationDeg,
       createdAt: now,
       updatedAt: now,
     };

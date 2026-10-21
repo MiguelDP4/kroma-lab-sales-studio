@@ -737,6 +737,18 @@ sequenceDiagram
    * Función `uploadFileToStorage(file, options)` con barra de progreso visual en tiempo real y badge de estado `☁️ R2 Activo`.
    * Prevención de condiciones de carrera si el usuario remueve o cambia el archivo mientras la subida está en curso.
    * Vinculación automática con `cartStore`, `saveQuoteModal`, `quotesStore` y visualización de botón de descarga directa en `orders-view.js` (Ficha de Pedido y Hoja de Taller Audley).
+6. **Bloqueo y Adaptación de Relación de Aspecto ("Mantener relación de aspecto"):**
+   * Checkbox accesible y táctil (`min-height: 44px`, `#optKeepAspectRatio`) ubicado debajo de los campos de ancho y alto, visible únicamente cuando se ha cargado una imagen en el previsualizador.
+   * Al cargar el arte gráfico, se calcula la relación de aspecto natural (`naturalHeight / naturalWidth`), se preserva el ancho elegido por el cliente y se adapta el alto automáticamente sin distorsiones ni deformaciones ópticas.
+   * Modificar el ancho recalcula el alto proporcionalmente; modificar el alto ajusta el ancho respetando el límite físico de 28 cm útiles de bobina Audley.
+7. **Rotación Interactiva de Diseño 90° (`#btnRotateImage`):**
+   * Botón táctil ergonómico (`min-height: 44px`) que permite girar el arte 90° en el canvas de la bobina.
+   * Al presionar rotar, las dimensiones se intercambian automáticamente (`[ancho, alto] = [alto, ancho]`), limitando el nuevo ancho a 28 cm si el alto anterior era mayor, e invirtiendo la relación de aspecto.
+   * En el canvas de bobina, la imagen se renderiza centrada y rotada mediante `ctx.translate` y `ctx.rotate`, llenando con precisión el nuevo espacio sin alterar las proporciones originales.
+8. **Instantánea Técnica de Bobina Guardada con la Cotización (`generateCanvasSnapshot`):**
+   * Al guardar la cotización (`btnSaveQuote`), se genera un composite canvas en alta resolución (`image/png`) que integra un encabezado técnico oscuro de taller con datos clave: ancho, alto, cantidad de copias, piezas por fila, metros lineales y fecha de cotización.
+   * El snapshot se almacena junto al registro de la cotización (`canvasSnapshot`) y se visualiza tanto en el modal de confirmación como en las tarjetas de cotizaciones (`quotes-view.js`).
+   * Permite al operador de taller (Arte Modelo Dubois / Kroma Lab) o al cliente pulsar "🔍 Ampliar" para abrir un lightbox modal de alta fidelidad y verificar de inmediato en qué orientación y posición exacta solicitó el cliente la impresión.
 
 ---
 

@@ -8,6 +8,8 @@ import {
   redrawRollCanvas,
   getActivePreviewImg,
   setActivePreviewImg,
+  getActiveRotation,
+  getActiveImageAspectRatio,
 } from '../src/js/app.js';
 import { store } from '../src/js/store.js';
 import * as fileUploader from '../src/js/modules/file-uploader.js';
@@ -32,6 +34,7 @@ vi.mock('../src/js/modules/file-uploader.js', async () => {
 
 describe('App — Inicialización y DOM', () => {
   beforeEach(() => {
+    setActivePreviewImg(null);
     document.body.innerHTML = `
       <header>
         <div class="brand-name">
@@ -402,11 +405,10 @@ describe('App — Inicialización y DOM', () => {
 
     it('maneja evento onerror al fallar carga de preview de imagen', async () => {
       const originalImage = global.Image;
+      let triggerError = null;
       global.Image = class {
-        constructor() {
-          setTimeout(() => {
-            if (this.onerror) this.onerror();
-          }, 10);
+        set onerror(fn) {
+          triggerError = fn;
         }
       };
       initApp();
@@ -417,8 +419,143 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 150));
+      await vi.waitFor(() => {
+        expect(triggerError).not.toBeNull();
+      });
+      triggerError();
       expect(getActivePreviewImg()).toBeNull();
+      global.Image = originalImage;
+    });
+
+    it('carga imagen con keepAspectCheckbox desmarcado ejecutando rama alternativa de renderizado', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        set src(_) {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 400;
+            this.naturalHeight = 200;
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+      initApp();
+      const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+      keepAspectCheckbox.checked = false;
+
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['png data'], 'no-aspect.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 150));
+
+      expect(getActivePreviewImg()).not.toBeNull();
+      global.Image = originalImage;
+    });
+
+    it('ignora recálculo proporcional cuando stickerWidth o stickerHeight reciben valores vacíos o no numéricos', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        set src(_) {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 400;
+            this.naturalHeight = 200;
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['png data'], 'art.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 150));
+
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+
+      widthInput.value = '';
+      widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      heightInput.value = 'invalid';
+      heightInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      global.Image = originalImage;
+    });
+
+    it('ignora finalización de lectura si el archivo fue removido concurrentemente', async () => {
+      let resolveRead;
+      vi.spyOn(fileUploader, 'readFileAsDataURL').mockImplementationOnce(() => {
+        return new Promise((resolve) => {
+          resolveRead = resolve;
+        });
+      });
+      initApp();
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['png data'], 'concur.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+
+      // Inmediatamente pulsar remover archivo mientras la lectura está en curso
+      const btnRemove = document.getElementById('btnRemoveFile');
+      btnRemove.click();
+
+      // Resolver lectura posterior a la remoción
+      resolveRead('data:image/png;base64,concurPreview');
+      await new Promise(r => setTimeout(r, 50));
+
+      expect(getActivePreviewImg()).toBeNull();
+    });
+
+    it('limita el ancho a 28 cm útiles al rotar si el alto previo supera 28 cm', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        set src(_) {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 200;
+            this.naturalHeight = 400;
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+      initApp();
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+      const btnRotate = document.getElementById('btnRotateImage');
+
+      widthInput.value = '10';
+      heightInput.value = '35'; // Mayor a 28 cm
+
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['tall png data'], 'tall.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 150));
+
+      // Asignar alto a 35 con relación de aspecto desactivada para probar el límite de ancho de bobina
+      const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+      keepAspectCheckbox.checked = false;
+      heightInput.value = '35';
+
+      // Al pulsar rotar, el nuevo ancho debería ser min(28, 35) = 28.0
+      btnRotate.click();
+      expect(parseFloat(widthInput.value)).toBe(28.0);
+      expect(parseFloat(heightInput.value)).toBe(10.0);
+
       global.Image = originalImage;
     });
 
@@ -510,6 +647,158 @@ describe('App — Inicialización y DOM', () => {
       fileInput.dispatchEvent(new Event('change'));
       await new Promise(r => setTimeout(r, 100));
       spy.mockRestore();
+    });
+
+    it('mantiene relación de aspecto automática al cargar imagen y al editar dimensiones', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        constructor() {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 400;
+            this.naturalHeight = 200; // ratio = 0.5 (alto es la mitad del ancho)
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+
+      initApp();
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+      const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+      const aspectRatioRow = document.getElementById('aspectRatioRow');
+
+      expect(aspectRatioRow.style.display).toBe('none');
+      expect(keepAspectCheckbox.checked).toBe(true);
+
+      widthInput.value = '8';
+
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['wide png'], 'banner.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      expect(aspectRatioRow.style.display).toBe('flex');
+      expect(getActiveImageAspectRatio()).toBe(0.5);
+      // Al cargarse con ancho 8, el alto debe ajustarse a 8 * 0.5 = 4.0
+      expect(heightInput.value).toBe('4.0');
+
+      // Modificar ancho -> debe actualizar alto
+      widthInput.value = '10';
+      widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(heightInput.value).toBe('5.0');
+
+      // Modificar alto -> debe actualizar ancho (5 / 0.5 = 10, probemos alto 6 -> ancho 12)
+      heightInput.value = '6';
+      heightInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(widthInput.value).toBe('12.0');
+
+      global.Image = originalImage;
+    });
+
+    it('permite desactivar relación de aspecto y volver a activarla actualizando alto', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        constructor() {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 300;
+            this.naturalHeight = 150; // ratio = 0.5
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+
+      initApp();
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+      const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['rect png'], 'rect.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      // Desactivar checkbox
+      keepAspectCheckbox.checked = false;
+      keepAspectCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+
+      widthInput.value = '10';
+      widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+      // Con checkbox inactivo, height no se altera automáticamente
+      expect(heightInput.value).not.toBe('5.0');
+
+      // Volver a activar checkbox -> debe reajustar alto según ancho actual
+      keepAspectCheckbox.checked = true;
+      keepAspectCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(heightInput.value).toBe('5.0');
+
+      global.Image = originalImage;
+    });
+
+    it('permite rotar diseño 90 grados intercambiando ancho y alto e invirtiendo relación de aspecto', async () => {
+      const originalImage = global.Image;
+      global.Image = class {
+        constructor() {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 800;
+            this.naturalHeight = 400; // ratio = 0.5
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      };
+
+      initApp();
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+      const btnRotate = document.getElementById('btnRotateImage');
+
+      widthInput.value = '8';
+
+      const fileInput = document.getElementById('quoterFileInput');
+      const validFile = new File(['sample png'], 'sample.png', { type: 'image/png' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [validFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+
+      expect(widthInput.value).toBe('8');
+      expect(heightInput.value).toBe('4.0');
+      expect(getActiveRotation()).toBe(0);
+
+      // Pulsar rotar 90° -> el nuevo ancho debe ser 4.0 y el nuevo alto 8.0
+      btnRotate.click();
+      expect(getActiveRotation()).toBe(90);
+      expect(widthInput.value).toBe('4.0');
+      expect(heightInput.value).toBe('8.0');
+      expect(getActiveImageAspectRatio()).toBe(2.0);
+
+      // Pulsar rotar nuevamente -> 180° -> ancho 8.0 y alto 4.0
+      btnRotate.click();
+      expect(getActiveRotation()).toBe(180);
+      expect(widthInput.value).toBe('8.0');
+      expect(heightInput.value).toBe('4.0');
+
+      // Pulsar eliminar archivo -> debe resetear rotación y ocultar controles
+      const btnRemove = document.getElementById('btnRemoveFile');
+      btnRemove.click();
+      expect(getActiveRotation()).toBe(0);
+      expect(getActiveImageAspectRatio()).toBeNull();
+      const aspectRatioRow = document.getElementById('aspectRatioRow');
+      expect(aspectRatioRow.style.display).toBe('none');
+
+      global.Image = originalImage;
     });
 
     it('maneja de forma segura initQuoter si no existen inputs en el DOM', () => {
