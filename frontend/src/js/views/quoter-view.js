@@ -70,39 +70,18 @@ export const quoterView = {
             </div>
           </div>
 
-          <div class="form-group" style="margin-top: 1.5rem;">
-            <label class="form-label" for="stickerQty">
-              Cantidad de stickers
-              <span class="tip">Piezas totales</span>
-            </label>
-            <input type="number" id="stickerQty" class="input-control" value="50" min="1" max="10000" step="1">
-          </div>
-
-          <!-- Opción de Acabado: Despiece / Corte Recto de Precisión -->
-          <div class="cutting-option-card" id="cuttingCard">
-            <label class="checkbox-wrapper" for="optCutting">
-              <input type="checkbox" id="optCutting">
-              <div class="checkbox-content">
-                <div class="checkbox-header">
-                  <span class="checkbox-title">✂️ Entregar cortados individualmente</span>
-                  <span class="checkbox-badge" id="cuttingBadgeRate">+Q0.35 / pza</span>
-                </div>
-                <p class="checkbox-desc">
-                  Recibe tus stickers separados en recuadros listos para aplicar o entregar a tus clientes. Corte perimetral recto con máquina de precisión.
-                </p>
-              </div>
-            </label>
-
-            <div class="cutting-details">
-              <div class="cutting-tier-info">
-                <span class="tier-tag active" id="tierTag1">1 - 50 uds: Q0.35 c/u</span>
-                <span class="tier-tag" id="tierTag2">51 - 200 uds: Q0.30 c/u</span>
-                <span class="tier-tag" id="tierTag3">+200 uds: Q0.25 c/u</span>
-              </div>
-              <p class="cutting-policy-note">
-                * <strong>Nota de acabado:</strong> Si no seleccionas corte, tu pedido se entrega en <strong>rollo continuo sin cortar</strong> (estándar de maquila industrial). Tarifa mínima de servicio de corte: Q25.00.
-              </p>
+          <!-- Simulador Visual de Bobina Audley (Ubicado justo bajo medidas para feedback visual inmediato) -->
+          <div class="simulator-container" style="margin-top: 1.25rem;">
+            <div class="simulator-header">
+              <span>ANCHO DE BOBINA: 28 CM ÚTILES</span>
+              <span id="canvasStats">5 por fila</span>
             </div>
+            <div class="roll-canvas-wrap">
+              <canvas id="rollCanvas" width="580" height="200"></canvas>
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 0;">
+              * Esquema a escala con separación técnica de 3 mm entre piezas para despiece seguro.
+            </p>
           </div>
 
           <!-- Zona de Carga de Archivo Gráfico -->
@@ -151,18 +130,40 @@ export const quoterView = {
             <div id="dropzoneError" class="dropzone-error-msg" style="display: none;"></div>
           </div>
 
-          <!-- Simulador Visual de Bobina Audley -->
-          <div class="simulator-container">
-            <div class="simulator-header">
-              <span>ANCHO DE BOBINA: 28 CM ÚTILES</span>
-              <span id="canvasStats">5 por fila</span>
+          <!-- Cantidad de stickers -->
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <label class="form-label" for="stickerQty">
+              Cantidad de stickers
+              <span class="tip">Piezas totales</span>
+            </label>
+            <input type="number" id="stickerQty" class="input-control" value="50" min="1" max="10000" step="1">
+          </div>
+
+          <!-- Opción de Acabado: Despiece / Corte Recto de Precisión -->
+          <div class="cutting-option-card" id="cuttingCard">
+            <label class="checkbox-wrapper" for="optCutting">
+              <input type="checkbox" id="optCutting">
+              <div class="checkbox-content">
+                <div class="checkbox-header">
+                  <span class="checkbox-title">✂️ Entregar cortados individualmente</span>
+                  <span class="checkbox-badge" id="cuttingBadgeRate">+Q0.35 / pza</span>
+                </div>
+                <p class="checkbox-desc">
+                  Recibe tus stickers separados en recuadros listos para aplicar o entregar a tus clientes. Corte perimetral recto con máquina de precisión.
+                </p>
+              </div>
+            </label>
+
+            <div class="cutting-details">
+              <div class="cutting-tier-info">
+                <span class="tier-tag active" id="tierTag1">1 - 50 uds: Q0.35 c/u</span>
+                <span class="tier-tag" id="tierTag2">51 - 200 uds: Q0.30 c/u</span>
+                <span class="tier-tag" id="tierTag3">+200 uds: Q0.25 c/u</span>
+              </div>
+              <p class="cutting-policy-note">
+                * <strong>Nota de acabado:</strong> Si no seleccionas corte, tu pedido se entrega en <strong>rollo continuo sin cortar</strong> (estándar de maquila industrial). Tarifa mínima de servicio de corte: Q25.00.
+              </p>
             </div>
-            <div class="roll-canvas-wrap">
-              <canvas id="rollCanvas" width="580" height="200"></canvas>
-            </div>
-            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.5rem;">
-              * Esquema a escala con separación técnica de 3 mm entre piezas para despiece seguro.
-            </p>
           </div>
         </div>
 
