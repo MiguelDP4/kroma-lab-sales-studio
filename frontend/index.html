@@ -193,23 +193,6 @@
     <!-- Vista inyectada dinámicamente por router.js -->
   </main>
 
-  <!-- ==========================================================================
-       HERRAMIENTA DE CONTROL Y TESTING DE ROLES RBAC
-       ========================================================================== -->
-  <footer class="container" style="padding-bottom: 3rem;">
-    <div style="margin: 3rem auto 1rem; padding: 1rem 1.5rem; background: var(--bg-surface-elevated); border: 1px dashed var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-      <div style="font-size: 0.85rem; color: var(--text-secondary);">
-        <strong>🛠️ Simulador de Roles:</strong> Cambia de rol para verificar cómo "Sales Studio", las rutas permitidas y el menú del navbar se adaptan.
-      </div>
-      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('VISITOR')">Visitante</button>
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('CUSTOMER')">Cliente</button>
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('EMPLOYEE')">Empleado</button>
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="window.__simulateRole('ADMIN')">Administrador</button>
-      </div>
-    </div>
-  </footer>
-
   <script>
     // Configuración dinámica de API Backend:
     // En entorno local utiliza el puerto 4000; en producción en la nube (Cloudflare Pages),
@@ -219,17 +202,5 @@
       : (window.__KROMA_API_PROD_URL__ || 'https://kroma-lab-sales-studio-backend.onrender.com/api');
   </script>
   <script type="module" src="./src/js/app.js"></script>
-  <script type="module">
-    import { store } from './src/js/store.js';
-    import { router } from './src/js/app.js';
-
-    window.__simulateRole = (role) => {
-      if (role === 'VISITOR') {
-        store.clearUser();
-      } else {
-        store.setUser({ id: 'USR_TEST', name: role, role }, 'fake-jwt', []);
-      }
-    };
-  </script>
 </body>
 </html>
