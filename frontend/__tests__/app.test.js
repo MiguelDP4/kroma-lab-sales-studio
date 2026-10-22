@@ -681,7 +681,7 @@ describe('App — Inicialización y DOM', () => {
     it('mantiene relación de aspecto automática al cargar imagen y al editar dimensiones', async () => {
       const originalImage = global.Image;
       global.Image = class {
-        constructor() {
+        set src(_) {
           setTimeout(() => {
             this.complete = true;
             this.naturalWidth = 400;
@@ -710,7 +710,10 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
+      for (let i = 0; i < 50; i++) {
+        if (aspectRatioRow && aspectRatioRow.style.display === 'flex') break;
+        await new Promise(r => setTimeout(r, 20));
+      }
 
       expect(aspectRatioRow.style.display).toBe('flex');
       expect(getActiveImageAspectRatio()).toBe(0.5);
@@ -782,7 +785,7 @@ describe('App — Inicialización y DOM', () => {
     it('permite rotar diseño 90 grados intercambiando ancho y alto e invirtiendo relación de aspecto', async () => {
       const originalImage = global.Image;
       global.Image = class {
-        constructor() {
+        set src(_) {
           setTimeout(() => {
             this.complete = true;
             this.naturalWidth = 800;
@@ -807,7 +810,11 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
+      const aspectRatioRow = document.getElementById('aspectRatioRow');
+      for (let i = 0; i < 50; i++) {
+        if (aspectRatioRow && aspectRatioRow.style.display === 'flex') break;
+        await new Promise(r => setTimeout(r, 20));
+      }
 
       expect(widthInput.value).toBe('8');
       expect(heightInput.value).toBe('4.0');
@@ -831,7 +838,6 @@ describe('App — Inicialización y DOM', () => {
       btnRemove.click();
       expect(getActiveRotation()).toBe(0);
       expect(getActiveImageAspectRatio()).toBeNull();
-      const aspectRatioRow = document.getElementById('aspectRatioRow');
       expect(aspectRatioRow.style.display).toBe('none');
 
       global.Image = originalImage;

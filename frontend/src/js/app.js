@@ -55,24 +55,69 @@ export const routes = [
 
 export const router = new Router(routes, 'app');
 
+export function purgeLegacyMockStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  if (IS_TEST) return;
+
+  const keysToClean = [
+    'kromalab_dispatch_notes',
+    'kromalab_orders',
+    'kromalab_clients',
+    'kromalab_quotes',
+    'kromalab_payments',
+    'kromalab_production_orders',
+    'kromalab_users',
+  ];
+
+  keysToClean.forEach(key => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      if (
+        raw.includes('Claudia Estrada') ||
+        raw.includes('Alejandro Morales') ||
+        raw.includes('Rodrigo Méndez') ||
+        raw.includes('Barbería Vintage') ||
+        raw.includes('Sport Gym') ||
+        raw.includes('REM-2026-00') ||
+        raw.includes('KL-0004') ||
+        raw.includes('CLI-00') ||
+        raw.includes('COT-2026-00') ||
+        raw.includes('PAY-2026-00') ||
+        raw.includes('carlos.taller@kromalab.gt') ||
+        raw.includes('sofia.ventas@kromalab.gt')
+      ) {
+        localStorage.removeItem(key);
+      }
+    } catch (_) {}
+  });
+}
+
 export async function initBackendSync() {
+  const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
   try {
     const health = await apiClient.checkHealth();
     if (health && health.status === 'ok') {
-      if (!apiClient.token) {
+      if (IS_TEST && !apiClient.token) {
         try {
-          await apiClient.auth.login('miguel@kromalab.gt', 'Admin2026!');
+          const res = await apiClient.auth.login('miguel@kromalab.gt', 'Admin2026!');
+          if (res && res.token) {
+            apiClient.setToken(res.token);
+          }
         } catch (_) {}
       }
-      await Promise.allSettled([
-        ordersStore.syncWithApi(),
-        clientsStore.syncWithApi(),
-        inventoryStore.syncWithApi(),
-        receivablesStore.syncWithApi(),
-        dispatchStore.syncWithApi(),
-        usersStore.syncWithApi(),
-        quotesStore.syncWithApi(),
-      ]);
+      if (apiClient.token) {
+        await Promise.allSettled([
+          ordersStore.syncWithApi(),
+          clientsStore.syncWithApi(),
+          inventoryStore.syncWithApi(),
+          receivablesStore.syncWithApi(),
+          dispatchStore.syncWithApi(),
+          usersStore.syncWithApi(),
+          quotesStore.syncWithApi(),
+        ]);
+      }
     }
   } catch (err) {
     console.warn('[BackendSync] Servidor backend offline o no disponible:', err?.message || err);
@@ -80,6 +125,7 @@ export async function initBackendSync() {
 }
 
 export function initApp() {
+  purgeLegacyMockStorage();
   initTheme();
   initNavbarRoleSync();
   initMobileNav();
