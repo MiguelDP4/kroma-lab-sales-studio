@@ -4,10 +4,25 @@
  * Incluye tolerancia a fallos y fallback transparente si el servidor local está desconectado.
  */
 
-const DEFAULT_API_URL = 'http://localhost:4000/api';
+export function getApiBaseUrl() {
+  if (typeof window !== 'undefined' && window.__KROMA_API_URL__) {
+    return window.__KROMA_API_URL__;
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = window.localStorage.getItem('kromalab_api_url');
+      if (stored) return stored;
+    } catch {
+      // Ignorar quota o storage error
+    }
+  }
+  return 'http://localhost:4000/api';
+}
+
+const DEFAULT_API_URL = getApiBaseUrl();
 
 export class ApiClient {
-  constructor(baseUrl = DEFAULT_API_URL) {
+  constructor(baseUrl = getApiBaseUrl()) {
     this.baseUrl = baseUrl;
     this.token = this._loadToken();
     this.isOnline = false;
