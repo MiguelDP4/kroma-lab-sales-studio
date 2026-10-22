@@ -755,8 +755,12 @@ describe('App — Inicialización y DOM', () => {
         value: [validFile],
         writable: true,
       });
-      fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
+            fileInput.dispatchEvent(new Event('change'));
+      const aspectRatioRow = document.getElementById('aspectRatioRow');
+      for (let i = 0; i < 50; i++) {
+        if (aspectRatioRow && aspectRatioRow.style.display === 'flex') break;
+        await new Promise(r => setTimeout(r, 20));
+      }
 
       // Desactivar checkbox
       keepAspectCheckbox.checked = false;

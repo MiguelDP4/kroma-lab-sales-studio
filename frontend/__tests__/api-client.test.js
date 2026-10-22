@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ApiClient } from '../src/js/modules/api-client';
+import { ApiClient, getApiBaseUrl } from '../src/js/modules/api-client';
 
 describe('ApiClient — Cliente HTTP Frontend', () => {
   let client;
@@ -219,7 +219,22 @@ describe('ApiClient — Cliente HTTP Frontend', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(7);
   });
-  it('storage gestiona getStatus, getPresignedUrl, confirmUpload, getDownloadUrl y deleteAsset', async () => {
+  it('getApiBaseUrl resuelve url por defecto, de window.__KROMA_API_URL__ y de localStorage', () => {
+    // Default
+    expect(getApiBaseUrl()).toBe('http://localhost:4000/api');
+
+    // LocalStorage
+    localStorage.setItem('kromalab_api_url', 'https://custom-api.example.com/api');
+    expect(getApiBaseUrl()).toBe('https://custom-api.example.com/api');
+    localStorage.removeItem('kromalab_api_url');
+
+    // Window global
+    window.__KROMA_API_URL__ = 'https://prod-api.onrender.com/api';
+    expect(getApiBaseUrl()).toBe('https://prod-api.onrender.com/api');
+    delete window.__KROMA_API_URL__;
+  });
+
+    it('storage gestiona getStatus, getPresignedUrl, confirmUpload, getDownloadUrl y deleteAsset', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ success: true }),
