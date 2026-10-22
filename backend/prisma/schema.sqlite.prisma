@@ -1,0 +1,246 @@
+// Esquema de Base de Datos para Kroma Lab Sales Studio (SQLite - Desarrollo y Pruebas Locales)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  name              String
+  phone             String?
+  company           String?
+  taxId             String?   // NIT SAT
+  address           String?
+  department        String?   // Taller, Ventas, etc.
+  role              String    @default("CUSTOMER") // ADMIN, EMPLOYEE, CUSTOMER
+  isVerified        Boolean   @default(true)
+  refreshToken      String?
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  paymentsRecorded  Payment[]
+  kardexMovements   InventoryMovement[]
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  companyName String?
+  managerName String
+  phone       String
+  email       String   @unique
+  address     String?
+  taxId       String?  // NIT en Guatemala (ej. 7845129-4 o CF)
+  tier        String   @default("NUEVO") // VIP, RECURRENTE, NUEVO, INACTIVO
+  sector      String   @default("COMERCIO_RETAIL") // CAFETERIAS, BARBERIAS, PROMO, BEBIDAS, COMERCIO
+  notes       String?
+
+  orders      Order[]
+  users       User[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id             String         @id @default(cuid())
+  code           String         @unique // Ej. "KL-2026-001"
+  status         String         @default("PENDING_REVIEW") // PENDING_REVIEW, IN_AUDLEY_QUEUE, PRINTING, LAMINATING_CUTTING, READY_FOR_DELIVERY, COMPLETED, CANCELLED
+  paymentStatus  String         @default("PENDING") // PENDING, PARTIAL, PAID, CANCELLED
+
+  customerId     String?
+  customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Datos desnormalizados del cliente para histórico
+  customerName   String
+  customerPhone  String
+  customerEmail  String?
+  customerTaxId  String?
+  customerAddress String?
+
+  // Metadatos de impresión UV DTF (Bobina Audley 28 cm útiles)
+  widthCm        Float
+  heightCm       Float
+  qty            Int
+  linearMeters   Float
+  withCutting    Boolean        @default(false)
+  finishType     String         @default("GLOSSY_VARNISH") // GLOSSY_VARNISH, MATTE
+
+  stickersPerRow Int            @default(1)
+  rows           Int            @default(1)
+
+  // Desglose financiero (Quetzales GTQ)
+  unitRateQ      Float          @default(105.0)
+  materialPriceQ Float
+  cuttingPriceQ  Float          @default(0.0)
+  totalAmountQ   Float
+  amountPaidQ    Float          @default(0.0)
+
+  // Archivo de diseño (Cloudflare R2 / Pre-signed URL)
+  fileUrl        String?
+  fileName       String?
+  fileSizeBytes  Int?
+  notes          String?
+
+  // Comprobante de pago o transferencia bancaria (Cloudflare R2)
+  paymentReceiptUrl      String?
+  paymentReceiptFileName String?
+
+  dispatchNotes  DispatchNote[]
+  payments       Payment[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Quote {
+  id                 String   @id @default(cuid())
+  code               String?  @unique // Correlativo ej. "COT-2026-001"
+  projectName        String?  // Nombre o referencia de proyecto
+  leadName           String?
+  leadPhone          String?
+  leadEmail          String?
+  companyName        String?
+  widthCm            Float
+  heightCm           Float
+  qty                Int
+  linearMeters       Float
+  stickersPerRow     Int      @default(1)
+  rows               Int      @default(1)
+  unitRateQ          Float
+  materialPriceQ     Float
+  cuttingPriceQ      Float    @default(0.0)
+  totalPriceQ        Float
+  withCutting        Boolean  @default(false)
+  finishType         String   @default("GLOSSY_VARNISH")
+  status             String   @default("SAVED") // DRAFT, SAVED, CONVERTED, EXPIRED
+  convertedOrderId   String?  // ID de orden generada si fue convertida
+  convertedOrderCode String?  // Código de orden ej. "KL-2026-042"
+  // Archivo de diseño adjunto (Cloudflare R2)
+  fileUrl            String?
+  fileName           String?
+  fileSizeBytes      Int?
+  notes              String?
+  source             String?  // "web", "whatsapp", "direct"
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model DispatchNote {
+  id                    String    @id @default(cuid())
+  folio                 String    @unique // Ej. "REM-2026-001"
+  orderId               String
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  customerName          String
+  customerPhone         String
+  customerAddress       String
+  customerTaxId         String?
+
+  deliveryMethod        String    @default("MOTO_LOCAL") // MOTO_LOCAL, CARGO_EXPRESO, GUATEX, FORZA_EXPRESS, PICKUP
+  trackingNumber        String?
+  packagesCount         Int       @default(1)
+  linearMeters          Float
+  totalAmountQ          Float
+  balanceDueQ           Float     @default(0.0)
+
+  status                String    @default("PREPARED") // PREPARED, IN_TRANSIT, DELIVERED, CANCELLED
+
+  deliveryRecipientName String?
+  deliveryRecipientDpi  String?
+  checklistPassed       Boolean   @default(true)
+  notes                 String?
+
+  deliveredAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model InventoryItem {
+  id                String              @id @default(cuid())
+  code              String              @unique // "FILM_A", "FILM_B", "INK_CMYK", etc.
+  name              String
+  category          String              // FILMS, INKS, CONSUMABLES, SPARES
+  unit              String              // m, ml, uds, kits
+  currentStock      Float
+  minStockThreshold Float
+  unitCostQ         Float
+  optimalRatio      Float               @default(1.5)
+
+  movements         InventoryMovement[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+model InventoryMovement {
+  id          String        @id @default(cuid())
+  movCode     String        @unique // Ej. "MOV-2026-001"
+  itemId      String
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type        String        // IN_PURCHASE, OUT_PRODUCTION, ADJUSTMENT
+  qtyDelta    Float         // Positivo o negativo
+  newStock    Float
+  totalCostQ  Float         @default(0.0)
+  reference   String?       // Orden KL-XXXX o Factura Compra
+  notes       String?
+
+  performedById String?
+  performedBy   User?       @relation(fields: [performedById], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime      @default(now())
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  paymentCode   String   @unique // Ej. "PAY-2026-001"
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  customerName  String
+  customerTaxId String?
+  amountPaidQ   Float
+  method        String   // TRANSFER, CASH, CARD, DEPOSIT, CHEQUE
+  bankName      String?  // BI, BAC, BANRURAL
+  bankReference String?  // Número de boleta / transacción
+  receiptUrl    String?
+  notes         String?
+
+  registeredById String?
+  registeredBy   User?   @relation(fields: [registeredById], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+}
+
+model WorkshopConfig {
+  id                    String   @id @default("default")
+  printableRollWidthCm  Float    @default(28.0)
+  rollWidthCm           Float    @default(30.0)
+  rateTier1             Float    @default(130.0)
+  rateTier2             Float    @default(120.0)
+  rateTier3             Float    @default(115.0)
+  rateTier4             Float    @default(105.0)
+  rateTier5             Float    @default(95.0)
+  cuttingFeePerPieceQ   Float    @default(0.08)
+
+  bankBiAccount         String   @default("5371667253")
+  bankBacAccount        String?
+  bankGytAccount        String?
+  bankBanruralAccount   String?
+  whatsappNumber        String   @default("+502 5555-0000")
+
+  filmACostPerM         Float    @default(6.30)
+  filmBCostPerM         Float    @default(4.08)
+  inkCostPerM           Float    @default(8.25)
+  monthlyNetTargetQ     Float    @default(20000.0)
+
+  updatedAt             DateTime @updatedAt
+}
