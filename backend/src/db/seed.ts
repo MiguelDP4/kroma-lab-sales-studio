@@ -34,7 +34,13 @@ export async function seedDatabase() {
   const adminPassword = await bcrypt.hash('Admin2026!', 10);
   await prisma.user.upsert({
     where: { email: 'miguel@kromalab.gt' },
-    update: {},
+    update: {
+      password: adminPassword,
+      name: 'Miguel Dubois',
+      phone: '+502 5406-6217',
+      role: 'ADMIN',
+      isVerified: true,
+    },
     create: {
       email: 'miguel@kromalab.gt',
       password: adminPassword,
@@ -125,7 +131,7 @@ export async function seedDatabase() {
   }
 
   // Si estamos en producción, asegurar que la base de datos esté libre de cualquier registro falso/demo
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prduction' || process.env.NODE_ENV?.includes('prod')) {
     console.log('🧹 Producción detectada: Garantizando base de datos 100% limpia de datos de prueba...');
     try {
       await prisma.dispatchNote.deleteMany({
