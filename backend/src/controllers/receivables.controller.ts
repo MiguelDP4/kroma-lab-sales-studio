@@ -30,7 +30,7 @@ export async function listReceivables(_req: AuthenticatedRequest, res: Response,
     const now = new Date();
 
     const receivables = orders.map((order) => {
-      const balanceDueQ = Math.max(0, order.totalAmountQ - order.amountPaidQ);
+      const balanceDueQ = Math.max(0, Number(order.totalAmountQ) - Number(order.amountPaidQ));
       const daysDiff = Math.floor((now.getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24));
 
       let agingStatus = 'CURRENT'; // 0-7 días
@@ -80,8 +80,8 @@ export async function recordPayment(req: AuthenticatedRequest, res: Response, ne
       return;
     }
 
-    const newAmountPaid = order.amountPaidQ + data.amountPaidQ;
-    const isFullyPaid = newAmountPaid >= order.totalAmountQ - 0.01;
+    const newAmountPaid = Number(order.amountPaidQ) + data.amountPaidQ;
+    const isFullyPaid = newAmountPaid >= Number(order.totalAmountQ) - 0.01;
     const newPaymentStatus = isFullyPaid ? 'PAID' : 'PARTIAL';
 
     const count = await prisma.payment.count();
@@ -154,7 +154,7 @@ export async function voidPayment(req: AuthenticatedRequest, res: Response, next
     }
 
     const order = payment.order;
-    const revertedAmount = Math.max(0, order.amountPaidQ - payment.amountPaidQ);
+    const revertedAmount = Math.max(0, Number(order.amountPaidQ) - Number(payment.amountPaidQ));
     const newPaymentStatus = revertedAmount <= 0.01 ? 'PENDING' : 'PARTIAL';
 
     await prisma.$transaction([
