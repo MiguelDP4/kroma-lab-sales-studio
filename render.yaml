@@ -6,7 +6,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm install && npm run db:postgres:generate && npm run build
-    startCommand: npx prisma db push --schema=prisma/schema.prisma && npm run start
+    startCommand: npx prisma db push --schema=prisma/schema.prisma && node dist/db/seed.js && npm run start
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:

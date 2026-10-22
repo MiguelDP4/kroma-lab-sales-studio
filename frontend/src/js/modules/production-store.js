@@ -5,6 +5,8 @@
 
 import { ORDER_STATUS } from '../../shared/business-config.js';
 
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
 const STORAGE_KEY_ORDERS = 'kromalab_production_orders';
 const STORAGE_KEY_ROLL = 'kromalab_production_roll';
 
@@ -91,13 +93,26 @@ class ProductionStore {
   }
 
   _loadState() {
-    let orders = INITIAL_ORDERS;
+    let orders = IS_TEST_ENV ? INITIAL_ORDERS : [];
     let roll = INITIAL_ROLL;
 
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const savedOrders = window.localStorage.getItem(STORAGE_KEY_ORDERS);
-        if (savedOrders) orders = JSON.parse(savedOrders);
+        if (savedOrders) {
+          const parsed = JSON.parse(savedOrders);
+          if (Array.isArray(parsed)) {
+            if (!IS_TEST_ENV) {
+              const clean = parsed.filter(o => !o.id?.startsWith('KL-000') && !o.clientName?.includes('Café San Cristóbal') && !o.clientName?.includes('Taller Mecánico') && !o.clientName?.includes('Barbería Vintage') && !o.clientName?.includes('Sport Gym'));
+              if (clean.length !== parsed.length) {
+                window.localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(clean));
+              }
+              orders = clean;
+            } else {
+              orders = parsed;
+            }
+          }
+        }
 
         const savedRoll = window.localStorage.getItem(STORAGE_KEY_ROLL);
         if (savedRoll) roll = JSON.parse(savedRoll);

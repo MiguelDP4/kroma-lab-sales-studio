@@ -147,12 +147,26 @@ export class Router {
         <p style="color: var(--text-secondary); margin-bottom: 2rem;">
           Esta sección requiere rol ${route.allowedRoles.join(' o ')}. Tu rol actual es <strong>${userRole}</strong>.
         </p>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
           <a href="/" class="btn btn-primary" data-link>Ir al Cotizador</a>
-          <a href="#login" class="btn btn-secondary" onclick="window.__simulateRole && window.__simulateRole('ADMIN')">Acceder como Admin</a>
+          <button type="button" class="btn btn-secondary" id="btnRestrictedLogin" style="min-height: 44px;">Iniciar Sesión</button>
         </div>
       </div>
     `;
+
+    const btnLogin = mountEl.querySelector('#btnRestrictedLogin');
+    if (btnLogin) {
+      btnLogin.addEventListener('click', () => {
+        import('./components/user-profile-modal.js').then(m => {
+          if (m && typeof m.openUserProfileModal === 'function') {
+            m.openUserProfileModal({ defaultTab: 'login' });
+          }
+        }).catch(err => {
+          console.error('Error al abrir modal de autenticación:', err);
+        });
+      });
+    }
+
     this.updateActiveNavLinks(route.path);
   }
 

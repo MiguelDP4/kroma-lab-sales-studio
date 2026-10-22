@@ -10,6 +10,8 @@ import { store } from '../store.js';
 import { usersStore } from '../modules/users-store.js';
 import { apiClient } from '../modules/api-client.js';
 
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
 let modalInitialized = false;
 
 export function initUserProfileModal() {
@@ -118,7 +120,8 @@ export function initUserProfileModal() {
               <textarea id="profileAddressInput" class="input-control" rows="2" placeholder="Colonia San José el Placer, Villa Nueva / Zona 10 Ciudad de Guatemala..."></textarea>
             </div>
 
-            <!-- Selector Rápido de Cuenta (Conexión Real con Backend) -->
+            ${IS_TEST_ENV ? `
+            <!-- Selector Rápido de Cuenta (Solo en entorno de pruebas) -->
             <div style="background: rgba(28, 114, 147, 0.05); border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.5rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em;">
@@ -142,7 +145,7 @@ export function initUserProfileModal() {
                   👤 Visitante
                 </button>
               </div>
-            </div>
+            </div>` : ''}
 
             <!-- Botones de Acción -->
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem; flex-wrap: wrap;">
@@ -184,7 +187,8 @@ export function initUserProfileModal() {
               </div>
             </div>
 
-            <!-- Accesos Rápidos con Cuentas Reales -->
+            ${IS_TEST_ENV ? `
+            <!-- Accesos Rápidos con Cuentas Reales (Solo en entorno de pruebas) -->
             <div style="background: rgba(28, 114, 147, 0.06); border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
               <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">
                 ⚡ Cuentas Semilla de Taller (Login Automático Real)
@@ -200,7 +204,7 @@ export function initUserProfileModal() {
                   🏢 Rodrigo Castillo (Cliente)
                 </button>
               </div>
-            </div>
+            </div>` : ''}
 
             <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
               <button type="button" class="btn btn-secondary" id="btnCancelLogin" style="min-height: 44px;">Cancelar</button>

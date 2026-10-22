@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 
 export async function seedDatabase() {
-  console.log('🌱 Inicializando datos semilla de Kroma Lab...');
+  console.log('🌱 Inicializando configuración y datos de Kroma Lab...');
 
   // 1. Configuración de Taller Audley UV DTF
   await prisma.workshopConfig.upsert({
@@ -22,7 +22,7 @@ export async function seedDatabase() {
       bankBacAccount: null,
       bankGytAccount: null,
       bankBanruralAccount: null,
-      whatsappNumber: '+502 5555-0000',
+      whatsappNumber: '+502 5406-6217',
       filmACostPerM: 6.30,
       filmBCostPerM: 4.08,
       inkCostPerM: 8.25,
@@ -30,44 +30,8 @@ export async function seedDatabase() {
     },
   });
 
-  // 2. Clientes B2B iniciales
-  const promoGuate = await prisma.customer.upsert({
-    where: { email: 'rodrigo@promoguate.gt' },
-    update: {},
-    create: {
-      companyName: 'PromoGuate',
-      managerName: 'Rodrigo Castillo',
-      phone: '+502 5555-1234',
-      email: 'rodrigo@promoguate.gt',
-      address: 'Zona 10, Edificio Design Center, Oficina 402, Ciudad de Guatemala',
-      taxId: '7845129-4',
-      tier: 'VIP',
-      sector: 'ARTICULOS_PROMO',
-      notes: 'Cliente de alto volumen de artículos promocionales y pachones metálicos.',
-    },
-  });
-
-  const cafeSanJose = await prisma.customer.upsert({
-    where: { email: 'pedidos@cafesanjose.gt' },
-    update: {},
-    create: {
-      companyName: 'Café San José',
-      managerName: 'Mariana López',
-      phone: '+502 5555-5678',
-      email: 'pedidos@cafesanjose.gt',
-      address: 'San José El Placer, Villa Nueva, Guatemala',
-      taxId: '9823145-2',
-      tier: 'RECURRENTE',
-      sector: 'CAFETERIAS',
-      notes: 'Stickers para tazas y vasos térmicos de café de especialidad.',
-    },
-  });
-
-  // 3. Usuarios del Sistema
+  // 2. Usuario Administrador Oficial
   const adminPassword = await bcrypt.hash('Admin2026!', 10);
-  const employeePassword = await bcrypt.hash('Taller2026!', 10);
-  const customerPassword = await bcrypt.hash('Cliente2026!', 10);
-
   await prisma.user.upsert({
     where: { email: 'miguel@kromalab.gt' },
     update: {},
@@ -75,7 +39,7 @@ export async function seedDatabase() {
       email: 'miguel@kromalab.gt',
       password: adminPassword,
       name: 'Miguel Dubois',
-      phone: '+502 5555-0100',
+      phone: '+502 5406-6217',
       company: 'Kroma Lab',
       taxId: '8932451-9',
       address: 'San José El Placer, Villa Nueva, Guatemala',
@@ -85,42 +49,7 @@ export async function seedDatabase() {
     },
   });
 
-  await prisma.user.upsert({
-    where: { email: 'taller@kromalab.gt' },
-    update: {},
-    create: {
-      email: 'taller@kromalab.gt',
-      password: employeePassword,
-      name: 'Carlos Méndez',
-      phone: '+502 5555-0200',
-      company: 'Kroma Lab Taller',
-      taxId: '4512789-0',
-      address: 'Taller de Producción San José El Placer',
-      department: 'Operador Audley UV DTF',
-      role: 'EMPLOYEE',
-      isVerified: true,
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: 'rodrigo@promoguate.gt' },
-    update: {},
-    create: {
-      email: 'rodrigo@promoguate.gt',
-      password: customerPassword,
-      name: 'Rodrigo Castillo',
-      phone: '+502 5555-1234',
-      company: 'PromoGuate',
-      taxId: '7845129-4',
-      address: 'Zona 10, Edificio Design Center, Oficina 402, Ciudad de Guatemala',
-      department: 'Compras B2B',
-      role: 'CUSTOMER',
-      customerId: promoGuate.id,
-      isVerified: true,
-    },
-  });
-
-  // 4. Insumos de Inventario de Taller UV DTF (7 insumos clave)
+  // 3. Insumos de Inventario de Taller UV DTF (7 insumos clave)
   const items = [
     {
       code: 'FILM_A',
@@ -195,7 +124,105 @@ export async function seedDatabase() {
     });
   }
 
-  // 5. Órdenes iniciales de demostración
+  // Si estamos en producción, asegurar que la base de datos esté libre de cualquier registro falso/demo
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🧹 Producción detectada: Garantizando base de datos 100% limpia de datos de prueba...');
+    try {
+      await prisma.dispatchNote.deleteMany({
+        where: { folio: { in: ['REM-2026-001', 'REM-2026-002', 'REM-2026-003'] } },
+      });
+      await prisma.payment.deleteMany({
+        where: { paymentCode: { in: ['PAY-2026-001', 'PAY-2026-002', 'PAY-2026-003'] } },
+      });
+      await prisma.order.deleteMany({
+        where: { code: { in: ['KL-2026-001', 'KL-00042', 'KL-00041', 'KL-00040'] } },
+      });
+      await prisma.user.deleteMany({
+        where: { email: { in: ['rodrigo@promoguate.gt', 'taller@kromalab.gt'] } },
+      });
+      await prisma.customer.deleteMany({
+        where: { email: { in: ['rodrigo@promoguate.gt', 'pedidos@cafesanjose.gt'] } },
+      });
+    } catch (cleanupErr) {
+      console.warn('Nota de limpieza:', cleanupErr);
+    }
+    console.log('✅ Base de datos de producción inicializada y limpia.');
+    return;
+  }
+
+  // 4. Clientes B2B iniciales (para pruebas locales y tests automatizados)
+  const promoGuate = await prisma.customer.upsert({
+    where: { email: 'rodrigo@promoguate.gt' },
+    update: {},
+    create: {
+      companyName: 'PromoGuate',
+      managerName: 'Rodrigo Castillo',
+      phone: '+502 5555-1234',
+      email: 'rodrigo@promoguate.gt',
+      address: 'Zona 10, Edificio Design Center, Oficina 402, Ciudad de Guatemala',
+      taxId: '7845129-4',
+      tier: 'VIP',
+      sector: 'ARTICULOS_PROMO',
+      notes: 'Cliente de alto volumen de artículos promocionales y pachones metálicos.',
+    },
+  });
+
+  await prisma.customer.upsert({
+    where: { email: 'pedidos@cafesanjose.gt' },
+    update: {},
+    create: {
+      companyName: 'Café San José',
+      managerName: 'Mariana López',
+      phone: '+502 5555-5678',
+      email: 'pedidos@cafesanjose.gt',
+      address: 'San José El Placer, Villa Nueva, Guatemala',
+      taxId: '9823145-2',
+      tier: 'RECURRENTE',
+      sector: 'CAFETERIAS',
+      notes: 'Stickers para tazas y vasos térmicos de café de especialidad.',
+    },
+  });
+
+  // Usuarios del Sistema para tests
+  const employeePassword = await bcrypt.hash('Taller2026!', 10);
+  const customerPassword = await bcrypt.hash('Cliente2026!', 10);
+
+  await prisma.user.upsert({
+    where: { email: 'taller@kromalab.gt' },
+    update: {},
+    create: {
+      email: 'taller@kromalab.gt',
+      password: employeePassword,
+      name: 'Carlos Méndez',
+      phone: '+502 5555-0200',
+      company: 'Kroma Lab Taller',
+      taxId: '4512789-0',
+      address: 'Taller de Producción San José El Placer',
+      department: 'Operador Audley UV DTF',
+      role: 'EMPLOYEE',
+      isVerified: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'rodrigo@promoguate.gt' },
+    update: {},
+    create: {
+      email: 'rodrigo@promoguate.gt',
+      password: customerPassword,
+      name: 'Rodrigo Castillo',
+      phone: '+502 5555-1234',
+      company: 'PromoGuate',
+      taxId: '7845129-4',
+      address: 'Zona 10, Edificio Design Center, Oficina 402, Ciudad de Guatemala',
+      department: 'Compras B2B',
+      role: 'CUSTOMER',
+      customerId: promoGuate.id,
+      isVerified: true,
+    },
+  });
+
+  // 5. Órdenes iniciales de demostración para tests
   let order1 = await prisma.order.findUnique({ where: { code: 'KL-2026-001' } });
   if (!order1) {
     order1 = await prisma.order.create({
@@ -227,7 +254,7 @@ export async function seedDatabase() {
     });
   }
 
-  // Remisión inicial
+  // Remisión inicial para tests
   const existingDispatch = await prisma.dispatchNote.findUnique({ where: { folio: 'REM-2026-001' } });
   if (!existingDispatch) {
     await prisma.dispatchNote.create({
@@ -250,7 +277,7 @@ export async function seedDatabase() {
     });
   }
 
-  // Abono parcial inicial
+  // Abono parcial inicial para tests
   const existingPayment = await prisma.payment.findUnique({ where: { paymentCode: 'PAY-2026-001' } });
   if (!existingPayment) {
     await prisma.payment.create({
