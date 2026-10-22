@@ -1,17 +1,133 @@
+import { apiClient } from './modules/api-client.js';
+import { ordersStore } from './modules/orders-store.js';
+import { clientsStore } from './modules/clients-store.js';
+import { inventoryStore } from './modules/inventory-store.js';
+import { receivablesStore } from './modules/receivables-store.js';
+import { dispatchStore } from './modules/dispatch-store.js';
+import { usersStore } from './modules/users-store.js';
 /**
  * SPA Entrypoint — Kroma Lab Sales Studio
- * Manejo de logo, roles en navbar, cotizador interactivo y simulador de bobina.
+ * Manejo de logo, roles en navbar, enrutador SPA y cotizador interactivo.
  */
 
 import { store } from './store.js';
 import { calculateQuote } from './modules/quoter-engine.js';
-import { drawRollCanvas } from './modules/roll-simulator.js';
+import { drawRollCanvas, generateCanvasSnapshot } from './modules/roll-simulator.js';
 import { BUSINESS_CONFIG } from '../shared/business-config.js';
+import { Router } from './router.js';
+import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
+import { cartStore } from './modules/cart-store.js';
+import { validatePrintFile, readFileAsDataURL, uploadFileToStorage, uploadCanvasSnapshotToStorage } from './modules/file-uploader.js';
+import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
+import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
+import { initPrintListeners, printDocument } from './modules/print-helper.js';
+import { quotesStore } from './modules/quotes-store.js';
+
+import { quoterView } from './views/quoter-view.js';
+import { ordersView } from './views/orders-view.js';
+import { productionView } from './views/production-view.js';
+import { clientsView } from './views/clients-view.js';
+import { usersView } from './views/users-view.js';
+import { reportsView } from './views/reports-view.js';
+import { profitabilityView } from './views/profitability-view.js';
+import { inventoryView } from './views/inventory-view.js';
+import { receivablesView } from './views/receivables-view.js';
+import { dispatchView } from './views/dispatch-view.js';
+import { quotesView } from './views/quotes-view.js';
+
+export const routes = [
+  quoterView,
+  { ...quoterView, path: '/cotizador' },
+  quotesView,
+  { ...quotesView, path: '/cotizaciones' },
+  ordersView,
+  productionView,
+  clientsView,
+  reportsView,
+  profitabilityView,
+  inventoryView,
+  receivablesView,
+  { ...receivablesView, path: '/cuentas-por-cobrar' },
+  dispatchView,
+  { ...dispatchView, path: '/remisiones' },
+  usersView,
+];
+
+export const router = new Router(routes, 'app');
+
+export async function initBackendSync() {
+  try {
+    const health = await apiClient.checkHealth();
+    if (health && health.status === 'ok') {
+      if (!apiClient.token) {
+        try {
+          await apiClient.auth.login('miguel@kromalab.gt', 'Admin2026!');
+        } catch (_) {}
+      }
+      await Promise.allSettled([
+        ordersStore.syncWithApi(),
+        clientsStore.syncWithApi(),
+        inventoryStore.syncWithApi(),
+        receivablesStore.syncWithApi(),
+        dispatchStore.syncWithApi(),
+        usersStore.syncWithApi(),
+        quotesStore.syncWithApi(),
+      ]);
+    }
+  } catch (err) {
+    console.warn('[BackendSync] Servidor backend offline o no disponible:', err?.message || err);
+  }
+}
 
 export function initApp() {
   initTheme();
   initNavbarRoleSync();
-  initQuoter();
+  initMobileNav();
+  initCartDrawer();
+  initUserProfileModal();
+  initSaveQuoteModal();
+  initPrintListeners();
+  router.init();
+  initBackendSync();
+}
+
+/**
+ * Estado en memoria para imagen activa, rotación y relación de aspecto del simulador de bobina
+ */
+let currentPreviewImg = null;
+let currentRotation = 0;
+let currentImageAspectRatio = null;
+
+export function getActivePreviewImg() {
+  return currentPreviewImg;
+}
+
+export function getActiveRotation() {
+  return currentRotation;
+}
+
+export function getActiveImageAspectRatio() {
+  return currentImageAspectRatio;
+}
+
+export function setActivePreviewImg(img, rotation = 0) {
+  currentPreviewImg = img;
+  currentRotation = rotation;
+  if (img && (img.naturalWidth || img.width)) {
+    const nw = img.naturalWidth || img.width || 1;
+    const nh = img.naturalHeight || img.height || 1;
+    currentImageAspectRatio = nh / nw;
+  } else {
+    currentImageAspectRatio = null;
+  }
+  redrawRollCanvas();
+}
+
+export function redrawRollCanvas() {
+  const canvas = document.getElementById('rollCanvas');
+  if (canvas && store.state.activeQuote) {
+    drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark', currentPreviewImg, currentRotation);
+  }
 }
 
 /**
@@ -37,20 +153,116 @@ function updateThemeUI(theme) {
     icon.textContent = theme === 'dark' ? '☀️' : '🌙';
   }
   // Re-dibujar canvas al cambiar el tema para adaptar el contraste
-  const canvas = document.getElementById('rollCanvas');
-  if (canvas && store.state.activeQuote) {
-    drawRollCanvas(canvas, store.state.activeQuote, theme === 'dark');
+  redrawRollCanvas();
+}
+
+/**
+ * Control del menú hamburguesa en dispositivos móviles
+ */
+export function initMobileNav() {
+  const toggleBtn = document.getElementById('mobileNavToggle');
+  const navLinks = document.getElementById('navRoleLinks');
+  const navIcon = document.getElementById('mobileNavIcon');
+  const sidebar = document.getElementById('appSidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const closeBtn = document.getElementById('sidebarCloseBtn');
+
+  function openSidebar() {
+    if (navLinks) navLinks.classList.add('is-open');
+    if (sidebar) {
+      sidebar.classList.add('is-open');
+      sidebar.setAttribute('aria-hidden', 'false');
+    }
+    if (backdrop) {
+      backdrop.classList.add('is-open');
+      backdrop.setAttribute('aria-hidden', 'false');
+    }
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+    if (navIcon) navIcon.textContent = '✕';
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeSidebar() {
+    if (navLinks) navLinks.classList.remove('is-open');
+    if (sidebar) {
+      sidebar.classList.remove('is-open');
+      sidebar.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) {
+      backdrop.classList.remove('is-open');
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+    if (navIcon) navIcon.textContent = '☰';
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.style.overflow = '';
+    }
+  }
+
+  function toggleSidebar() {
+    const isOpen = (sidebar && sidebar.classList.contains('is-open')) || (navLinks && navLinks.classList.contains('is-open'));
+    if (isOpen) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleSidebar);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeSidebar);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeSidebar);
+  }
+
+  if (navLinks) {
+    navLinks.addEventListener('click', (e) => {
+      if (e.target.matches('a, a *')) {
+        closeSidebar();
+      }
+    });
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeSidebar();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const isNavOpen = (sidebar && sidebar.classList.contains('is-open')) || (navLinks && navLinks.classList.contains('is-open'));
+      if (
+        isNavOpen &&
+        (!sidebar || !sidebar.contains(e.target)) &&
+        (!navLinks || !navLinks.contains(e.target)) &&
+        (!toggleBtn || !toggleBtn.contains(e.target)) &&
+        (!backdrop || !backdrop.contains(e.target))
+      ) {
+        closeSidebar();
+      }
+    });
   }
 }
 
 /**
- * Control dinámico del Navbar según el rol del usuario:
- * - "Sales Studio" SOLO se muestra para ADMIN y EMPLOYEE.
- * - Clientes y visitantes sin registrar SOLO ven "Kroma Lab".
+ * Control dinámico del Navbar y Sidebar Drawer según el rol del usuario (RBAC)
  */
 export function syncNavbarRole(role) {
   const salesStudioTag = document.getElementById('salesStudioTag');
   const navLinksContainer = document.getElementById('navRoleLinks');
+  const userChipName = document.getElementById('userChipName');
+  const userChipAvatar = document.getElementById('userChipAvatar');
+  const sidebarUserName = document.getElementById('sidebarUserName');
+  const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
+  const sidebarUserRole = document.getElementById('sidebarUserRole');
 
   const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
 
@@ -58,48 +270,159 @@ export function syncNavbarRole(role) {
     salesStudioTag.style.display = isStaff ? 'inline-block' : 'none';
   }
 
+  // Actualizar tarjeta de usuario y chip
+  const currentUser = store.state.user;
+  const currentName = currentUser?.name;
+
+  if (role === 'ADMIN') {
+    if (userChipName) userChipName.textContent = currentName ? `${currentName} (Admin)` : 'Miguel Dubois (Admin)';
+    if (userChipAvatar) userChipAvatar.textContent = '👑';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Miguel Dubois';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'M';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'ADMINISTRADOR';
+  } else if (role === 'EMPLOYEE') {
+    if (userChipName) userChipName.textContent = currentName || 'Operador Taller';
+    if (userChipAvatar) userChipAvatar.textContent = '🛠️';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Operador Audley';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'O';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'OPERADOR TALLER';
+  } else if (role === 'CUSTOMER') {
+    if (userChipName) userChipName.textContent = currentName || 'Cliente B2B';
+    if (userChipAvatar) userChipAvatar.textContent = '🏢';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Cliente B2B';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'C';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
+  } else {
+    // Visitante no registrado
+    if (userChipName) userChipName.textContent = 'Visitante';
+    if (userChipAvatar) userChipAvatar.textContent = '👤';
+    if (sidebarUserName) sidebarUserName.textContent = 'Visitante';
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = 'V';
+    if (sidebarUserRole) sidebarUserRole.textContent = 'COTIZADOR WEB';
+  }
+
   if (navLinksContainer) {
     if (isStaff) {
       navLinksContainer.innerHTML = `
-        <a href="#produccion" class="nav-link">Cola Audley</a>
-        <a href="#pedidos" class="nav-link">Pedidos</a>
-        <a href="#clientes" class="nav-link">Clientes</a>
-        <a href="#cotizador" class="nav-link active">Cotizador</a>
-        ${role === 'ADMIN' ? '<a href="#usuarios" class="nav-link">Usuarios</a>' : ''}
+        <div class="sidebar-section-title">🏭 Producción & Taller</div>
+        <a href="/produccion" class="nav-link" data-link>
+          <span class="nav-link-icon">🖨️</span>
+          <span>Cola Audley</span>
+        </a>
+        <a href="/pedidos" class="nav-link" data-link>
+          <span class="nav-link-icon">📋</span>
+          <span>Pedidos</span>
+        </a>
+        <a href="/despacho" class="nav-link" data-link>
+          <span class="nav-link-icon">🚚</span>
+          <span>Despacho</span>
+        </a>
+        <a href="/inventario" class="nav-link" data-link>
+          <span class="nav-link-icon">📦</span>
+          <span>Inventario</span>
+        </a>
+
+        <div class="sidebar-section-title">💼 Gestión Comercial</div>
+        <a href="/" class="nav-link" data-link>
+          <span class="nav-link-icon">🧮</span>
+          <span>Cotizador</span>
+        </a>
+        <a href="/cotizaciones" class="nav-link" data-link>
+          <span class="nav-link-icon">📑</span>
+          <span>Cotizaciones</span>
+        </a>
+        <a href="/clientes" class="nav-link" data-link>
+          <span class="nav-link-icon">👥</span>
+          <span>Clientes</span>
+        </a>
+        <a href="/cobranza" class="nav-link" data-link>
+          <span class="nav-link-icon">💰</span>
+          <span>Cobranza</span>
+        </a>
+
+        <div class="sidebar-section-title">📊 Inteligencia & Finanzas</div>
+        <a href="/reportes" class="nav-link" data-link>
+          <span class="nav-link-icon">📈</span>
+          <span>Reportes</span>
+        </a>
+        <a href="/rentabilidad" class="nav-link" data-link>
+          <span class="nav-link-icon">💵</span>
+          <span>Rentabilidad</span>
+        </a>
+
+        ${role === 'ADMIN' ? `
+        <div class="sidebar-section-title">⚙️ Sistema & Permisos</div>
+        <a href="/usuarios" class="nav-link" data-link>
+          <span class="nav-link-icon">👤</span>
+          <span>Usuarios</span>
+        </a>
+        ` : ''}
       `;
     } else if (role === 'CUSTOMER') {
       navLinksContainer.innerHTML = `
-        <a href="#cotizador" class="nav-link active">Cotizador</a>
-        <a href="#pedidos" class="nav-link">Mis Pedidos</a>
-        <a href="#disenos" class="nav-link">Mis Diseños</a>
+        <div class="sidebar-section-title">🛍️ Autoservicio</div>
+        <a href="/" class="nav-link" data-link>
+          <span class="nav-link-icon">🧮</span>
+          <span>Cotizador</span>
+        </a>
+        <a href="/cotizaciones" class="nav-link" data-link>
+          <span class="nav-link-icon">📑</span>
+          <span>Mis Cotizaciones</span>
+        </a>
+        <a href="/pedidos" class="nav-link" data-link>
+          <span class="nav-link-icon">📦</span>
+          <span>Mis Pedidos</span>
+        </a>
       `;
     } else {
       // Visitante no registrado
       navLinksContainer.innerHTML = `
-        <a href="#cotizador" class="nav-link active">Cotizador</a>
-        <a href="#ventajas" class="nav-link">¿Qué es UV DTF?</a>
-        <a href="#contacto" class="nav-link">WhatsApp</a>
+        <div class="sidebar-section-title">🎨 Kroma Lab</div>
+        <a href="/" class="nav-link" data-link>
+          <span class="nav-link-icon">🧮</span>
+          <span>Cotizador</span>
+        </a>
+        <a href="/cotizaciones" class="nav-link" data-link>
+          <span class="nav-link-icon">📑</span>
+          <span>Cotizaciones</span>
+        </a>
+        <a href="#contacto" class="nav-link">
+          <span class="nav-link-icon">💬</span>
+          <span>WhatsApp</span>
+        </a>
       `;
     }
   }
 }
 
+let lastSyncedRole = null;
+
 function initNavbarRoleSync() {
   store.subscribe((state) => {
     const role = state.user?.role || 'VISITOR';
-    syncNavbarRole(role);
+    if (role !== lastSyncedRole) {
+      lastSyncedRole = role;
+      syncNavbarRole(role);
+      // Re-resolver la ruta para revalidar permisos RBAC si el rol cambió
+      if (typeof window !== 'undefined' && router && router.currentRoute) {
+        router.resolve(window.location.pathname);
+      }
+    } else {
+      syncNavbarRole(role);
+    }
   });
-  syncNavbarRole(store.state.user?.role || 'VISITOR');
+  lastSyncedRole = store.state.user?.role || 'VISITOR';
+  syncNavbarRole(lastSyncedRole);
 }
 
-/**
- * Inicialización de la interfaz del cotizador interactivo
- */
 export function initQuoter() {
   const widthInput = document.getElementById('stickerWidth');
   const heightInput = document.getElementById('stickerHeight');
   const qtyInput = document.getElementById('stickerQty');
   const cuttingCheckbox = document.getElementById('optCutting');
+  const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
+  const btnRotate = document.getElementById('btnRotateImage');
+  const aspectRatioRow = document.getElementById('aspectRatioRow');
 
   if (!widthInput || !heightInput || !qtyInput) return;
 
@@ -112,24 +435,69 @@ export function initQuoter() {
     const quote = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
     store.setActiveQuote(quote);
     renderQuoteResults(quote);
-
-    const canvas = document.getElementById('rollCanvas');
-    if (canvas) {
-      drawRollCanvas(canvas, quote, store.state.theme === 'dark');
-    }
+    redrawRollCanvas();
   }
 
-  widthInput.addEventListener('input', handleCalculate);
-  heightInput.addEventListener('input', handleCalculate);
+  widthInput.addEventListener('input', () => {
+    if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
+      const w = parseFloat(widthInput.value);
+      if (!isNaN(w) && w > 0) {
+        heightInput.value = (w * currentImageAspectRatio).toFixed(1);
+      }
+    }
+    handleCalculate();
+  });
+
+  heightInput.addEventListener('input', () => {
+    if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio && currentImageAspectRatio > 0) {
+      const h = parseFloat(heightInput.value);
+      if (!isNaN(h) && h > 0) {
+        const newW = Math.min(BUSINESS_CONFIG.printableWidthCm, h / currentImageAspectRatio);
+        widthInput.value = newW.toFixed(1);
+      }
+    }
+    handleCalculate();
+  });
+
   qtyInput.addEventListener('input', handleCalculate);
   if (cuttingCheckbox) {
     cuttingCheckbox.addEventListener('change', handleCalculate);
   }
 
+  if (keepAspectCheckbox) {
+    keepAspectCheckbox.addEventListener('change', () => {
+      if (keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
+        const w = parseFloat(widthInput.value) || 5;
+        heightInput.value = (w * currentImageAspectRatio).toFixed(1);
+        handleCalculate();
+      }
+    });
+  }
+
+  if (btnRotate) {
+    btnRotate.addEventListener('click', () => {
+      currentRotation = (currentRotation + 90) % 360;
+
+      if (currentImageAspectRatio && currentImageAspectRatio > 0) {
+        currentImageAspectRatio = 1 / currentImageAspectRatio;
+      }
+
+      const oldW = parseFloat(widthInput.value) || 5;
+      const oldH = parseFloat(heightInput.value) || 5;
+      const newW = Math.min(BUSINESS_CONFIG.printableWidthCm, oldH);
+      const newH = oldW;
+
+      widthInput.value = newW.toFixed(1);
+      heightInput.value = newH.toFixed(1);
+
+      handleCalculate();
+    });
+  }
+
   // Configurar botones de presets rápidos
   const presetChips = document.querySelectorAll('.btn-chip[data-w]');
   presetChips.forEach(chip => {
-    chip.addEventListener('click', (e) => {
+    chip.addEventListener('click', () => {
       presetChips.forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       widthInput.value = chip.dataset.w;
@@ -138,20 +506,347 @@ export function initQuoter() {
     });
   });
 
+  // Zona de Carga de Archivos de Impresión (Dropzone)
+  let currentAttachedFile = null;
+  let currentRawFile = null;
+  let currentPreviewUrl = null;
+
   // Botón de WhatsApp
   const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
   if (btnWhatsApp) {
-    btnWhatsApp.addEventListener('click', () => {
-      sendWhatsAppQuote(store.state.activeQuote);
+    btnWhatsApp.addEventListener('click', async () => {
+      let fileUrl = currentAttachedFile ? currentAttachedFile.fileUrl : null;
+      if (currentRawFile && currentAttachedFile && !fileUrl) {
+        try {
+          const uploadRes = await uploadFileToStorage(currentRawFile, { context: 'quotes' });
+          currentAttachedFile.fileKey = uploadRes.fileKey;
+          currentAttachedFile.fileUrl = uploadRes.fileUrl;
+          currentAttachedFile.provider = uploadRes.provider;
+          fileUrl = uploadRes.fileUrl;
+        } catch (uploadErr) {
+          console.warn('[Storage] Error al subir archivo para cotización WhatsApp:', uploadErr);
+        }
+      }
+
+      const rollCanvas = document.getElementById('rollCanvas');
+      const calculated = store.state.activeQuote;
+      let canvasSnapshotUrl = null;
+      if (rollCanvas && calculated) {
+        try {
+          const snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
+          if (snapshotBase64) {
+            canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
+              snapshotBase64,
+              `esquema_${calculated.widthCm}x${calculated.heightCm}cm.png`,
+              { context: 'quotes' }
+            );
+          }
+        } catch (snapErr) {
+          console.warn('[Storage] Error al subir snapshot canvas para cotización WhatsApp:', snapErr);
+        }
+      }
+
+      const quoteToSend = {
+        ...store.state.activeQuote,
+        fileUrl,
+        canvasSnapshotUrl,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+      };
+      sendWhatsAppQuote(quoteToSend);
+    });
+  }
+
+  const dropzone = document.getElementById('quoterDropzone');
+  const fileInput = document.getElementById('quoterFileInput');
+  const emptyState = document.getElementById('dropzoneEmptyState');
+  const selectedState = document.getElementById('dropzoneFileSelected');
+  const fileNameEl = document.getElementById('dropzoneFileName');
+  const fileSizeEl = document.getElementById('dropzoneFileSize');
+  const thumbWrap = document.getElementById('dropzoneThumbWrap');
+  const btnRemoveFile = document.getElementById('btnRemoveFile');
+  const errorMsgEl = document.getElementById('dropzoneError');
+  const progressWrap = document.getElementById('dropzoneProgressWrap');
+  const progressBar = document.getElementById('dropzoneProgressBar');
+  const progressPercent = document.getElementById('dropzoneProgressPercent');
+  const progressLabel = document.getElementById('dropzoneProgressLabel');
+  const uploadBadge = document.getElementById('dropzoneUploadBadge');
+
+  function clearDropzoneFile() {
+    currentAttachedFile = null;
+    currentRawFile = null;
+    currentPreviewUrl = null;
+    currentPreviewImg = null;
+    currentRotation = 0;
+    currentImageAspectRatio = null;
+
+    if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+
+    redrawRollCanvas();
+
+    if (fileInput) fileInput.value = '';
+    if (emptyState) emptyState.style.display = 'flex';
+    if (selectedState) selectedState.style.display = 'none';
+    if (errorMsgEl) errorMsgEl.style.display = 'none';
+    if (progressWrap) progressWrap.style.display = 'none';
+    if (uploadBadge) uploadBadge.style.display = 'none';
+  }
+
+  async function handleFileSelected(file) {
+    if (!file) return;
+    const validation = validatePrintFile(file);
+    if (!validation.valid) {
+      if (errorMsgEl) {
+        errorMsgEl.textContent = validation.error;
+        errorMsgEl.style.display = 'block';
+      }
+      return;
+    }
+
+    if (errorMsgEl) errorMsgEl.style.display = 'none';
+    currentRawFile = file;
+    currentAttachedFile = {
+      ...validation.fileData,
+      fileKey: null,
+      fileUrl: null,
+      provider: 'pending',
+    };
+
+    try {
+      currentPreviewUrl = await readFileAsDataURL(file);
+    } catch (_) {
+      currentPreviewUrl = null;
+    }
+
+    if (!currentAttachedFile || currentAttachedFile.name !== validation.fileData.name) {
+      return;
+    }
+
+    if (fileNameEl) fileNameEl.textContent = currentAttachedFile.name;
+    if (fileSizeEl) fileSizeEl.textContent = currentAttachedFile.sizeFormatted;
+
+    if (thumbWrap) {
+      if (currentPreviewUrl) {
+        thumbWrap.innerHTML = `<img src="${currentPreviewUrl}" alt="Preview" class="dropzone-thumb-img">`;
+      } else {
+        thumbWrap.innerHTML = `<span style="font-size: 1.5rem;">📁</span>`;
+      }
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (selectedState) selectedState.style.display = 'flex';
+
+    // Estrategia 1 (Lazy Upload): No subir al bucket de Cloudflare R2 todavía.
+    // Se mantiene en memoria del navegador para previsualización con cero latencia
+    if (uploadBadge) {
+      uploadBadge.style.display = 'inline-block';
+      uploadBadge.textContent = '📁 Listo para cotizar';
+      uploadBadge.style.background = 'rgba(2, 132, 199, 0.15)';
+      uploadBadge.style.color = 'var(--cerulean)';
+    }
+
+    if (progressWrap) {
+      progressWrap.style.display = 'none';
+    }
+
+    // Cargar imagen en memoria para renderizado en la bobina
+    if (currentPreviewUrl && typeof Image !== 'undefined') {
+      const img = new Image();
+      img.onload = () => {
+        currentPreviewImg = img;
+        currentRotation = 0;
+        const nw = img.naturalWidth || img.width || 1;
+        const nh = img.naturalHeight || img.height || 1;
+        currentImageAspectRatio = nh / nw;
+
+        if (aspectRatioRow) {
+          aspectRatioRow.style.display = 'flex';
+        }
+
+        if (keepAspectCheckbox && keepAspectCheckbox.checked) {
+          const currentW = parseFloat(widthInput.value) || 5;
+          const newH = Math.round((currentW * currentImageAspectRatio) * 10) / 10;
+          heightInput.value = (newH).toFixed(1);
+          handleCalculate();
+        } else {
+          redrawRollCanvas();
+        }
+      };
+      img.onerror = () => {
+        currentPreviewImg = null;
+        currentRotation = 0;
+        currentImageAspectRatio = null;
+        if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+        redrawRollCanvas();
+      };
+      img.src = currentPreviewUrl;
+    } else {
+      currentPreviewImg = null;
+      currentRotation = 0;
+      currentImageAspectRatio = null;
+      if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+      redrawRollCanvas();
+    }
+  }
+
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', (e) => {
+      if (e.target.closest('#btnRemoveFile')) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleFileSelected(file);
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleFileSelected(file);
+    });
+  }
+
+  if (btnRemoveFile) {
+    btnRemoveFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearDropzoneFile();
+    });
+  }
+
+  // Botón Agregar al Carrito
+  const btnAddToCart = document.getElementById('btnAddToCart');
+  if (btnAddToCart) {
+    btnAddToCart.addEventListener('click', async () => {
+      const w = parseFloat(widthInput.value) || 5;
+      const h = parseFloat(heightInput.value) || 5;
+      const q = parseInt(qtyInput.value, 10) || 50;
+      const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+      // Estrategia 1 (Lazy Upload): Si hay un archivo seleccionado y aún no se ha subido a R2, subir ahora
+      if (currentRawFile && currentAttachedFile && !currentAttachedFile.fileUrl) {
+        if (progressWrap && progressBar && progressPercent) {
+          progressWrap.style.display = 'block';
+          progressBar.style.width = '0%';
+          progressPercent.textContent = '0%';
+          if (progressLabel) progressLabel.textContent = 'Subiendo a Cloudflare R2...';
+        }
+
+        try {
+          const uploadRes = await uploadFileToStorage(currentRawFile, {
+            context: 'quotes',
+            onProgress: ({ percent }) => {
+              if (progressBar) progressBar.style.width = `${percent}%`;
+              if (progressPercent) progressPercent.textContent = `${percent}%`;
+            },
+          });
+
+          currentAttachedFile.fileKey = uploadRes.fileKey;
+          currentAttachedFile.fileUrl = uploadRes.fileUrl;
+          currentAttachedFile.provider = uploadRes.provider;
+
+          if (uploadBadge) {
+            uploadBadge.style.display = 'inline-block';
+            uploadBadge.textContent = uploadRes.provider === 'cloudflare-r2' ? '☁️ R2 Activo' : '💾 Local';
+            uploadBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+            uploadBadge.style.color = '#10b981';
+          }
+        } catch (uploadErr) {
+          console.warn('[Storage] Error al subir archivo en carrito a R2:', uploadErr);
+          currentAttachedFile.provider = 'local';
+        } finally {
+          if (progressWrap) progressWrap.style.display = 'none';
+        }
+      }
+
+      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const rollCanvas = document.getElementById('rollCanvas');
+      const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+      let canvasSnapshotUrl = null;
+      if (canvasSnapshot) {
+        try {
+          canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
+            canvasSnapshot,
+            `bobina_${w}x${h}cm.png`,
+            { context: 'orders' }
+          );
+        } catch (snapErr) {
+          console.warn('[Storage] Error al subir snapshot canvas al carrito:', snapErr);
+        }
+      }
+
+      cartStore.addItem({
+        title: `Stickers ${w} × ${h} cm`,
+        widthCm: w,
+        heightCm: h,
+        qty: q,
+        includeCutting: cut,
+        actualLinearMeters: calculated.actualLinearMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        fileInfo: currentAttachedFile ? { ...currentAttachedFile } : null,
+        fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        previewUrl: currentPreviewUrl,
+        canvasSnapshot: canvasSnapshot || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
+        rotationDeg: currentRotation || 0,
+      });
+
+      clearDropzoneFile();
+      openCartDrawer();
+    });
+  }
+
+  // Botón Guardar Cotización
+  const btnSaveQuote = document.getElementById('btnSaveQuote');
+  if (btnSaveQuote) {
+    btnSaveQuote.addEventListener('click', () => {
+      const w = parseFloat(widthInput.value) || 5;
+      const h = parseFloat(heightInput.value) || 5;
+      const q = parseInt(qtyInput.value, 10) || 50;
+      const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+
+      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const rollCanvas = document.getElementById('rollCanvas');
+      const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
+
+      openSaveQuoteModal({
+        widthCm: w,
+        heightCm: h,
+        qty: q,
+        linearMeters: calculated.billableMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        withCutting: cut,
+        unitRateQ: calculated.tierRate,
+        materialPriceQ: calculated.materialPriceQ,
+        cuttingPriceQ: calculated.cuttingTotalQ,
+        totalPriceQ: calculated.totalPriceQ,
+        rawFile: currentRawFile || null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        fileUrl: currentAttachedFile ? currentAttachedFile.fileUrl : null,
+        fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
+        fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
+        provider: currentAttachedFile ? currentAttachedFile.provider : null,
+        canvasSnapshot,
+        rotationDeg: currentRotation,
+      });
     });
   }
 
   // Redimensionado responsivo del canvas
   window.addEventListener('resize', () => {
-    const canvas = document.getElementById('rollCanvas');
-    if (canvas && store.state.activeQuote) {
-      drawRollCanvas(canvas, store.state.activeQuote, store.state.theme === 'dark');
-    }
+    redrawRollCanvas();
   });
 
   // Cálculo inicial
@@ -236,18 +931,26 @@ export function sendWhatsAppQuote(quote) {
     ? `• *Corte / Acabado:* Sí, corte recto con máquinas de precisión ${cutDetail}\n`
     : `• *Corte / Acabado:* No (Entrega estándar en rollo continuo)\n`;
 
+  const clientArtUrl = quote.fileUrl || quote.fileInfo?.fileUrl || null;
+  const clientArtText = clientArtUrl ? `• 🖼️ *Arte del cliente:* ${clientArtUrl}\n` : '';
 
-  const text = `¡Hola Kroma Lab! 🚀\n\nQuisiera consultar una cotización de impresión UV DTF:\n` +
-    `• *Tamaño de sticker:* ${quote.widthCm} x ${quote.heightCm} cm\n` +
-    `• *Cantidad solicitada:* ${quote.qty} stickers\n` +
-    `• *Acomodo:* ${quote.stickersPerRow} stickers por fila\n` +
+  const snapUrl = quote.canvasSnapshotUrl || (quote.canvasSnapshot && !quote.canvasSnapshot.startsWith('data:') ? quote.canvasSnapshot : null);
+  const snapText = snapUrl ? `• 📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+
+  const text = `*KROMA LAB — Cotización UV DTF*\n\n` +
+    `Hola, deseo consultar la siguiente cotización:\n` +
+    `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
+    `• *Cantidad:* ${quote.qty} stickers\n` +
+    `• *Acomodo:* ${quote.stickersPerRow} stickers por fila (28 cm útiles)\n` +
     `• *Metros requeridos:* ${quote.billableMeters.toFixed(2)} m\n` +
     `• *Tarifa material:* Q${quote.tierRate.toFixed(2)} / m\n` +
     cuttingText +
-    `• *Total estimado:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
-    `¿Qué disponibilidad tienen para entrega esta semana?`;
+    clientArtText +
+    snapText +
+    `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
+    `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 
-  const url = `https://wa.me/${BUSINESS_CONFIG.phoneWhatsApp}?text=${encodeURIComponent(text)}`;
+  const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
   if (typeof window !== 'undefined') {
     window.open(url, '_blank');
   }
@@ -256,3 +959,5 @@ export function sendWhatsAppQuote(quote) {
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
+
+export { openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };

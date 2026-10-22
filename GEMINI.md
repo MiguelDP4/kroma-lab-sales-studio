@@ -132,3 +132,49 @@ flowchart TD
    * **Tokens del Sistema de Diseño:** Paleta de colores (`--space-indigo`, `--regal-navy`, `--baltic-blue`, `--cerulean`, `--powder-blue`) y su comportamiento en Modo Claro y Modo Oscuro.
    * **Matriz Maestra de Roles y Permisos (RBAC):** Catálogo de permisos asignados a Visitante, Cliente, Empleado y Administrador.
 
+---
+
+## 7. Flujo de Trabajo GitFlow Obligatorio
+
+> **NORMA DE CONTROL DE VERSIONES:**
+> El desarrollo del proyecto debe seguir estrictamente la metodología **GitFlow**. Queda estrictamente prohibido realizar commits directos sobre `development` o `main`.
+
+### Estructura de Ramas:
+* **`main` (Producción):**
+  * Representa el código estable en producción.
+  * Solo recibe merges provenientes de `development` al momento de liberar una versión o entrega formal.
+* **`development` (Staging y Rama Principal por Defecto):**
+  * Es la **rama principal y predeterminada del repositorio**.
+  * Actúa como entorno de Staging y base de integración de todos los features aprobados.
+* **Ramas de Trabajo Temporales (`feature/*`, `fix/*`, `docs/*`, `test/*`):**
+  * Cada cambio, requerimiento o corrección debe desarrollarse en su propia rama creada a partir de `development`:
+    ```bash
+    git checkout -b feature/<nombre-tarea> development
+    ```
+
+### Protocolo de Integración y Aprobación:
+1. **Desarrollo y Testing en la Rama:** Se implementa el código y se garantiza el 100% de tests passing con cobertura > 85%.
+2. **Commit Atómico:** Mensajes descriptivos bajo estándar Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
+3. **Solicitud de Visto Bueno:** Al finalizar la tarea, se le presenta el avance detallado a Miguel para revisión.
+4. **Merge a `development`:** **Únicamente tras recibir el visto bueno explícito de Miguel**, se realiza el merge a `development`.
+
+---
+
+## 8. Regla Obligatoria de Diseño y Desarrollo Mobile-First
+
+> **NORMA DE EXPERIENCIA DE USUARIO (UX/UI):**
+> Toda la interfaz pública, cotizador, catálogo, tablas de gestión interna, modales, componentes y tableros interactivos deben construirse y optimizarse obligatoriamente con **mentalidad Mobile-First**.
+
+1. **Diseño y Estilizado Progresivo:**
+   * La estructura HTML y el CSS base deben pensarse primero para pantallas pequeñas (smartphones desde 320px - 375px de ancho) y expandirse progresivamente hacia tablets y escritorios mediante `@media (min-width: ...)`.
+2. **Tablas y Listados Adaptativos:**
+   * Ninguna tabla o panel de control debe desbordar o romper el viewport horizontal en móviles.
+   * Se deben implementar contenedores con scroll horizontal táctil suave (`overflow-x: auto; -webkit-overflow-scrolling: touch;`), vistas de tarjeta (card view) o colapso responsivo de columnas secundarias.
+3. **Zonas de Toque y Ergonomía Táctil:**
+   * Botones, selectores, checkboxes e inputs interactivos deben cumplir con un tamaño mínimo de toque ergonómico (mínimo 44 × 44 px de área táctil).
+   * Modales y hojas desplegables (drawers) deben adaptarse al 100% del ancho móvil con zonas de cierre (X y botón cerrar) cómodas con una sola mano.
+4. **Canvas y Simuladores Gráficos:**
+   * El simulador de bobina Audley y el dropzone deben escalar dinámicamente según el ancho de pantalla (`max-width: 100%`, auto-resize en Canvas), manteniendo legibilidad sin recortes.
+
+
+

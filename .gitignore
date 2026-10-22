@@ -11,6 +11,10 @@ coverage/
 .env
 .env.local
 .env.*.local
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # Compilados y Builds
 dist/
@@ -27,3 +31,7 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Subidas locales
+uploads/
+backend/uploads/

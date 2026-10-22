@@ -1,0 +1,585 @@
+/**
+ * Almacén reactivo de pedidos B2B y gestión comercial de Kroma Lab UV DTF.
+ * Administra el ciclo de vida comercial, pagos, métricas y órdenes de taller.
+ */
+
+import { ORDER_STATUS } from '../../shared/business-config.js';
+import { inventoryStore } from './inventory-store.js';
+import { apiClient } from './api-client.js';
+
+const STORAGE_KEY_ORDERS = 'kromalab_orders';
+
+export const PAYMENT_STATUS = {
+  PENDING: 'PENDING',       // Pendiente de pago
+  PARTIAL: 'PARTIAL',       // Anticipo 50%
+  PAID: 'PAID',             // Pagado 100%
+  CANCELLED: 'CANCELLED',   // Cancelado
+};
+
+export const PAYMENT_STATUS_LABELS = {
+  [PAYMENT_STATUS.PENDING]: { label: 'Pendiente', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+  [PAYMENT_STATUS.PARTIAL]: { label: 'Anticipo 50%', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  [PAYMENT_STATUS.PAID]: { label: 'Pagado', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  [PAYMENT_STATUS.CANCELLED]: { label: 'Anulado', color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
+};
+
+export const PRODUCTION_STATUS_LABELS = {
+  [ORDER_STATUS.PENDING_REVIEW]: { label: 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
+  [ORDER_STATUS.IN_AUDLEY_QUEUE]: { label: 'En Cola Audley', color: 'var(--cerulean)', bg: 'rgba(28, 114, 147, 0.15)' },
+  [ORDER_STATUS.PRINTING]: { label: 'Imprimiendo UV', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  [ORDER_STATUS.LAMINATING_CUTTING]: { label: 'Laminado y Corte', color: 'var(--baltic-blue)', bg: 'rgba(6, 90, 130, 0.2)' },
+  [ORDER_STATUS.READY_FOR_DELIVERY]: { label: 'Listo para Entrega', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  [ORDER_STATUS.COMPLETED]: { label: 'Entregado', color: '#9eb3c2', bg: 'rgba(158, 179, 194, 0.15)' },
+  [ORDER_STATUS.CANCELLED]: { label: 'Cancelado', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+};
+
+const INITIAL_SEED_ORDERS = [
+  {
+    id: 'KL-00042',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    customer: {
+      clientId: 'CLI-001',
+      name: 'Rodrigo Méndez',
+      company: 'Café San Cristóbal',
+      phone: '+502 5555-1234',
+      nit: '7845129-4',
+      address: 'San Cristóbal, Zona 8 de Mixco',
+      email: 'rodrigo@cafesancristobal.gt',
+    },
+    items: [
+      {
+        title: 'Logo Tazas 5 × 5 cm',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 150,
+        actualLinearMeters: 1.58,
+        stickersPerRow: 5,
+        rows: 30,
+        includeCutting: true,
+        cuttingRateUnit: 0.30,
+        finishType: 'Barniz con Relieve 3D',
+        fileInfo: { name: 'logo_cafe_300dpi.png', sizeFormatted: '2.4 MB' },
+      }
+    ],
+    metrics: {
+      totalBillableMeters: 1.58,
+      tierRate: 115.0,
+      materialTotalQ: 181.70,
+      cuttingTotalQ: 45.0,
+      grandTotalQ: 226.70,
+      hasCutting: true,
+    },
+    productionStatus: ORDER_STATUS.IN_AUDLEY_QUEUE,
+    paymentStatus: PAYMENT_STATUS.PAID,
+    paymentMethod: 'TRANSFER',
+    workshopNotes: 'Prioridad alta, entrega por la tarde. Verificar registro de barniz UV.',
+  },
+  {
+    id: 'KL-00041',
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+    customer: {
+      clientId: 'CLI-002',
+      name: 'Alejandro Morales',
+      company: 'Barbería Vintage',
+      phone: '+502 5111-2233',
+      nit: 'CF',
+      address: 'Zona 1, Centro Histórico',
+      email: 'contacto@barberiavintage.com',
+    },
+    items: [
+      {
+        title: 'Logos Espejo 8 × 5 cm',
+        widthCm: 8,
+        heightCm: 5,
+        qty: 80,
+        actualLinearMeters: 3.20,
+        stickersPerRow: 3,
+        rows: 27,
+        includeCutting: true,
+        cuttingRateUnit: 0.30,
+        finishType: 'Barniz con Relieve 3D',
+        fileInfo: { name: 'vintage_barber.pdf', sizeFormatted: '4.8 MB' },
+      }
+    ],
+    metrics: {
+      totalBillableMeters: 3.20,
+      tierRate: 115.0,
+      materialTotalQ: 368.0,
+      cuttingTotalQ: 25.0, // Mínimo de corte
+      grandTotalQ: 393.0,
+      hasCutting: true,
+    },
+    productionStatus: ORDER_STATUS.PRINTING,
+    paymentStatus: PAYMENT_STATUS.PARTIAL,
+    paymentMethod: 'TRANSFER',
+    workshopNotes: 'Anticipo de Q200.00 recibido por transferencia. Saldo contraentrega.',
+  },
+  {
+    id: 'KL-00040',
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    customer: {
+      name: 'Claudia Estrada',
+      company: 'Sport Gym GT',
+      phone: '+502 5999-8877',
+      nit: '1029384-5',
+      address: 'Carretera a El Salvador, Km 14',
+      email: 'gerencia@sportgym.gt',
+    },
+    items: [
+      {
+        title: 'Termos Deportivos 10 × 10 cm',
+        widthCm: 10,
+        heightCm: 10,
+        qty: 50,
+        actualLinearMeters: 2.50,
+        stickersPerRow: 2,
+        rows: 25,
+        includeCutting: false,
+        cuttingRateUnit: 0,
+        finishType: 'Barniz Brillante',
+        fileInfo: { name: 'sportgym_vector.ai', sizeFormatted: '1.8 MB' },
+      }
+    ],
+    metrics: {
+      totalBillableMeters: 2.50,
+      tierRate: 115.0,
+      materialTotalQ: 287.50,
+      cuttingTotalQ: 0.0,
+      grandTotalQ: 287.50,
+      hasCutting: false,
+    },
+    productionStatus: ORDER_STATUS.READY_FOR_DELIVERY,
+    paymentStatus: PAYMENT_STATUS.PAID,
+    paymentMethod: 'TRANSFER',
+    workshopNotes: 'Empacado en tubo rígido continuo. Listo para mensajero.',
+  },
+  {
+    id: 'KL-00039',
+    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+    customer: {
+      name: 'Mario Gómez',
+      company: 'Restaurante Los Almendros',
+      phone: '+502 5222-3344',
+      nit: '4455667-8',
+      address: 'Zona 4, 4 Grados Norte',
+      email: 'compras@losalmendros.gt',
+    },
+    items: [
+      {
+        title: 'Señalización Acrílicos 12 × 8 cm',
+        widthCm: 12,
+        heightCm: 8,
+        qty: 40,
+        actualLinearMeters: 1.66,
+        stickersPerRow: 2,
+        rows: 20,
+        includeCutting: true,
+        cuttingRateUnit: 0.35,
+        finishType: 'Sin Barniz (Mate)',
+        fileInfo: { name: 'almendros_logos.png', sizeFormatted: '3.1 MB' },
+      }
+    ],
+    metrics: {
+      totalBillableMeters: 1.66,
+      tierRate: 115.0,
+      materialTotalQ: 190.90,
+      cuttingTotalQ: 25.0,
+      grandTotalQ: 215.90,
+      hasCutting: true,
+    },
+    productionStatus: ORDER_STATUS.COMPLETED,
+    paymentStatus: PAYMENT_STATUS.PAID,
+    paymentMethod: 'TRANSFER',
+    workshopNotes: 'Entregado y recibido a conformidad.',
+  },
+  {
+    id: 'KL-00038',
+    createdAt: new Date(Date.now() - 3600000 * 24 * 18).toISOString(),
+    customer: {
+      clientId: 'CLI-003',
+      name: 'Daniel Estrada',
+      company: 'Cervecería El Injerto',
+      phone: '+502 5999-8877',
+      nit: '6549871-2',
+      address: 'Km 14.5 Carretera a El Salvador',
+      email: 'ventas@elinjerto.gt',
+    },
+    items: [
+      {
+        title: 'Etiquetas Growlers 10 × 6 cm',
+        widthCm: 10,
+        heightCm: 6,
+        qty: 120,
+        actualLinearMeters: 4.20,
+        stickersPerRow: 2,
+        rows: 60,
+        includeCutting: true,
+        cuttingRateUnit: 0.30,
+        finishType: 'Barniz con Relieve 3D',
+        fileInfo: { name: 'injerto_growlers.pdf', sizeFormatted: '5.2 MB' },
+      }
+    ],
+    metrics: {
+      totalBillableMeters: 4.20,
+      tierRate: 115.0,
+      materialTotalQ: 483.00,
+      cuttingTotalQ: 25.0,
+      grandTotalQ: 508.00,
+      hasCutting: true,
+    },
+    productionStatus: ORDER_STATUS.COMPLETED,
+    paymentStatus: PAYMENT_STATUS.PENDING,
+    paymentMethod: 'TRANSFER',
+    workshopNotes: 'Crédito B2B de 15 días acordado. Saldo vencido pendiente de cobro.',
+  },
+];
+
+class OrdersStore {
+  constructor() {
+    this.listeners = new Set();
+    this.orders = this._loadOrders();
+  }
+
+  _loadOrders() {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const saved = window.localStorage.getItem(STORAGE_KEY_ORDERS);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.warn('Error al leer pedidos de localStorage', e);
+      }
+    }
+    return JSON.parse(JSON.stringify(INITIAL_SEED_ORDERS));
+  }
+
+  _saveOrders() {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(this.orders));
+      } catch (e) {
+        console.warn('Error al guardar pedidos en localStorage', e);
+      }
+    }
+  }
+
+  _mapBackendOrder(o) {
+    const firstItemTitle = o.notes ? `Tiraje DTF UV (${o.widthCm} × ${o.heightCm} cm)` : 'Impresión DTF UV';
+    return {
+      id: o.code || o.id,
+      backendId: o.id,
+      createdAt: o.createdAt,
+      fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
+      fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.fileName) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
+      paymentReceiptUrl: o.paymentReceiptUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.paymentReceiptUrl) || null,
+      paymentReceiptFileName: o.paymentReceiptFileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.paymentReceiptFileName) || null,
+      canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || null,
+      canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || null,
+      rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.rotationDeg) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
+      customer: {
+        clientId: o.customerId || null,
+        name: o.customerName,
+        company: o.customer?.companyName || o.customerName,
+        phone: o.customerPhone,
+        nit: o.customerTaxId || 'CF',
+        address: o.customerAddress || 'Ciudad de Guatemala',
+        email: o.customerEmail || '',
+      },
+      items: [
+        {
+          title: firstItemTitle,
+          widthCm: Number(o.widthCm),
+          heightCm: Number(o.heightCm),
+          qty: o.qty,
+          actualLinearMeters: Number(o.linearMeters),
+          stickersPerRow: o.stickersPerRow || 1,
+          rows: o.rows || 1,
+          includeCutting: Boolean(o.withCutting),
+          cuttingRateUnit: o.withCutting ? 0.08 : 0,
+          finishType: o.finishType || 'Barniz con Relieve 3D',
+          fileInfo: {
+            name: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.name) || 'diseño.png',
+            fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.fileUrl) || null,
+            sizeFormatted: (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.sizeFormatted) || '300 DPI',
+          },
+          fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
+          fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
+          canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || null,
+          canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || null,
+          rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
+        },
+      ],
+      metrics: {
+        totalBillableMeters: Number(o.linearMeters),
+        tierRate: Number(o.unitRateQ || 105.0),
+        materialTotalQ: Number(o.materialPriceQ),
+        cuttingTotalQ: Number(o.cuttingPriceQ || 0.0),
+        grandTotalQ: Number(o.totalAmountQ),
+        hasCutting: Boolean(o.withCutting),
+      },
+      productionStatus: o.status,
+      paymentStatus: o.paymentStatus,
+      amountPaidQ: Number(o.amountPaidQ || 0.0),
+      workshopNotes: o.notes || '',
+    };
+  }
+
+  async syncWithApi() {
+    try {
+      const res = await apiClient.orders.list();
+      if (res && res.success && Array.isArray(res.orders)) {
+        if (res.orders.length > 0) {
+          const apiOrders = res.orders.map(o => this._mapBackendOrder(o));
+          const apiCodes = new Set(apiOrders.map(o => o.id));
+          const localOnly = this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId);
+          this.orders = [...apiOrders, ...localOnly];
+          this._saveOrders();
+          this._notify();
+        }
+        return this.orders;
+      }
+    } catch (err) {
+      console.warn('[OrdersStore] Sincronización API no disponible:', err.message);
+    }
+    return this.orders;
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  _notify() {
+    this._saveOrders();
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.orders);
+      } catch (err) {
+        console.error('Error en listener de ordersStore:', err);
+      }
+    });
+  }
+
+  getOrders() {
+    return this.orders;
+  }
+
+  getOrderById(id) {
+    return this.orders.find(o => o.id === id) || null;
+  }
+
+  createOrder({ customer = {}, cartTotals = {}, items = [], workshopNotes = '', paymentReceiptUrl = null, paymentReceiptFileName = null }) {
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    const newId = `KL-${randomNum}`;
+
+    const newOrder = {
+      id: newId,
+      createdAt: new Date().toISOString(),
+      customer: {
+        clientId: customer.clientId || null,
+        name: customer.name || 'Cliente Mostrador',
+        company: customer.company || '',
+        phone: customer.phone || '+502 5555-0000',
+        nit: customer.nit || 'CF',
+        address: customer.address || 'Ciudad de Guatemala',
+        email: customer.email || '',
+      },
+      paymentReceiptUrl: paymentReceiptUrl || cartTotals.paymentReceiptUrl || null,
+      paymentReceiptFileName: paymentReceiptFileName || cartTotals.paymentReceiptFileName || null,
+      canvasSnapshot: items[0]?.canvasSnapshot || cartTotals.canvasSnapshot || null,
+      canvasSnapshotUrl: items[0]?.canvasSnapshotUrl || (items[0]?.canvasSnapshot && !items[0]?.canvasSnapshot.startsWith('data:') ? items[0]?.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
+      rotationDeg: items[0]?.rotationDeg || cartTotals.rotationDeg || 0,
+      fileUrl: items[0]?.fileUrl || items[0]?.fileInfo?.fileUrl || null,
+      fileName: items[0]?.fileName || items[0]?.fileInfo?.name || null,
+      items: items.map((it, idx) => ({
+        title: it.title || `Diseño #${idx + 1}`,
+        widthCm: parseFloat(it.widthCm) || 5,
+        heightCm: parseFloat(it.heightCm) || 5,
+        qty: parseInt(it.qty, 10) || 50,
+        actualLinearMeters: parseFloat(it.actualLinearMeters) || 1.0,
+        stickersPerRow: it.stickersPerRow || 5,
+        rows: it.rows || 10,
+        includeCutting: Boolean(it.includeCutting),
+        cuttingRateUnit: it.cuttingRateUnit || 0,
+        finishType: it.finishType || 'Barniz con Relieve 3D',
+        fileInfo: it.fileInfo || null,
+        fileUrl: it.fileUrl || it.fileInfo?.fileUrl || null,
+        fileName: it.fileName || it.fileInfo?.name || null,
+        previewUrl: it.previewUrl || null,
+        canvasSnapshot: it.canvasSnapshot || null,
+        canvasSnapshotUrl: it.canvasSnapshotUrl || (it.canvasSnapshot && !it.canvasSnapshot.startsWith('data:') ? it.canvasSnapshot : null) || null,
+        rotationDeg: Number(it.rotationDeg) || 0,
+      })),
+      metrics: {
+        totalBillableMeters: parseFloat(cartTotals.totalBillableMeters) || 1.0,
+        tierRate: parseFloat(cartTotals.tierRate) || 140.0,
+        materialTotalQ: parseFloat(cartTotals.materialTotalQ) || 140.0,
+        cuttingTotalQ: parseFloat(cartTotals.cuttingTotalQ) || 0.0,
+        grandTotalQ: parseFloat(cartTotals.grandTotalQ) || 140.0,
+        hasCutting: Boolean(cartTotals.hasCutting),
+      },
+      productionStatus: ORDER_STATUS.PENDING_REVIEW,
+      paymentStatus: PAYMENT_STATUS.PENDING,
+      paymentMethod: 'TRANSFER',
+      workshopNotes: workshopNotes || customer.notes || '',
+    };
+
+    this.orders.unshift(newOrder);
+    this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.orders) {
+      const firstItem = newOrder.items[0] || {};
+      apiClient.orders.create({
+        customerId: newOrder.customer.clientId || undefined,
+        customerName: newOrder.customer.name,
+        customerPhone: newOrder.customer.phone,
+        customerEmail: newOrder.customer.email,
+        customerTaxId: newOrder.customer.nit,
+        customerAddress: newOrder.customer.address,
+        widthCm: firstItem.widthCm || 5,
+        heightCm: firstItem.heightCm || 5,
+        qty: firstItem.qty || 50,
+        linearMeters: newOrder.metrics.totalBillableMeters,
+        unitRateQ: newOrder.metrics.tierRate,
+        materialPriceQ: newOrder.metrics.materialTotalQ,
+        withCutting: newOrder.metrics.hasCutting,
+        cuttingPriceQ: newOrder.metrics.cuttingTotalQ,
+        totalAmountQ: newOrder.metrics.grandTotalQ,
+        finishType: firstItem.finishType || 'GLOSSY_VARNISH',
+        stickersPerRow: firstItem.stickersPerRow || 1,
+        rows: firstItem.rows || 1,
+        fileUrl: firstItem.fileUrl || firstItem.fileInfo?.fileUrl || newOrder.fileUrl,
+        fileName: firstItem.fileName || firstItem.fileInfo?.name || newOrder.fileName,
+        canvasSnapshot: firstItem.canvasSnapshot || newOrder.canvasSnapshot,
+        rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
+        paymentReceiptUrl: newOrder.paymentReceiptUrl,
+        paymentReceiptFileName: newOrder.paymentReceiptFileName,
+        notes: newOrder.workshopNotes,
+      }).then(res => {
+        if (res && res.order) {
+          newOrder.backendId = res.order.id;
+          if (res.order.code) newOrder.id = res.order.code;
+          this._saveOrders();
+        }
+      }).catch(() => {});
+    }
+    return newOrder;
+  }
+
+  async attachPaymentReceipt(orderId, receiptData = {}) {
+    const order = this.orders.find(o => o.id === orderId || o.backendId === orderId);
+    if (!order) return null;
+
+    if (receiptData.paymentReceiptUrl) {
+      order.paymentReceiptUrl = receiptData.paymentReceiptUrl;
+    }
+    if (receiptData.paymentReceiptFileName !== undefined) {
+      order.paymentReceiptFileName = receiptData.paymentReceiptFileName;
+    }
+    if (receiptData.amountPaidQ !== undefined) {
+      order.amountPaidQ = Number(receiptData.amountPaidQ);
+    }
+    if (receiptData.paymentStatus) {
+      order.paymentStatus = receiptData.paymentStatus;
+    }
+    order.updatedAt = new Date().toISOString();
+    this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.orders && typeof apiClient.orders.attachReceipt === 'function') {
+      try {
+        const targetId = order.backendId || order.id;
+        const res = await apiClient.orders.attachReceipt(targetId, receiptData);
+        if (res && res.order) {
+          order.paymentReceiptUrl = res.order.paymentReceiptUrl || order.paymentReceiptUrl;
+          order.paymentReceiptFileName = res.order.paymentReceiptFileName || order.paymentReceiptFileName;
+          if (res.order.amountPaidQ !== undefined) {
+            order.amountPaidQ = Number(res.order.amountPaidQ);
+          }
+          if (res.order.paymentStatus) {
+            order.paymentStatus = res.order.paymentStatus;
+          }
+          this._notify();
+        }
+      } catch (err) {
+        console.warn('[OrdersStore] Error al adjuntar boleta en backend:', err.message);
+      }
+    }
+    return order;
+  }
+
+  updateProductionStatus(orderId, newStatus) {
+    const order = this.getOrderById(orderId);
+    if (!order) return false;
+
+    order.productionStatus = newStatus;
+    order.updatedAt = new Date().toISOString();
+    if (newStatus === ORDER_STATUS.PRINTING || newStatus === ORDER_STATUS.COMPLETED) {
+      try {
+        inventoryStore.deductOrderConsumption(order);
+      } catch (e) {
+        console.warn('Error al descontar consumo de inventario:', e);
+      }
+    }
+    this._notify();
+    if (typeof apiClient !== 'undefined' && apiClient.orders) {
+      const targetId = order.backendId || order.id;
+      apiClient.orders.updateStatus(targetId, newStatus).catch(() => {});
+    }
+    return true;
+  }
+
+  updatePaymentStatus(orderId, newPaymentStatus) {
+    const order = this.getOrderById(orderId);
+    if (!order) return false;
+
+    order.paymentStatus = newPaymentStatus;
+    order.updatedAt = new Date().toISOString();
+    this._notify();
+    if (typeof apiClient !== 'undefined' && apiClient.orders) {
+      const targetId = order.backendId || order.id;
+      apiClient.orders.updatePayment(targetId, { paymentStatus: newPaymentStatus }).catch(() => {});
+    }
+    return true;
+  }
+
+  deleteOrder(orderId) {
+    const index = this.orders.findIndex(o => o.id === orderId);
+    if (index === -1) return false;
+
+    this.orders.splice(index, 1);
+    this._notify();
+    return true;
+  }
+
+  getSummaryMetrics() {
+    const activeOrders = this.orders.filter(
+      o => o.productionStatus !== ORDER_STATUS.COMPLETED && o.productionStatus !== ORDER_STATUS.CANCELLED
+    );
+
+    const activeMeters = activeOrders.reduce(
+      (sum, o) => sum + o.metrics.totalBillableMeters, 0
+    );
+
+    const totalRevenueQ = this.orders.reduce(
+      (sum, o) => sum + o.metrics.grandTotalQ, 0
+    );
+
+    const pendingPaymentQ = this.orders
+      .filter(o => o.paymentStatus === PAYMENT_STATUS.PENDING)
+      .reduce((sum, o) => sum + o.metrics.grandTotalQ, 0);
+
+    return {
+      totalOrdersCount: this.orders.length,
+      activeOrdersCount: activeOrders.length,
+      activeMeters,
+      totalRevenueQ,
+      pendingPaymentQ,
+    };
+  }
+
+  resetToInitial() {
+    this.orders = JSON.parse(JSON.stringify(INITIAL_SEED_ORDERS));
+    this._notify();
+  }
+}
+
+export const ordersStore = new OrdersStore();

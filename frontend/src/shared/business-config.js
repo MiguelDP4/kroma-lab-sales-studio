@@ -17,7 +17,7 @@ export const BUSINESS_CONFIG = {
   cuttingMinimumQ: 25.0,
 
   // Contacto comercial
-  phoneWhatsApp: "50230000000", // Actualizable con el WhatsApp de Kroma Lab
+  phoneWhatsApp: "50254066217", // Actualizable con el WhatsApp de Kroma Lab
   currencySymbol: "Q",
   currencyCode: "GTQ",
 };
