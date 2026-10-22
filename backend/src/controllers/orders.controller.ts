@@ -230,8 +230,8 @@ export async function attachPaymentReceipt(req: AuthenticatedRequest, res: Respo
 
     let payment = null;
     if (data.amountPaidQ) {
-      const newAmountPaid = order.amountPaidQ + data.amountPaidQ;
-      const isFullyPaid = newAmountPaid >= order.totalAmountQ - 0.01;
+      const newAmountPaid = Number(order.amountPaidQ || 0) + data.amountPaidQ;
+      const isFullyPaid = newAmountPaid >= Number(order.totalAmountQ) - 0.01;
       updateData.amountPaidQ = newAmountPaid;
       updateData.paymentStatus = isFullyPaid ? 'PAID' : 'PARTIAL';
 
@@ -284,10 +284,10 @@ export async function getOrderStats(_req: AuthenticatedRequest, res: Response, n
     const activeOrders = orders.filter((o) => !['COMPLETED', 'CANCELLED'].includes(o.status)).length;
     const totalMetersInWorkshop = orders
       .filter((o) => !['COMPLETED', 'CANCELLED'].includes(o.status))
-      .reduce((sum, o) => sum + o.linearMeters, 0);
+      .reduce((sum, o) => sum + Number(o.linearMeters || 0), 0);
 
-    const totalBillingQ = orders.reduce((sum, o) => sum + o.totalAmountQ, 0);
-    const totalPaidQ = orders.reduce((sum, o) => sum + o.amountPaidQ, 0);
+    const totalBillingQ = orders.reduce((sum, o) => sum + Number(o.totalAmountQ || 0), 0);
+    const totalPaidQ = orders.reduce((sum, o) => sum + Number(o.amountPaidQ || 0), 0);
     const totalBalanceDueQ = Math.max(0, totalBillingQ - totalPaidQ);
 
     res.json({

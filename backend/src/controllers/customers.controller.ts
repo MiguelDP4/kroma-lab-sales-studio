@@ -33,9 +33,9 @@ export async function listCustomers(_req: Request, res: Response, next: NextFunc
 
     const enrichedCustomers = customers.map((c) => {
       const totalOrders = c.orders.length;
-      const totalMeters = c.orders.reduce((sum, o) => sum + o.linearMeters, 0);
-      const totalSpentQ = c.orders.reduce((sum, o) => sum + o.totalAmountQ, 0);
-      const totalPaidQ = c.orders.reduce((sum, o) => sum + o.amountPaidQ, 0);
+      const totalMeters = c.orders.reduce((sum, o) => sum + Number(o.linearMeters || 0), 0);
+      const totalSpentQ = c.orders.reduce((sum, o) => sum + Number(o.totalAmountQ || 0), 0);
+      const totalPaidQ = c.orders.reduce((sum, o) => sum + Number(o.amountPaidQ || 0), 0);
       const balanceDueQ = Math.max(0, totalSpentQ - totalPaidQ);
 
       return {
