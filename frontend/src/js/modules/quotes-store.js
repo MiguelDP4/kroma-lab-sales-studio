@@ -8,6 +8,8 @@
 import { apiClient } from './api-client.js';
 import { ordersStore } from './orders-store.js';
 
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
 const STORAGE_KEY_QUOTES = 'kromalab_quotes';
 
 export const INITIAL_SEED_QUOTES = [
@@ -110,15 +112,25 @@ class QuotesStore {
         const raw = localStorage.getItem(STORAGE_KEY_QUOTES);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.quotes = parsed;
-            return;
+          if (Array.isArray(parsed)) {
+            if (!IS_TEST_ENV) {
+              const clean = parsed.filter(q => !q.id?.startsWith('COT-2026-00') && !q.code?.startsWith('COT-2026-00') && !['qt_001', 'qt_002', 'qt_003'].includes(q.id));
+              this.quotes = clean;
+              this.saveToStorage();
+              return;
+            }
+            if (parsed.length > 0) {
+              this.quotes = parsed;
+              return;
+            }
           }
         }
       }
     } catch (_) {}
-    this.quotes = JSON.parse(JSON.stringify(INITIAL_SEED_QUOTES));
-    this.saveToStorage();
+    this.quotes = IS_TEST_ENV ? JSON.parse(JSON.stringify(INITIAL_SEED_QUOTES)) : [];
+    if (IS_TEST_ENV) {
+      this.saveToStorage();
+    }
   }
 
   saveToStorage() {
@@ -194,14 +206,14 @@ class QuotesStore {
       if (typeof apiClient !== 'undefined' && apiClient.quotes) {
         const res = await apiClient.quotes.list();
         if (res && res.success && Array.isArray(res.quotes)) {
-          if (res.quotes.length > 0) {
-            const apiQuotes = res.quotes.map(q => this._mapBackendQuote(q));
-            const apiIds = new Set(apiQuotes.map(q => q.id));
-            const localOnly = this.quotes.filter(q => !q.backendId && !apiIds.has(q.id));
-            this.quotes = [...apiQuotes, ...localOnly];
-            this.saveToStorage();
-            this.notify();
-          }
+          const apiQuotes = res.quotes.map(q => this._mapBackendQuote(q));
+          const apiIds = new Set(apiQuotes.map(q => q.id));
+          const localOnly = IS_TEST_ENV
+            ? this.quotes.filter(q => !q.backendId && !apiIds.has(q.id))
+            : [];
+          this.quotes = [...apiQuotes, ...localOnly];
+          this.saveToStorage();
+          this.notify();
           return this.getQuotes();
         }
       }

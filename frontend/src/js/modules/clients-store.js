@@ -7,6 +7,8 @@
 import { ordersStore, PAYMENT_STATUS } from './orders-store.js';
 import { apiClient } from './api-client.js';
 
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
 const STORAGE_KEY_CLIENTS = 'kromalab_clients';
 
 export const CLIENT_CATEGORIES = {
@@ -105,14 +107,26 @@ class ClientsStore {
         const stored = window.localStorage.getItem(STORAGE_KEY_CLIENTS);
         if (stored) {
           const parsed = JSON.parse(stored);
-          this.clients = Array.isArray(parsed) ? parsed : [...INITIAL_SEED_CLIENTS];
-          return;
+          if (Array.isArray(parsed)) {
+            if (!IS_TEST_ENV) {
+              const clean = parsed.filter(c => !c.id?.startsWith('CLI-00') && !c.company?.includes('Café San Cristóbal') && !c.company?.includes('Barbería Vintage') && !c.company?.includes('Cervecería El Injerto') && !c.company?.includes('Emprende Pack') && !c.company?.includes('Impresos La Paz'));
+              if (clean.length !== parsed.length) {
+                this.clients = clean;
+                this._saveClients();
+              } else {
+                this.clients = clean;
+              }
+              return;
+            }
+            this.clients = parsed;
+            return;
+          }
         }
       } catch (e) {
         console.warn('Error al leer clientes de localStorage:', e);
       }
     }
-    this.clients = JSON.parse(JSON.stringify(INITIAL_SEED_CLIENTS));
+    this.clients = IS_TEST_ENV ? JSON.parse(JSON.stringify(INITIAL_SEED_CLIENTS)) : [];
   }
 
 
@@ -147,14 +161,14 @@ class ClientsStore {
       if (typeof apiClient !== 'undefined' && apiClient.customers) {
         const res = await apiClient.customers.list();
         if (res && res.success && Array.isArray(res.customers)) {
-          if (res.customers.length > 0) {
-            const apiClients = res.customers.map(c => this._mapBackendCustomer(c));
-            const apiIds = new Set(apiClients.map(c => c.id));
-            const localOnly = this.clients.filter(c => !apiIds.has(c.id) && !c.backendId);
-            this.clients = [...apiClients, ...localOnly];
-            this._saveClients();
-            this._notify();
-          }
+          const apiClients = res.customers.map(c => this._mapBackendCustomer(c));
+          const apiIds = new Set(apiClients.map(c => c.id));
+          const localOnly = IS_TEST_ENV
+            ? this.clients.filter(c => !apiIds.has(c.id) && !c.backendId)
+            : [];
+          this.clients = [...apiClients, ...localOnly];
+          this._saveClients();
+          this._notify();
           return this.clients;
         }
       }

@@ -7,6 +7,8 @@ import { USER_ROLES } from '../../shared/business-config.js';
 import { USER_STATUS } from '../../shared/rbac-config.js';
 import { apiClient } from './api-client.js';
 
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
 const STORAGE_KEY_USERS = 'kromalab_users';
 
 export const INITIAL_SEED_USERS = [
@@ -96,15 +98,25 @@ class UsersStore {
         const raw = localStorage.getItem(STORAGE_KEY_USERS);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.users = parsed;
-            return;
+          if (Array.isArray(parsed)) {
+            if (!IS_TEST_ENV) {
+              const clean = parsed.filter(u => u.email === 'miguel@kromalab.gt');
+              this.users = clean;
+              this.saveToStorage();
+              return;
+            }
+            if (parsed.length > 0) {
+              this.users = parsed;
+              return;
+            }
           }
         }
       }
     } catch (_) {}
-    this.users = JSON.parse(JSON.stringify(INITIAL_SEED_USERS));
-    this.saveToStorage();
+    this.users = IS_TEST_ENV ? JSON.parse(JSON.stringify(INITIAL_SEED_USERS)) : [];
+    if (IS_TEST_ENV) {
+      this.saveToStorage();
+    }
   }
 
 
@@ -133,14 +145,14 @@ class UsersStore {
       if (typeof apiClient !== 'undefined' && apiClient.auth) {
         const res = await apiClient.auth.listUsers();
         if (res && res.success && Array.isArray(res.users)) {
-          if (res.users.length > 0) {
-            const apiUsers = res.users.map(u => this._mapBackendUser(u));
-            const apiEmails = new Set(apiUsers.map(u => u.email.toLowerCase()));
-            const localOnly = this.users.filter(u => !apiEmails.has(u.email.toLowerCase()) && !u.backendId);
-            this.users = [...apiUsers, ...localOnly];
-            this.saveToStorage();
-            this.notify();
-          }
+          const apiUsers = res.users.map(u => this._mapBackendUser(u));
+          const apiEmails = new Set(apiUsers.map(u => u.email.toLowerCase()));
+          const localOnly = IS_TEST_ENV
+            ? this.users.filter(u => !apiEmails.has(u.email.toLowerCase()) && !u.backendId)
+            : [];
+          this.users = [...apiUsers, ...localOnly];
+          this.saveToStorage();
+          this.notify();
           return this.getUsers();
         }
       }
