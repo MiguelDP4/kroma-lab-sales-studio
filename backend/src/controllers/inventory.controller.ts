@@ -26,15 +26,15 @@ export async function listInventory(_req: AuthenticatedRequest, res: Response, n
 
     const enrichedItems = items.map((item) => {
       let status = 'OPTIMAL';
-      const optimalThreshold = item.minStockThreshold * (item.optimalRatio || 1.5);
+      const optimalThreshold = Number(item.minStockThreshold) * (Number(item.optimalRatio) || 1.5);
 
-      if (item.currentStock < item.minStockThreshold) {
+      if (Number(item.currentStock) < Number(item.minStockThreshold)) {
         status = 'CRITICAL';
-      } else if (item.currentStock <= optimalThreshold) {
+      } else if (Number(item.currentStock) <= optimalThreshold) {
         status = 'LOW';
       }
 
-      const totalValueQ = item.currentStock * item.unitCostQ;
+      const totalValueQ = Number(item.currentStock) * Number(item.unitCostQ);
 
       return {
         ...item,
@@ -59,7 +59,7 @@ export async function recordRestock(req: AuthenticatedRequest, res: Response, ne
       return;
     }
 
-    const newStock = item.currentStock + data.quantity;
+    const newStock = Number(item.currentStock) + data.quantity;
     const totalCostQ = data.quantity * data.unitCostQ;
 
     const count = await prisma.inventoryMovement.count();
@@ -106,7 +106,7 @@ export async function adjustStock(req: AuthenticatedRequest, res: Response, next
       return;
     }
 
-    const diff = data.newStock - item.currentStock;
+    const diff = data.newStock - Number(item.currentStock);
     const count = await prisma.inventoryMovement.count();
     const movCode = `MOV-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
@@ -122,7 +122,7 @@ export async function adjustStock(req: AuthenticatedRequest, res: Response, next
           type: 'ADJUSTMENT',
           qtyDelta: diff,
           newStock: data.newStock,
-          totalCostQ: Math.abs(diff) * item.unitCostQ,
+          totalCostQ: Math.abs(diff) * Number(item.unitCostQ),
           reference: data.reason,
           notes: data.notes,
           performedById: req.user?.id,
