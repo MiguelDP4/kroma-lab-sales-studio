@@ -381,6 +381,11 @@ describe('File Uploader — Validación y Subida de Archivos Gráficos UV DTF', 
       });
     });
 
+    it('retorna null cuando dataURL es inválida o falla la decodificación', () => {
+      const res = dataURLtoFile('texto-no-base64-invalido', 'error.png');
+      expect(res).toBeNull();
+    });
+
     it('sube un comprobante bancario con context: payments y registra isReceipt: true', async () => {
       const mockFile = new File(['fake-receipt-content'], 'boleta_deposito.jpg', { type: 'image/jpeg' });
       const res = await uploadPaymentReceiptToStorage(mockFile, {

@@ -294,4 +294,32 @@ describe('QuotesStore — Almacén Reactivo de Cotizaciones Guardadas', () => {
     quotesStore.loadFromStorage();
     expect(quotesStore.getQuotes().length).toBe(3);
   });
+
+  it('cubre fallbacks de _mapBackendQuote con objeto minimo y captura errores en notify y saveToStorage', () => {
+    // 1. _mapBackendQuote con objeto casi vacio
+    const mapped = quotesStore._mapBackendQuote({
+      id: 'backend_999',
+      widthCm: '8',
+      heightCm: '10',
+      qty: '100',
+      linearMeters: '1.5'
+    });
+    expect(mapped.id).toBe('backend_999');
+    expect(mapped.leadName).toBe('Cliente Cotización');
+    expect(mapped.stickersPerRow).toBe(1);
+    expect(mapped.unitRateQ).toBe(140);
+    expect(mapped.finishType).toBe('GLOSSY_VARNISH');
+    expect(mapped.status).toBe('SAVED');
+
+    // 2. notify() con listener que lanza error
+    const brokenListener = vi.fn(() => { throw new Error('Boom'); });
+    quotesStore.subscribe(brokenListener);
+    expect(() => quotesStore.notify()).not.toThrow();
+
+    // 3. saveToStorage con error en localStorage
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new Error('Quota exceeded');
+    });
+    expect(() => quotesStore.saveToStorage()).not.toThrow();
+  });
 });

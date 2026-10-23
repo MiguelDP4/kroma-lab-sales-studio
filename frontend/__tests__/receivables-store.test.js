@@ -391,5 +391,66 @@ describe('Receivables Store — Almacén de Cuentas por Cobrar y Saldos B2B', ()
       expect(summary.totalReceivableQ).toBe(0);
       expect(summary.collectionRatePercent).toBe(100);
     });
+
+    it('cubre fallbacks de _mapBackendPayment y filtros avanzados en getReceivables', () => {
+      // 1. _mapBackendPayment con objeto mínimo
+      const m1 = receivablesStore._mapBackendPayment({
+        id: 'pay_999',
+        amountPaidQ: '200'
+      });
+      expect(m1.id).toBe('pay_999');
+      expect(m1.clientName).toBe('Cliente B2B');
+      expect(m1.method).toBe('TRANSFER');
+      expect(m1.reference).toBe('Sin referencia');
+      expect(m1.recordedBy).toBe('Operador de Taller');
+
+      // 2. _mapBackendPayment con objeto completo
+      const m2 = receivablesStore._mapBackendPayment({
+        paymentCode: 'PAY-2026-999',
+        id: 'back_999',
+        createdAt: '2026-10-23T10:00:00Z',
+        order: { code: 'ORD-999', customerName: 'Empresa Test', customerPhone: '5551234' },
+        bankReference: 'BOLETA-1234',
+        registeredBy: { name: 'Admin Miguel' },
+        amountPaidQ: 350
+      });
+      expect(m2.id).toBe('PAY-2026-999');
+      expect(m2.orderId).toBe('ORD-999');
+      expect(m2.clientName).toBe('Empresa Test');
+      expect(m2.clientPhone).toBe('5551234');
+      expect(m2.reference).toBe('BOLETA-1234');
+      expect(m2.recordedBy).toBe('Admin Miguel');
+
+      // 3. getReceivables con busqueda por telefono, empresa y NIT
+      ordersStore.orders = [
+        {
+          id: 'test_ord_1',
+          code: 'KL-00099',
+          orderNumber: 'KL-00099',
+          customer: {
+            name: 'Cliente Busqueda',
+            phone: '502 9988-7766',
+            company: 'Cafe Dubois',
+            nit: '1234567-8'
+          },
+          metrics: { grandTotalQ: 500 },
+          createdAt: new Date().toISOString(),
+          status: 'COMPLETED',
+          paymentStatus: 'PENDING'
+        }
+      ];
+
+      const byPhone = receivablesStore.getAllReceivables({ search: '99887766' });
+      expect(byPhone.length).toBe(1);
+
+      const byCompany = receivablesStore.getAllReceivables({ search: 'Dubois' });
+      expect(byCompany.length).toBe(1);
+
+      const byNit = receivablesStore.getAllReceivables({ search: '1234567' });
+      expect(byNit.length).toBe(1);
+
+      const noMatch = receivablesStore.getAllReceivables({ search: 'zzzz_inexistente' });
+      expect(noMatch.length).toBe(0);
+    });
   });
 });

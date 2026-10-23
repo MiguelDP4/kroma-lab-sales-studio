@@ -54,6 +54,11 @@ describe('Quoter Engine — Tarifas por Escala', () => {
     expect(getTierRate(100.0)).toBe(85.0);
   });
 
+  it('retorna fallback cuando el valor es NaN o inválido', () => {
+    expect(getTierRate(NaN)).toBe(85.0);
+    expect(getCuttingRate(NaN)).toBe(0.25);
+  });
+
   it('calcula la tarifa de corte según la escala de unidades', () => {
     expect(getCuttingRate(40)).toBe(0.35);
     expect(getCuttingRate(100)).toBe(0.30);
