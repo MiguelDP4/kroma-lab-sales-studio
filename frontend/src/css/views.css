@@ -2997,3 +2997,105 @@
     font-size: 0.9rem;
   }
 }
+/* ==========================================================================
+   TABLA DE DESGLOSE TÉCNICO DE INSUMOS (RENTABILIDAD - COMPACTA & RESPONSIVA)
+   ========================================================================== */
+.breakdown-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 0.5rem;
+}
+
+.breakdown-cost-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.breakdown-cost-table th,
+.breakdown-cost-table td {
+  padding: 0.55rem 0.5rem !important;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.breakdown-cost-table th {
+  font-size: 0.74rem !important;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid var(--border-color);
+  background: var(--bg-surface);
+  white-space: nowrap;
+}
+
+.breakdown-cost-table .col-cost-name {
+  width: 32%;
+  min-width: 130px;
+  line-height: 1.35;
+}
+
+.breakdown-cost-table .col-cost-detail {
+  width: 26%;
+  min-width: 95px;
+}
+
+.breakdown-cost-table .col-cost-unit {
+  width: 18%;
+  min-width: 75px;
+  white-space: nowrap;
+}
+
+.breakdown-cost-table .col-cost-total {
+  width: 14%;
+  min-width: 70px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.breakdown-cost-table .col-cost-pct {
+  width: 10%;
+  min-width: 50px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .breakdown-cost-table th,
+  .breakdown-cost-table td {
+    padding: 0.45rem 0.35rem !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .breakdown-cost-table th,
+  .breakdown-cost-table td {
+    padding: 0.4rem 0.3rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .breakdown-cost-table .col-cost-name {
+    min-width: 110px;
+  }
+
+  .breakdown-cost-table .col-cost-detail {
+    min-width: 80px;
+    font-size: 0.72rem !important;
+  }
+
+  .breakdown-cost-table .col-cost-unit {
+    min-width: 65px;
+    font-size: 0.72rem !important;
+  }
+
+  .breakdown-cost-table .col-cost-total {
+    min-width: 58px;
+  }
+
+  .breakdown-cost-table .col-cost-pct {
+    min-width: 42px;
+  }
+}

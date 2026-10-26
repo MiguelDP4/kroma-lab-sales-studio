@@ -218,15 +218,15 @@ export const profitabilityView = {
               <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
                 Desglose Técnico de Insumos para este Tiraje de Stickers:
               </h3>
-              <div class="orders-table-container">
-                <table class="orders-table" style="font-size: 0.85rem;">
+              <div class="orders-table-container breakdown-table-wrapper">
+                <table class="breakdown-cost-table">
                   <thead>
                     <tr>
-                      <th>Concepto</th>
-                      <th>Consumo Estimado</th>
-                      <th>Costo Unitario Ref.</th>
-                      <th>Total Rubro (Q)</th>
-                      <th>% del Costo</th>
+                      <th class="col-cost-name">Insumo</th>
+                      <th class="col-cost-detail">Consumo</th>
+                      <th class="col-cost-unit">Costo Unit.</th>
+                      <th class="col-cost-total" style="text-align: right;">Total (Q)</th>
+                      <th class="col-cost-pct" style="text-align: right;">% Costo</th>
                     </tr>
                   </thead>
                   <tbody id="stkCostBreakdownTableBody"></tbody>
@@ -349,15 +349,15 @@ export const profitabilityView = {
               <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
                 Desglose Técnico de Rubros de Costo (Metros Directos):
               </h3>
-              <div class="orders-table-container">
-                <table class="orders-table" style="font-size: 0.85rem;">
+              <div class="orders-table-container breakdown-table-wrapper">
+                <table class="breakdown-cost-table">
                   <thead>
                     <tr>
-                      <th>Concepto</th>
-                      <th>Consumo Estimado</th>
-                      <th>Costo Unitario Ref.</th>
-                      <th>Total Rubro (Q)</th>
-                      <th>% del Costo</th>
+                      <th class="col-cost-name">Insumo</th>
+                      <th class="col-cost-detail">Consumo</th>
+                      <th class="col-cost-unit">Costo Unit.</th>
+                      <th class="col-cost-total" style="text-align: right;">Total (Q)</th>
+                      <th class="col-cost-pct" style="text-align: right;">% Costo</th>
                     </tr>
                   </thead>
                   <tbody id="costBreakdownTableBody"></tbody>
@@ -908,11 +908,11 @@ export const profitabilityView = {
 
       tbody.innerHTML = rows.map(r => `
         <tr>
-          <td><strong>${r.name}</strong></td>
-          <td style="color: var(--text-secondary);">${r.detail}</td>
-          <td style="font-family: var(--font-mono);">${r.unit}</td>
-          <td style="font-family: var(--font-mono); font-weight: 700; color: #ef4444;">Q${r.cost.toFixed(2)}</td>
-          <td style="font-family: var(--font-mono); font-weight: 600;">${getPct(r.cost)}%</td>
+          <td class="col-cost-name"><strong>${r.name}</strong></td>
+          <td class="col-cost-detail" style="color: var(--text-secondary);">${r.detail}</td>
+          <td class="col-cost-unit" style="font-family: var(--font-mono); color: var(--text-secondary);">${r.unit}</td>
+          <td class="col-cost-total" style="font-family: var(--font-mono); font-weight: 700; color: #ef4444; text-align: right;">Q${r.cost.toFixed(2)}</td>
+          <td class="col-cost-pct" style="font-family: var(--font-mono); font-weight: 600; text-align: right;">${getPct(r.cost)}%</td>
         </tr>
       `).join('');
     }
