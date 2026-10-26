@@ -71,8 +71,8 @@ export const clientsView = {
           </div>
         </div>
 
-        <!-- Tabla Principal de Clientes -->
-        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <!-- Tabla Principal de Clientes (Desktop > 1200px) -->
+        <div class="calc-card clients-table-wrapper" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
           <div class="mobile-scroll-hint">
             <span>👈 Desliza horizontalmente para ver más columnas 👉</span>
           </div>
@@ -91,9 +91,15 @@ export const clientsView = {
               <!-- Inyectado dinámicamente por renderClientsTable() -->
             </tbody>
           </table>
-          <div id="clientsEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
-            No se encontraron clientes que coincidan con la búsqueda o filtros aplicados.
-          </div>
+        </div>
+
+        <!-- Tarjetas de Clientes Estilo Despacho (<= 1200px) -->
+        <div id="clientsCardsContainer" class="clients-cards-grid dispatch-cards-grid">
+          <!-- Tarjetas generadas dinámicamente por renderClientsTable() -->
+        </div>
+
+        <div id="clientsEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
+          No se encontraron clientes que coincidan con la búsqueda o filtros aplicados.
         </div>
       </div>
 
@@ -348,8 +354,11 @@ export const clientsView = {
         return matchesQuery && matchesCat && matchesTier;
       });
 
+      const cardsContainer = document.getElementById('clientsCardsContainer');
+
       if (filtered.length === 0) {
         tableBody.innerHTML = '';
+        if (cardsContainer) cardsContainer.innerHTML = '';
         if (emptyState) emptyState.style.display = 'block';
         return;
       }
@@ -434,6 +443,123 @@ export const clientsView = {
           </tr>
         `;
       }).join('');
+
+      if (cardsContainer) {
+        cardsContainer.innerHTML = filtered.map(client => {
+          const catInfo = CLIENT_CATEGORIES[client.category];
+          const tierInfo = CLIENT_TIERS[client.tier];
+          const clientMetrics = clientsStore.getClientMetrics(client);
+
+          return `
+            <div class="dispatch-card client-card" data-client-card="${client.id}" style="border-top: 4px solid ${tierInfo.color};">
+              <!-- Cabecera: Empresa, Categoría y Nivel B2B -->
+              <div class="dispatch-card-header">
+                <div>
+                  <div class="dispatch-card-folio" style="color: var(--text-primary); font-size: 1.05rem;">
+                    ${client.company}
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                    ${catInfo.icon} ${catInfo.label}
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="badge" style="background: ${tierInfo.bg}; color: ${tierInfo.color}; border-color: ${tierInfo.color}; font-size: 0.75rem; font-weight: 700; padding: 0.35rem 0.65rem;">
+                    ${tierInfo.badge}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Cuerpo: Contacto, Ubicación y Métricas Grid -->
+              <div class="dispatch-card-body">
+                <div class="dispatch-card-client-row">
+                  <div>
+                    <div class="dispatch-card-client-name">
+                      👤 ${client.name}
+                    </div>
+                    <div class="dispatch-card-client-phone">
+                      📞 <span>${client.phone}</span>
+                      <span>• NIT: ${client.nit}</span>
+                    </div>
+                  </div>
+                </div>
+
+                ${client.address ? `
+                  <div class="dispatch-card-address" title="${client.address}">
+                    📍 <span style="color: var(--text-primary); font-weight: 500;">${client.address}</span>
+                  </div>
+                ` : ''}
+
+                <div class="dispatch-card-metrics-grid">
+                  <div class="dispatch-card-metric-col">
+                    <span>Metraje</span>
+                    <span style="color: var(--cerulean);">${clientMetrics.totalMetersPurchased.toFixed(2)} m</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Tiradas</span>
+                    <span style="color: var(--text-primary);">${clientMetrics.ordersCount} ${clientMetrics.ordersCount === 1 ? 'ped.' : 'peds.'}</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Facturación</span>
+                    <span style="color: var(--text-primary);">Q${clientMetrics.totalSpentQ.toFixed(2)}</span>
+                    ${clientMetrics.pendingDebtQ > 0 ? `
+                      <span style="font-size: 0.72rem; color: #ef4444; font-weight: 700; display: block;">Saldo: Q${clientMetrics.pendingDebtQ.toFixed(2)}</span>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pie: Acciones Táctiles -->
+              <div class="dispatch-card-footer">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary btn-view-dossier" 
+                  data-client-id="${client.id}" 
+                  style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                  title="Ver Expediente"
+                >
+                  <span>📁</span>
+                  <span>Expediente</span>
+                </button>
+
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                  <button 
+                    type="button" 
+                    class="btn btn-secondary btn-edit-client" 
+                    data-client-id="${client.id}" 
+                    style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                    title="Editar Cliente"
+                  >
+                    <span>✏️</span>
+                    <span>Editar</span>
+                  </button>
+
+                  <a 
+                    href="https://api.whatsapp.com/send?phone=${client.phone.replace(/\D/g, '')}&text=${encodeURIComponent(`Hola ${client.name}, le saludamos de Kroma Lab UV DTF. ¿En qué podemos apoyarle hoy para ${client.company}?`)}" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="btn-action-icon" 
+                    title="Chat WhatsApp"
+                    style="min-height: 42px; min-width: 42px;"
+                  >
+                    <span>💬</span>
+                  </a>
+
+                  <button 
+                    type="button" 
+                    class="btn-action-icon btn-delete-client" 
+                    data-client-id="${client.id}" 
+                    title="Eliminar Cliente" 
+                    style="color: var(--color-danger); min-height: 42px; min-width: 42px;"
+                  >
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
 
       attachTableEvents();
     }

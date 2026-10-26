@@ -403,4 +403,17 @@ describe('Profitability View — Interfaz de Costos Industriales y Rentabilidad 
       expect(costEl.textContent).not.toBe('Q0.00');
     });
   });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de rentabilidad histórica en ordersProfitabilityCardsContainer', () => {
+      const container = document.getElementById('ordersProfitabilityCardsContainer');
+      expect(container).not.toBeNull();
+
+      const cards = container.querySelectorAll('.profit-card');
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+    });
+  });
 });

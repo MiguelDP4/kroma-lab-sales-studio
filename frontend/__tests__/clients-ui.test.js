@@ -290,4 +290,38 @@ describe('Clients View — Interfaz de Directorio B2B y Cartera de Clientes', ()
     const clients = clientsStore.getClients();
     expect(clients[0].company).toBe('Cliente B2B');
   });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de clientes en clientsCardsContainer', () => {
+      const container = document.getElementById('clientsCardsContainer');
+      expect(container).not.toBeNull();
+
+      const cards = container.querySelectorAll('.client-card');
+      expect(cards.length).toBeGreaterThanOrEqual(5);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-view-dossier')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-edit-client')).not.toBeNull();
+    });
+
+    it('permite abrir expediente y editar desde las tarjetas de clientes', () => {
+      const card = document.querySelector('.client-card');
+      expect(card).not.toBeNull();
+
+      // Abrir expediente desde tarjeta
+      const btnDossier = card.querySelector('.btn-view-dossier');
+      btnDossier.click();
+      const dossierModal = document.getElementById('clientDossierModal');
+      expect(dossierModal.style.display).toBe('block');
+      document.getElementById('btnCloseDossierModal').click();
+
+      // Abrir edición desde tarjeta
+      const btnEdit = card.querySelector('.btn-edit-client');
+      btnEdit.click();
+      const formModal = document.getElementById('clientFormModal');
+      expect(formModal.style.display).toBe('block');
+      document.getElementById('btnCloseClientFormModal').click();
+    });
+  });
 });

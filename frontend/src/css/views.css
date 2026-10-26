@@ -2902,13 +2902,19 @@
 /* 1. Desktop (> 1200px): Mostrar tablas completas, ocultar tarjetas responsivas */
 @media (min-width: 1201px) {
   .orders-table-wrapper,
-  .receivables-table-wrapper {
+  .receivables-table-wrapper,
+  .clients-table-wrapper,
+  .reports-table-wrapper,
+  .profitability-table-wrapper {
     display: block !important;
   }
 
   .orders-cards-grid,
   .receivables-cards-grid,
-  .payments-cards-grid {
+  .payments-cards-grid,
+  .clients-cards-grid,
+  .reports-cards-grid,
+  .profitability-cards-grid {
     display: none !important;
   }
 }
@@ -2918,6 +2924,9 @@
 @media (max-width: 1200px) {
   .orders-table-wrapper,
   .receivables-table-wrapper,
+  .clients-table-wrapper,
+  .reports-table-wrapper,
+  .profitability-table-wrapper,
   .mobile-scroll-hint,
   .receivables-mobile-scroll-hint {
     display: none !important;
@@ -2925,7 +2934,10 @@
 
   .orders-cards-grid,
   .receivables-cards-grid,
-  .payments-cards-grid {
+  .payments-cards-grid,
+  .clients-cards-grid,
+  .reports-cards-grid,
+  .profitability-cards-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 1.25rem;
@@ -2936,7 +2948,10 @@
 @media (max-width: 640px) {
   .orders-cards-grid,
   .receivables-cards-grid,
-  .payments-cards-grid {
+  .payments-cards-grid,
+  .clients-cards-grid,
+  .reports-cards-grid,
+  .profitability-cards-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem;
   }
