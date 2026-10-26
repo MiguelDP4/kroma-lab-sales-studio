@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Frontend Vanilla HTML5/CSS3/JS para Kroma Lab Sales Studio",
   "scripts": {
+    "dev": "node scripts/serve-frontend.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

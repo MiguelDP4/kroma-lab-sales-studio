@@ -319,7 +319,7 @@ function attachModalEventListeners() {
   if (tabLogin) tabLogin.addEventListener('click', () => switchAuthTab('login'));
   if (tabRegister) tabRegister.addEventListener('click', () => switchAuthTab('register'));
 
-  const modal = document.getElementById('userProfileModal');
+  const modal = typeof document !== 'undefined' ? document.getElementById('userProfileModal') : null;
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
@@ -438,7 +438,7 @@ export function switchAuthTab(tabName) {
 }
 
 export function openUserProfileModal(preferredTab = null) {
-  const modal = document.getElementById('userProfileModal');
+  const modal = typeof document !== 'undefined' ? document.getElementById('userProfileModal') : null;
   if (!modal) return;
 
   const user = store.state.user;
@@ -532,7 +532,7 @@ export function openUserProfileModal(preferredTab = null) {
 }
 
 export function closeUserProfileModal() {
-  const modal = document.getElementById('userProfileModal');
+  const modal = typeof document !== 'undefined' ? document.getElementById('userProfileModal') : null;
   if (modal) {
     modal.style.display = 'none';
   }
@@ -844,3 +844,4 @@ export function showFeedback(msg, type = 'info') {
     el.style.border = '1px solid var(--cerulean)';
   }
 }
+

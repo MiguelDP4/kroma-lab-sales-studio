@@ -16,6 +16,14 @@ export function getApiBaseUrl() {
       // Ignorar quota o storage error
     }
   }
+  if (typeof window !== 'undefined' && window.location) {
+    const isLocal = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' || 
+                    window.location.hostname === '';
+    if (!isLocal) {
+      return 'https://kroma-lab-backend-216908488828.us-central1.run.app/api';
+    }
+  }
   return 'http://localhost:4000/api';
 }
 
