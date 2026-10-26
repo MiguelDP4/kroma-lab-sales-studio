@@ -128,6 +128,14 @@ export const receivablesView = {
               </tbody>
             </table>
           </div>
+
+          <!-- Tarjetas de Cobranza Estilo Despacho (<= 1200px) -->
+          <div id="receivablesCardsContainer" class="receivables-cards-grid dispatch-cards-grid">
+            <!-- Inyectado por renderReceivablesTable() -->
+          </div>
+          <div id="receivablesEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
+            No se encontraron cuentas por cobrar con los filtros seleccionados.
+          </div>
         </div>
 
         <!-- SECCIÓN 2: HISTORIAL DE ABONOS Y PAGOS RECIENTES -->
@@ -164,6 +172,14 @@ export const receivablesView = {
                 <!-- Inyectado por renderPaymentsTable() -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Tarjetas de Pagos Estilo Despacho (<= 1200px) -->
+          <div id="paymentsCardsContainer" class="payments-cards-grid dispatch-cards-grid">
+            <!-- Inyectado por renderPaymentsTable() -->
+          </div>
+          <div id="paymentsEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
+            No hay pagos ni abonos registrados en el sistema.
           </div>
         </div>
 
@@ -543,6 +559,8 @@ export const receivablesView = {
 
     function renderReceivablesTable() {
       const tbody = document.getElementById('receivablesTableBody');
+      const cardsContainer = document.getElementById('receivablesCardsContainer');
+      const emptyState = document.getElementById('receivablesEmptyState');
       if (!tbody) return;
 
       const searchVal = searchInput?.value || '';
@@ -563,9 +581,14 @@ export const receivablesView = {
             </td>
           </tr>
         `;
+        if (cardsContainer) cardsContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
         return;
       }
 
+      if (emptyState) emptyState.style.display = 'none';
+
+      // 1. Render Desktop Table Rows (> 1200px)
       tbody.innerHTML = items.map(item => {
         const aging = item.agingStatus;
         const pMeta = PAYMENT_STATUS_LABELS[item.paymentStatus] || { label: item.paymentStatus, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' };
@@ -639,35 +662,145 @@ export const receivablesView = {
         `;
       }).join('');
 
-      // Enlazar eventos de botones de acción
-      tbody.querySelectorAll('.btn-quick-pay').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-order-id');
-          populateOrderSelect(id);
-          toggleModal(recordModal, true);
-        });
-      });
+      // 2. Render Mobile/Responsive Cards (<= 1200px)
+      if (cardsContainer) {
+        cardsContainer.innerHTML = items.map(item => {
+          const aging = item.agingStatus;
+          const pMeta = PAYMENT_STATUS_LABELS[item.paymentStatus] || { label: item.paymentStatus, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' };
+          const hasDebt = item.hasDebt;
 
-      tbody.querySelectorAll('.btn-whatsapp-reminder').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-order-id');
-          const reminder = receivablesStore.generateWhatsAppReminder(id);
-          if (reminder) {
-            window.open(reminder.url, '_blank');
-          }
-        });
-      });
+          return `
+            <div class="dispatch-card receivable-card" data-receivable-card="${item.orderId}" style="border-top: 4px solid ${hasDebt ? aging.color : '#10b981'};">
+              <!-- Cabecera: Folio, Antigüedad y Estado -->
+              <div class="dispatch-card-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="dispatch-card-folio">#${item.orderId}</span>
+                    <span class="badge" style="background: ${aging.bg}; color: ${aging.color}; border-color: ${aging.border}; font-size: 0.72rem; font-weight: 700;">
+                      ${aging.badge} (${item.agingDays}d)
+                    </span>
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    📅 ${new Date(item.createdAt).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                </div>
 
-      tbody.querySelectorAll('.btn-view-payments').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-order-id');
-          openViewPaymentsModal(id);
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="badge" style="background: ${pMeta.bg}; color: ${pMeta.color}; border-color: ${pMeta.color}; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.65rem;">
+                    ${pMeta.label}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Cuerpo: Cliente y Métricas Financieras (3 columnas) -->
+              <div class="dispatch-card-body">
+                <div class="dispatch-card-client-row">
+                  <div>
+                    <div class="dispatch-card-client-name">
+                      👤 ${item.customer?.company || item.customer?.name || 'Cliente B2B'}
+                    </div>
+                    <div class="dispatch-card-client-phone">
+                      📞 <span>${item.customer?.phone || 'Sin teléfono'}</span>
+                      <span>• NIT: ${item.customer?.nit || 'CF'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dispatch-card-metrics-grid">
+                  <div class="dispatch-card-metric-col">
+                    <span>Total</span>
+                    <span style="color: var(--text-primary);">Q${item.grandTotalQ.toFixed(2)}</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Abonado</span>
+                    <span style="color: #10b981;">Q${item.totalPaidQ.toFixed(2)}</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Saldo Pendiente</span>
+                    <span style="color: ${hasDebt ? '#ef4444' : '#10b981'}; font-size: 1.05rem;">Q${item.pendingBalanceQ.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pie: Acciones Táctiles de Cobranza -->
+              <div class="dispatch-card-footer">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary btn-view-payments" 
+                  data-order-id="${item.orderId}" 
+                  style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                  title="Ver historial de pagos"
+                >
+                  <span>🔍</span>
+                  <span>Ver Detalle</span>
+                </button>
+
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                  ${hasDebt ? `
+                    <button 
+                      type="button" 
+                      class="btn btn-primary btn-quick-pay" 
+                      data-order-id="${item.orderId}" 
+                      style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                      title="Registrar abono"
+                    >
+                      ➕ Abonar
+                    </button>
+                    <button 
+                      type="button" 
+                      class="btn btn-secondary btn-whatsapp-reminder" 
+                      data-order-id="${item.orderId}" 
+                      style="font-size: 0.85rem; padding: 0.5rem 0.85rem; min-height: 42px; color: #10b981; border-color: rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 0.4rem;"
+                      title="Enviar recordatorio por WhatsApp"
+                    >
+                      💬 WhatsApp
+                    </button>
+                  ` : `
+                    <span class="receivables-settled-badge" style="font-size: 0.85rem; color: #10b981; font-weight: 700; padding: 0.5rem 0.75rem;">
+                      ✓ Liquidado
+                    </span>
+                  `}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Enlazar eventos de botones de acción en tabla y tarjetas
+      [tbody, cardsContainer].forEach(container => {
+        if (!container) return;
+        container.querySelectorAll('.btn-quick-pay').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-order-id');
+            populateOrderSelect(id);
+            toggleModal(recordModal, true);
+          });
+        });
+
+        container.querySelectorAll('.btn-whatsapp-reminder').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-order-id');
+            const reminder = receivablesStore.generateWhatsAppReminder(id);
+            if (reminder) {
+              window.open(reminder.url, '_blank');
+            }
+          });
+        });
+
+        container.querySelectorAll('.btn-view-payments').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-order-id');
+            openViewPaymentsModal(id);
+          });
         });
       });
     }
 
     function renderPaymentsTable() {
       const tbody = document.getElementById('paymentsTableBody');
+      const cardsContainer = document.getElementById('paymentsCardsContainer');
+      const emptyState = document.getElementById('paymentsEmptyState');
       if (!tbody) return;
 
       const payments = receivablesStore.getPayments();
@@ -680,9 +813,14 @@ export const receivablesView = {
             </td>
           </tr>
         `;
+        if (cardsContainer) cardsContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
         return;
       }
 
+      if (emptyState) emptyState.style.display = 'none';
+
+      // 1. Render Desktop Table Rows (> 1200px)
       tbody.innerHTML = payments.map(p => {
         const methodMeta = PAYMENT_METHODS[p.method] || { label: p.method, icon: '💵' };
 
@@ -738,12 +876,88 @@ export const receivablesView = {
         `;
       }).join('');
 
-      tbody.querySelectorAll('.btn-delete-payment').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-payment-id');
-          if (confirm(`¿Estás seguro de anular el pago ${id}? Esto revertirá el saldo de la orden.`)) {
-            receivablesStore.deletePayment(id);
-          }
+      // 2. Render Mobile/Responsive Cards (<= 1200px)
+      if (cardsContainer) {
+        cardsContainer.innerHTML = payments.map(p => {
+          const methodMeta = PAYMENT_METHODS[p.method] || { label: p.method, icon: '💵' };
+
+          return `
+            <div class="dispatch-card payment-card" data-payment-card="${p.id}" style="border-top: 4px solid #10b981;">
+              <!-- Cabecera: ID Pago, No. Orden y Método -->
+              <div class="dispatch-card-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="dispatch-card-folio" style="color: var(--cerulean);">${p.id}</span>
+                    <span class="badge" style="color: var(--cerulean); border-color: var(--cerulean); font-size: 0.78rem; font-weight: 700;">
+                      Pedido #${p.orderId}
+                    </span>
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    📅 ${new Date(p.timestamp).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="badge" style="font-size: 0.76rem; padding: 0.35rem 0.65rem;">
+                    ${methodMeta.icon} ${methodMeta.label}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Cuerpo: Cliente, Referencia y Métricas Grid -->
+              <div class="dispatch-card-body">
+                <div class="dispatch-card-client-row">
+                  <div>
+                    <div class="dispatch-card-client-name">
+                      👤 ${p.clientName}
+                    </div>
+                    <div class="dispatch-card-client-phone">
+                      <span>Boleta / Referencia: </span>
+                      <span style="font-family: var(--font-mono); font-weight: 700; color: var(--cerulean);">${p.reference || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dispatch-card-metrics-grid" style="grid-template-columns: repeat(2, 1fr);">
+                  <div class="dispatch-card-metric-col">
+                    <span>Monto Recibido</span>
+                    <span style="color: #10b981; font-size: 1.05rem;">Q${p.amountQ.toFixed(2)}</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Registrado Por</span>
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; font-family: var(--font-sans);">${p.recordedBy}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pie: Acción de Anular Pago -->
+              <div class="dispatch-card-footer" style="justify-content: flex-end;">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary btn-delete-payment" 
+                  data-payment-id="${p.id}" 
+                  style="font-size: 0.85rem; min-height: 42px; padding: 0.45rem 0.85rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); display: inline-flex; align-items: center; gap: 0.4rem;"
+                  title="Eliminar abono"
+                >
+                  <span>🗑️</span>
+                  <span>Anular Abono</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Enlazar eventos de eliminación en tabla y tarjetas
+      [tbody, cardsContainer].forEach(container => {
+        if (!container) return;
+        container.querySelectorAll('.btn-delete-payment').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-payment-id');
+            if (confirm(`¿Estás seguro de anular el pago ${id}? Esto revertirá el saldo de la orden.`)) {
+              receivablesStore.deletePayment(id);
+            }
+          });
         });
       });
     }

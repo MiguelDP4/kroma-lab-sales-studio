@@ -821,4 +821,37 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
       expect(msg).toContain('🧾 *Boleta:* https://pub-r2.dev/assets/payments/boleta_99.jpg');
     });
   });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de pedidos con estructura similar a despacho en ordersCardsContainer', () => {
+      const cardsContainer = document.getElementById('ordersCardsContainer');
+      expect(cardsContainer).not.toBeNull();
+
+      const cards = cardsContainer.querySelectorAll('.order-card');
+      expect(cards.length).toBeGreaterThanOrEqual(4);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-view-order')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-workshop-sheet')).not.toBeNull();
+    });
+
+    it('permite abrir detalle y cambiar estados desde las tarjetas de pedidos', () => {
+      const card = document.querySelector('.order-card[data-order-card="KL-00042"]');
+      expect(card).not.toBeNull();
+
+      // Abrir detalle desde tarjeta
+      const btnView = card.querySelector('.btn-view-order');
+      btnView.click();
+      const detailModal = document.getElementById('orderDetailModal');
+      expect(detailModal.style.display).toBe('block');
+      document.getElementById('btnOkDetailModal').click();
+
+      // Cambiar estado desde selector de tarjeta
+      const selectProd = card.querySelector('.select-prod-status');
+      selectProd.value = ORDER_STATUS.COMPLETED;
+      selectProd.dispatchEvent(new Event('change'));
+      expect(ordersStore.getOrderById('KL-00042').productionStatus).toBe(ORDER_STATUS.COMPLETED);
+    });
+  });
 });

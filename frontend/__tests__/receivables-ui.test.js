@@ -467,4 +467,50 @@ describe('Receivables View — Interfaz de Cuentas por Cobrar y Saldos B2B', () 
     const content = document.getElementById('viewModalContent');
     expect(content.textContent).toContain('CRYPTO_SPECIAL');
   });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de cuentas por cobrar en receivablesCardsContainer', () => {
+      const cardsContainer = document.getElementById('receivablesCardsContainer');
+      expect(cardsContainer).not.toBeNull();
+
+      const cards = cardsContainer.querySelectorAll('.receivable-card');
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-view-payments')).not.toBeNull();
+    });
+
+    it('renderiza tarjetas de historial de pagos en paymentsCardsContainer', () => {
+      const cardsContainer = document.getElementById('paymentsCardsContainer');
+      expect(cardsContainer).not.toBeNull();
+
+      const cards = cardsContainer.querySelectorAll('.payment-card');
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-delete-payment')).not.toBeNull();
+    });
+
+    it('permite abrir detalle de pagos y abonar desde las tarjetas de cobranza', () => {
+      const card = document.querySelector('.receivable-card[data-receivable-card="KL-00041"]');
+      expect(card).not.toBeNull();
+
+      // Abrir detalle desde tarjeta
+      const btnView = card.querySelector('.btn-view-payments');
+      btnView.click();
+      const viewModal = document.getElementById('viewPaymentsModal');
+      expect(viewModal.style.display).toBe('block');
+      document.getElementById('btnCloseViewModal').click();
+
+      // Abrir modal de abono desde tarjeta
+      const btnPay = card.querySelector('.btn-quick-pay');
+      btnPay.click();
+      const recordModal = document.getElementById('recordPaymentModal');
+      expect(recordModal.style.display).toBe('block');
+      expect(document.getElementById('paymentOrderId').value).toBe('KL-00041');
+      document.getElementById('btnClosePaymentModal').click();
+    });
+  });
 });

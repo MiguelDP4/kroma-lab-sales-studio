@@ -107,7 +107,7 @@ export const ordersView = {
         </div>
 
         <!-- Tabla Principal de Pedidos -->
-        <div class="calc-card" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <div class="calc-card orders-table-wrapper" style="padding: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
           <div class="mobile-scroll-hint">
             <span>👈 Desliza horizontalmente para ver más columnas 👉</span>
           </div>
@@ -128,9 +128,13 @@ export const ordersView = {
               <!-- Filas generadas por renderOrdersTable() -->
             </tbody>
           </table>
-          <div id="ordersEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
-            No se encontraron pedidos que coincidan con los filtros seleccionados.
-          </div>
+        </div>
+
+        <!-- Tarjetas de Pedidos Estilo Despacho (<= 1200px) -->
+        <div id="ordersCardsContainer" class="orders-cards-grid dispatch-cards-grid"></div>
+
+        <div id="ordersEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
+          No se encontraron pedidos que coincidan con los filtros seleccionados.
         </div>
       </div>
 
@@ -834,8 +838,11 @@ export const ordersView = {
         return matchesQuery && matchesProd && matchesPay;
       });
 
+      const cardsContainer = document.getElementById('ordersCardsContainer');
+
       if (filtered.length === 0) {
         tableBody.innerHTML = '';
+        if (cardsContainer) cardsContainer.innerHTML = '';
         if (emptyState) emptyState.style.display = 'block';
         return;
       }
@@ -939,6 +946,168 @@ export const ordersView = {
           </tr>
         `;
       }).join('');
+
+      if (cardsContainer) {
+        cardsContainer.innerHTML = filtered.map(order => {
+          const itemsSummary = order.items.length > 0
+            ? `${order.items[0].title} (${order.items[0].qty} uds)`
+            : 'Diseños varios';
+
+          const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus] || { label: order.productionStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
+          const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
+          const orderWaMsg = formatOrderWhatsAppMessage(order);
+          const totalPieces = order.items.reduce((acc, i) => acc + (i.qty || 0), 0);
+
+          return `
+            <div class="dispatch-card order-card" data-order-card="${order.id}" style="border-top: 4px solid ${prodStyle.color};">
+              <!-- Cabecera: Folio, Boleta, Fecha y Selectores/Badges de Estado -->
+              <div class="dispatch-card-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="dispatch-card-folio">#${order.id}</span>
+                    ${order.paymentReceiptUrl ? `
+                      <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.72rem; padding: 2px 6px;">
+                        📄 Boleta
+                      </span>
+                    ` : `
+                      <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.72rem; padding: 2px 6px;">
+                        ⏳ Boleta Pendiente
+                      </span>
+                    `}
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    📅 ${new Date(order.createdAt).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  ${isStaff ? `
+                    <select class="select-status select-prod-status" data-order-id="${order.id}" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color}; min-height: 38px; padding: 0.35rem 0.65rem;">
+                      <option value="${ORDER_STATUS.PENDING_REVIEW}" ${order.productionStatus === ORDER_STATUS.PENDING_REVIEW ? 'selected' : ''}>Por Confirmar</option>
+                      <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}" ${order.productionStatus === ORDER_STATUS.IN_AUDLEY_QUEUE ? 'selected' : ''}>En Cola Audley</option>
+                      <option value="${ORDER_STATUS.PRINTING}" ${order.productionStatus === ORDER_STATUS.PRINTING ? 'selected' : ''}>Imprimiendo UV</option>
+                      <option value="${ORDER_STATUS.LAMINATING_CUTTING}" ${order.productionStatus === ORDER_STATUS.LAMINATING_CUTTING ? 'selected' : ''}>Laminado y Corte</option>
+                      <option value="${ORDER_STATUS.READY_FOR_DELIVERY}" ${order.productionStatus === ORDER_STATUS.READY_FOR_DELIVERY ? 'selected' : ''}>Listo para Entrega</option>
+                      <option value="${ORDER_STATUS.COMPLETED}" ${order.productionStatus === ORDER_STATUS.COMPLETED ? 'selected' : ''}>Entregado</option>
+                      <option value="${ORDER_STATUS.CANCELLED}" ${order.productionStatus === ORDER_STATUS.CANCELLED ? 'selected' : ''}>Cancelado</option>
+                    </select>
+
+                    <select class="select-status select-pay-status" data-order-id="${order.id}" style="background: ${payStyle.bg}; color: ${payStyle.color}; border-color: ${payStyle.color}; min-height: 38px; padding: 0.35rem 0.65rem;">
+                      <option value="${PAYMENT_STATUS.PENDING}" ${order.paymentStatus === PAYMENT_STATUS.PENDING ? 'selected' : ''}>Pendiente</option>
+                      <option value="${PAYMENT_STATUS.PARTIAL}" ${order.paymentStatus === PAYMENT_STATUS.PARTIAL ? 'selected' : ''}>Anticipo 50%</option>
+                      <option value="${PAYMENT_STATUS.PAID}" ${order.paymentStatus === PAYMENT_STATUS.PAID ? 'selected' : ''}>Pagado</option>
+                    </select>
+                  ` : `
+                    <span class="badge" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color}; padding: 0.35rem 0.65rem;">
+                      ${prodStyle.label}
+                    </span>
+                    <span class="badge" style="background: ${payStyle.bg}; color: ${payStyle.color}; border-color: ${payStyle.color}; padding: 0.35rem 0.65rem;">
+                      ${payStyle.label}
+                    </span>
+                  `}
+                </div>
+              </div>
+
+              <!-- Cuerpo: Cliente, Dimensiones y Métricas Grid -->
+              <div class="dispatch-card-body">
+                <div class="dispatch-card-client-row">
+                  <div>
+                    <div class="dispatch-card-client-name">
+                      👤 ${order.customer.company || order.customer.name}
+                    </div>
+                    <div class="dispatch-card-client-phone">
+                      📞 <span>${order.customer.phone || 'Sin teléfono'}</span>
+                      ${order.customer.nit ? `<span>• NIT: ${order.customer.nit}</span>` : ''}
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: var(--cerulean); border-color: var(--cerulean); font-size: 0.78rem;">
+                      ${itemsSummary}
+                    </span>
+                    ${order.items[0] ? `
+                      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        ${order.items[0].widthCm} × ${order.items[0].heightCm} cm ${order.items.length > 1 ? `(+ ${order.items.length - 1} más)` : ''}
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+
+                ${order.customer.address ? `
+                  <div class="dispatch-card-address" title="${order.customer.address}">
+                    📍 <span style="color: var(--text-primary); font-weight: 500;">${order.customer.address}</span>
+                  </div>
+                ` : ''}
+
+                <div class="dispatch-card-metrics-grid">
+                  <div class="dispatch-card-metric-col">
+                    <span>Metraje</span>
+                    <span style="color: var(--cerulean);">${order.metrics.totalBillableMeters.toFixed(2)} m</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Piezas</span>
+                    <span style="color: var(--text-primary);">${totalPieces} uds</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Total Orden</span>
+                    <span style="color: var(--text-primary);">Q${order.metrics.grandTotalQ.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pie: Acciones Táctiles -->
+              <div class="dispatch-card-footer">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary btn-view-order" 
+                  data-order-id="${order.id}" 
+                  style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                  title="Ver Detalle del Pedido"
+                >
+                  <span>🔍</span>
+                  <span>Ver Detalle</span>
+                </button>
+
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                  ${isStaff ? `
+                    <button 
+                      type="button" 
+                      class="btn btn-secondary btn-workshop-sheet" 
+                      data-order-id="${order.id}" 
+                      title="Hoja de Taller Audley"
+                      style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                    >
+                      <span>🖨️</span>
+                      <span>Taller</span>
+                    </button>
+
+                    <a 
+                      href="/despacho" 
+                      data-link 
+                      class="btn-action-icon" 
+                      data-order-id="${order.id}" 
+                      title="${order.dispatchNoteId ? `Ver Remisión ${order.dispatchNoteId}` : 'Generar Guía de Despacho'}"
+                      style="min-height: 42px; min-width: 42px;"
+                    >
+                      <span>🚚</span>
+                    </a>
+                  ` : ''}
+
+                  <a 
+                    href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="btn-action-icon" 
+                    title="Chat WhatsApp"
+                    style="min-height: 42px; min-width: 42px;"
+                  >
+                    <span>💬</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
 
       attachTableEvents();
     }

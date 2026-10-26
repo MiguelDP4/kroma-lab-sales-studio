@@ -2896,7 +2896,54 @@
 }
 
 /* ==========================================================================
-   MOBILE-FIRST BREAKPOINT (Smartphones & Tablets <= 768px)
+   BREAKPOINTS RESPONSIVOS: TABLAS DESKTOP (> 1200px) VS TARJETAS ESTILO DESPACHO (<= 1200px)
+   ========================================================================== */
+
+/* 1. Desktop (> 1200px): Mostrar tablas completas, ocultar tarjetas responsivas */
+@media (min-width: 1201px) {
+  .orders-table-wrapper,
+  .receivables-table-wrapper {
+    display: block !important;
+  }
+
+  .orders-cards-grid,
+  .receivables-cards-grid,
+  .payments-cards-grid {
+    display: none !important;
+  }
+}
+
+/* 2. Pantallas <= 1200px (Laptops compactas, Tablets y Móviles):
+      Ocultar tablas con scroll horizontal y mostrar tarjetas estilo despacho */
+@media (max-width: 1200px) {
+  .orders-table-wrapper,
+  .receivables-table-wrapper,
+  .mobile-scroll-hint,
+  .receivables-mobile-scroll-hint {
+    display: none !important;
+  }
+
+  .orders-cards-grid,
+  .receivables-cards-grid,
+  .payments-cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .orders-cards-grid,
+  .receivables-cards-grid,
+  .payments-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+}
+
+/* ==========================================================================
+   MOBILE-FIRST BREAKPOINT (Smartphones & Tablets <= 768px: Controles y Botones)
    ========================================================================== */
 @media (max-width: 768px) {
   .receivables-header-actions {
@@ -2933,100 +2980,5 @@
     max-width: 100% !important;
     min-height: 44px;
     font-size: 0.9rem;
-  }
-
-  .receivables-mobile-scroll-hint {
-    display: none !important;
-  }
-
-  .receivables-table-wrapper {
-    overflow-x: visible !important;
-  }
-
-  /* Transformación de tabla a tarjetas táctiles en móvil */
-  .receivables-table,
-  .receivables-payments-table {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .receivables-table thead,
-  .receivables-payments-table thead {
-    display: none !important;
-  }
-
-  .receivables-table tbody,
-  .receivables-payments-table tbody {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 1rem !important;
-    width: 100% !important;
-  }
-
-  .receivables-row,
-  .receivables-payment-row {
-    display: flex !important;
-    flex-direction: column !important;
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: var(--radius-md) !important;
-    padding: 1.1rem !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-    gap: 0.5rem !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .receivables-table td,
-  .receivables-payments-table td {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 0.35rem 0 !important;
-    border: none !important;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.06) !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    text-align: right !important;
-    font-size: 0.88rem !important;
-  }
-
-  .receivables-table td:last-child,
-  .receivables-payments-table td:last-child {
-    border-bottom: none !important;
-    padding-top: 0.75rem !important;
-  }
-
-  .mobile-td-label {
-    display: inline-block !important;
-    font-weight: 700 !important;
-    color: var(--text-muted) !important;
-    font-size: 0.82rem !important;
-    text-align: left !important;
-    flex-shrink: 0 !important;
-  }
-
-  .col-order-actions,
-  .col-pay-action {
-    display: block !important;
-    width: 100% !important;
-  }
-
-  .receivables-actions-col {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.5rem !important;
-    width: 100% !important;
-    margin-top: 0.25rem !important;
-  }
-
-  .receivables-actions-col .btn,
-  .col-pay-action .btn {
-    min-height: 44px !important;
-    font-size: 0.88rem !important;
-    font-weight: 700 !important;
-    justify-content: center !important;
-    width: 100% !important;
   }
 }
