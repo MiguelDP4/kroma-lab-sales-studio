@@ -352,6 +352,7 @@ export function syncNavbarRole(role) {
   }
 
   if (navLinksContainer) {
+    const SHOW_SPOT_STUDIO = false;
     if (isStaff) {
       navLinksContainer.innerHTML = `
         <div class="sidebar-section-title">🏭 Producción & Taller</div>
@@ -381,10 +382,12 @@ export function syncNavbarRole(role) {
           <span class="nav-link-icon">📑</span>
           <span>Cotizaciones</span>
         </a>
+        ${SHOW_SPOT_STUDIO ? `
         <a href="/software" class="nav-link" data-link>
           <span class="nav-link-icon">⚡</span>
           <span>Kroma Spot Studio</span>
         </a>
+        ` : ''}
         <a href="/clientes" class="nav-link" data-link>
           <span class="nav-link-icon">👥</span>
           <span>Clientes</span>
@@ -404,11 +407,13 @@ export function syncNavbarRole(role) {
           <span>Rentabilidad</span>
         </a>
 
+        ${SHOW_SPOT_STUDIO ? `
         <div class="sidebar-section-title">⚡ Software & I+D</div>
         <a href="/software" class="nav-link" data-link>
           <span class="nav-link-icon">⚡</span>
           <span>Kroma Spot Studio</span>
         </a>
+        ` : ''}
 
         ${role === 'ADMIN' ? `
         <div class="sidebar-section-title">⚙️ Sistema & Permisos</div>
@@ -434,11 +439,13 @@ export function syncNavbarRole(role) {
           <span>Mis Pedidos</span>
         </a>
 
+        ${SHOW_SPOT_STUDIO ? `
         <div class="sidebar-section-title">⚡ Software de Preprensa</div>
         <a href="/software" class="nav-link" data-link>
           <span class="nav-link-icon">⚡</span>
           <span>Kroma Spot Studio</span>
         </a>
+        ` : ''}
       `;
     } else {
       // Visitante no registrado
@@ -452,10 +459,12 @@ export function syncNavbarRole(role) {
           <span class="nav-link-icon">📑</span>
           <span>Cotizaciones</span>
         </a>
+        ${SHOW_SPOT_STUDIO ? `
         <a href="/software" class="nav-link" data-link>
           <span class="nav-link-icon">⚡</span>
           <span>Kroma Spot Studio</span>
         </a>
+        ` : ''}
         <a href="#contacto" class="nav-link">
           <span class="nav-link-icon">💬</span>
           <span>WhatsApp</span>

@@ -4,6 +4,8 @@
 
 import { initQuoter } from '../app.js';
 
+export const SHOW_SPOT_STUDIO = false;
+
 export const quoterView = {
   path: '/',
   name: 'quoter',
@@ -229,7 +231,9 @@ export const quoterView = {
         </div>
 
       </div>
-    <!-- Banner informativo Kroma Spot Studio para talleres de impresión -->
+
+      ${SHOW_SPOT_STUDIO ? `
+      <!-- Banner informativo Kroma Spot Studio para talleres de impresión -->
       <div style="max-width: 1100px; margin: 2rem auto 0.5rem; padding: 1.25rem 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
         <div style="max-width: 700px;">
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
@@ -245,6 +249,7 @@ export const quoterView = {
           <span>→</span>
         </a>
       </div>
+      ` : ''}
     </section>
   `,
   onMount: () => {
