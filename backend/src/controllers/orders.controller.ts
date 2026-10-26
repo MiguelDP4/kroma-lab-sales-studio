@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { AuthenticatedRequest } from '../middlewares/auth';
+import { generateNextPaymentCode } from './receivables.controller';
 
 const createOrderSchema = z.object({
   customerId: z.string().optional(),
@@ -60,6 +61,29 @@ const attachReceiptSchema = z.object({
   bankReference: z.string().optional(),
   notes: z.string().optional(),
 });
+
+/**
+ * Genera el siguiente correlativo secuencial de orden como entero de 10 dígitos con ceros a la izquierda.
+ * La primera orden será 0000000001 y se incrementa en 1 por cada orden nueva.
+ */
+export async function generateNextOrderCode(): Promise<string> {
+  const orders = await prisma.order.findMany({
+    select: { code: true },
+  });
+
+  let maxNum = 0;
+  for (const o of orders) {
+    if (/^\d{10}$/.test(o.code)) {
+      const num = parseInt(o.code, 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  }
+
+  const nextNum = maxNum + 1;
+  return String(nextNum).padStart(10, '0');
+}
 
 export async function listOrders(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -141,9 +165,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
   try {
     const data = createOrderSchema.parse(req.body);
 
-    const year = new Date().getFullYear();
-    const count = await prisma.order.count();
-    const code = `KL-${year}-${String(count + 1).padStart(3, '0')}`;
+    const code = await generateNextOrderCode();
 
     const order = await prisma.order.create({
       data: {
@@ -235,8 +257,7 @@ export async function attachPaymentReceipt(req: AuthenticatedRequest, res: Respo
       updateData.amountPaidQ = newAmountPaid;
       updateData.paymentStatus = isFullyPaid ? 'PAID' : 'PARTIAL';
 
-      const paymentCount = await prisma.payment.count();
-      const paymentCode = `PAY-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(3, '0')}`;
+      const paymentCode = await generateNextPaymentCode();
 
       payment = await prisma.payment.create({
         data: {

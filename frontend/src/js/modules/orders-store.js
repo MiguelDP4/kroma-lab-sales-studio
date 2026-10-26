@@ -382,8 +382,15 @@ class OrdersStore {
   }
 
   createOrder({ customer = {}, cartTotals = {}, items = [], workshopNotes = '', paymentReceiptUrl = null, paymentReceiptFileName = null }) {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    const newId = `KL-${randomNum}`;
+    let maxNum = 0;
+    this.orders.forEach(o => {
+      const cleanId = (o.id || '').replace(/^KL-/, '');
+      if (/^\d{1,10}$/.test(cleanId)) {
+        const val = parseInt(cleanId, 10);
+        if (!isNaN(val) && val > maxNum) maxNum = val;
+      }
+    });
+    const newId = String(maxNum + 1).padStart(10, '0');
 
     const newOrder = {
       id: newId,

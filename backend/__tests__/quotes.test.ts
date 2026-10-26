@@ -154,7 +154,7 @@ describe('Quotes API (/api/quotes)', () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.order).toBeDefined();
-    expect(res.body.order.code).toMatch(/^KL-\d{4}-\d{3}$/);
+    expect(res.body.order.code).toMatch(/^\d{10}$/);
     expect(Number(res.body.order.widthCm)).toBe(5.0);
     expect(Number(res.body.order.heightCm)).toBe(5.0);
     expect(res.body.order.qty).toBe(100);

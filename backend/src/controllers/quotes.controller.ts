@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { AuthenticatedRequest } from '../middlewares/auth';
+import { generateNextOrderCode } from './orders.controller';
 
 export const createQuoteSchema = z.object({
   projectName: z.string().optional().default('Cotización UV DTF'),
@@ -205,10 +206,8 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
       return;
     }
 
-    // Generar correlativo de orden KL-YYYY-XXX
-    const year = new Date().getFullYear();
-    const orderCount = await prisma.order.count();
-    const orderCode = `KL-${year}-${String(orderCount + 1).padStart(3, '0')}`;
+    // Generar correlativo de orden como entero de 10 dígitos (ej: 0000000001)
+    const orderCode = await generateNextOrderCode();
 
     // Buscar si existe cliente vinculado por email
     let customerId: string | null = null;

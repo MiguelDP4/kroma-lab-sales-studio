@@ -2,6 +2,7 @@
  * Vista de Cuentas por Cobrar y Saldos B2B (ReceivablesView) — Kroma Lab.
  * Supervisa saldos adeudados de clientes, antigüedad de mora (0-7d, 8-15d, >15d),
  * registro de abonos parciales, conciliación bancaria y recordatorios por WhatsApp.
+ * Rediseño Mobile-First con columnas optimizadas y formato de orden de 10 dígitos.
  */
 
 import {
@@ -20,25 +21,25 @@ export const receivablesView = {
 
   render: () => {
     return `
-      <div style="padding: 2rem 0 4rem;">
+      <div class="receivables-view" style="padding: 1.5rem 0 4rem;">
         <!-- Cabecera de la Vista -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.25rem;">
-          <div style="flex: 1 1 340px; min-width: 0;">
+        <div class="receivables-header-bar">
+          <div style="flex: 1 1 320px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
               <span class="badge">Finanzas & Cobranza</span>
               <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981;">
                 Saldos B2B Guatemala
               </span>
             </div>
-            <h1 style="font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 800; margin: 0.25rem 0;">
+            <h1 style="font-size: clamp(1.6rem, 3.2vw, 2.2rem); font-weight: 800; margin: 0.25rem 0; line-height: 1.2;">
               Cuentas por Cobrar y Saldos B2B
             </h1>
-            <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
               Control de créditos a clientes, registro de abonos y anticipos, conciliación bancaria y cobranza por WhatsApp.
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; flex-shrink: 0;">
+          <div class="receivables-header-actions">
             <button id="btnOpenRecordPaymentModal" class="btn btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
               <span>➕</span>
               <span>Registrar Abono / Pago</span>
@@ -50,7 +51,7 @@ export const receivablesView = {
           </div>
         </div>
 
-        <!-- Notificación Toast de Cobranza (No afecta la posición ni el tamaño de los botones) -->
+        <!-- Notificación Toast de Cobranza -->
         <div id="receivablesToast" class="reports-notification" style="display: none; margin-bottom: 1.5rem;"></div>
 
         <!-- Tarjetas de Resumen KPI de Cobranza -->
@@ -59,7 +60,7 @@ export const receivablesView = {
         </div>
 
         <!-- Barra de Cuentas Bancarias de Taller -->
-        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div class="receivables-bank-bar">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <span style="font-size: 1.5rem;">🏦</span>
             <div>
@@ -70,14 +71,14 @@ export const receivablesView = {
               </div>
             </div>
           </div>
-          <button id="btnCopyBankAccounts" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.4rem 0.8rem; min-height: 38px;">
+          <button id="btnCopyBankAccounts" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.4rem 0.8rem; min-height: 40px;">
             📋 Copiar Cuentas
           </button>
         </div>
 
         <!-- SECCIÓN 1: TABLA PRINCIPAL DE CUENTAS POR COBRAR -->
-        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: clamp(1.2rem, 3vw, 1.75rem); margin-bottom: 2.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+        <div class="receivables-section-card">
+          <div class="receivables-section-header">
             <div>
               <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                 <span>📑</span>
@@ -88,17 +89,17 @@ export const receivablesView = {
               </p>
             </div>
 
-            <!-- Filtros de Cartera -->
-            <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
-              <input type="text" id="receivablesSearchInput" class="input-control" placeholder="Buscar por cliente, orden, NIT..." style="min-height: 44px; font-size: 0.85rem; width: 220px;">
-              <select id="receivablesStatusFilter" class="input-control" style="min-height: 44px; font-size: 0.85rem; width: 180px;">
+            <!-- Filtros de Cartera Responsivos -->
+            <div class="receivables-filters-bar">
+              <input type="text" id="receivablesSearchInput" class="input-control" placeholder="Buscar por cliente, orden, NIT...">
+              <select id="receivablesStatusFilter" class="input-control">
                 <option value="DEBT_ONLY">⚠️ Con Deuda Pendiente</option>
                 <option value="ALL">Todos los Pedidos</option>
                 <option value="PARTIAL">🟡 Con Anticipo (50%)</option>
                 <option value="PENDING">🔴 Sin Abonos (0%)</option>
                 <option value="PAID">🟢 Pagados 100%</option>
               </select>
-              <select id="receivablesAgingFilter" class="input-control" style="min-height: 44px; font-size: 0.85rem; width: 170px;">
+              <select id="receivablesAgingFilter" class="input-control">
                 <option value="ALL">Todas las Edades</option>
                 <option value="OVERDUE">🔴 En Mora (>15 días)</option>
                 <option value="ATTENTION">🟡 Por Vencer (8-15d)</option>
@@ -107,19 +108,19 @@ export const receivablesView = {
             </div>
           </div>
 
-          <div class="mobile-scroll-hint">Desliza para ver columnas de saldo, mora y cobranza ↔</div>
-          <div class="orders-table-container">
-            <table class="orders-table" style="font-size: 0.85rem;">
+          <div class="mobile-scroll-hint receivables-mobile-scroll-hint">Desliza para ver columnas de saldo, mora y cobranza ↔</div>
+          <div class="orders-table-container receivables-table-wrapper">
+            <table class="orders-table receivables-table">
               <thead>
                 <tr>
-                  <th>No. Orden</th>
-                  <th>Fecha & Antigüedad</th>
-                  <th>Cliente & Empresa</th>
-                  <th>Total (Q)</th>
-                  <th>Abonado (Q)</th>
-                  <th>Saldo Pendiente (Q)</th>
-                  <th>Estado</th>
-                  <th style="text-align: right;">Acciones de Cobro</th>
+                  <th class="col-order-code">No. Orden</th>
+                  <th class="col-order-date">Fecha & Antigüedad</th>
+                  <th class="col-order-client">Cliente & Empresa</th>
+                  <th class="col-order-total">Total (Q)</th>
+                  <th class="col-order-paid">Abonado (Q)</th>
+                  <th class="col-order-balance">Saldo Pendiente (Q)</th>
+                  <th class="col-order-status">Estado</th>
+                  <th class="col-order-actions">Acciones de Cobro</th>
                 </tr>
               </thead>
               <tbody id="receivablesTableBody">
@@ -130,8 +131,8 @@ export const receivablesView = {
         </div>
 
         <!-- SECCIÓN 2: HISTORIAL DE ABONOS Y PAGOS RECIENTES -->
-        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: clamp(1.2rem, 3vw, 1.75rem);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+        <div class="receivables-section-card">
+          <div class="receivables-section-header">
             <div>
               <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                 <span>💳</span>
@@ -143,20 +144,20 @@ export const receivablesView = {
             </div>
           </div>
 
-          <div class="mobile-scroll-hint">Desliza para ver referencias bancarias y montos ↔</div>
-          <div class="orders-table-container">
-            <table class="orders-table" style="font-size: 0.85rem;">
+          <div class="mobile-scroll-hint receivables-mobile-scroll-hint">Desliza para ver referencias bancarias y montos ↔</div>
+          <div class="orders-table-container receivables-table-wrapper">
+            <table class="orders-table receivables-payments-table">
               <thead>
                 <tr>
-                  <th>ID Pago</th>
-                  <th>Fecha & Hora</th>
-                  <th>No. Orden</th>
-                  <th>Cliente / Razón Social</th>
-                  <th>Método</th>
-                  <th>No. Boleta / Ref</th>
-                  <th>Monto (Q)</th>
-                  <th>Registrado Por</th>
-                  <th>Acción</th>
+                  <th class="col-pay-id">ID Pago</th>
+                  <th class="col-pay-date">Fecha & Hora</th>
+                  <th class="col-pay-order">No. Orden</th>
+                  <th class="col-pay-client">Cliente / Razón Social</th>
+                  <th class="col-pay-method">Método</th>
+                  <th class="col-pay-ref">No. Boleta / Ref</th>
+                  <th class="col-pay-amount">Monto (Q)</th>
+                  <th class="col-pay-recorded">Registrado Por</th>
+                  <th class="col-pay-action">Acción</th>
                 </tr>
               </thead>
               <tbody id="paymentsTableBody">
@@ -234,7 +235,7 @@ export const receivablesView = {
                     <option value="CASH">💵 Efectivo en Taller</option>
                     <option value="CARD">💳 Tarjeta Débito/Crédito (POS)</option>
                     <option value="DEPOSIT">📄 Boleta de Depósito</option>
-                    <option value="CHECK">📑 Cheque</option>
+                    <option value="CHEQUE">📑 Cheque</option>
                   </select>
                 </div>
               </div>
@@ -477,7 +478,7 @@ export const receivablesView = {
       }, 3500);
     }
 
-    // Exportar CSV (Sin modificar texto ni estado del botón para evitar brincos o desalineaciones visuales)
+    // Exportar CSV
     if (btnExportCSV) {
       btnExportCSV.addEventListener('click', () => {
         try {
@@ -571,56 +572,66 @@ export const receivablesView = {
         const hasDebt = item.hasDebt;
 
         return `
-          <tr>
-            <td style="font-family: var(--font-mono); font-weight: 800; color: var(--cerulean); white-space: nowrap;">
-              ${item.orderId}
+          <tr class="receivables-row">
+            <td class="col-order-code">
+              <span class="mobile-td-label">No. Orden:</span>
+              <span class="receivables-code-badge">${item.orderId}</span>
             </td>
-            <td style="white-space: nowrap;">
-              <div style="font-size: 0.82rem; color: var(--text-secondary);">
+            <td class="col-order-date">
+              <span class="mobile-td-label">Fecha / Antigüedad:</span>
+              <div class="receivables-date-text">
                 ${new Date(item.createdAt).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
               <span class="badge" style="background: ${aging.bg}; color: ${aging.color}; border-color: ${aging.border}; font-size: 0.68rem; margin-top: 0.2rem;">
                 ${aging.badge} (${item.agingDays}d)
               </span>
             </td>
-            <td>
-              <div style="font-weight: 800; color: var(--text-primary); font-size: 0.9rem;">
+            <td class="col-order-client">
+              <span class="mobile-td-label">Cliente & Empresa:</span>
+              <div class="receivables-client-name">
                 ${item.customer?.company || item.customer?.name || 'Cliente B2B'}
               </div>
-              <div style="font-size: 0.78rem; color: var(--text-secondary);">
+              <div class="receivables-client-sub">
                 ${item.customer?.phone || 'Sin teléfono'} • NIT: ${item.customer?.nit || 'CF'}
               </div>
             </td>
-            <td style="font-family: var(--font-mono); font-weight: 700;">
-              Q${item.grandTotalQ.toFixed(2)}
+            <td class="col-order-total">
+              <span class="mobile-td-label">Total (Q):</span>
+              <span class="val-mono">Q${item.grandTotalQ.toFixed(2)}</span>
             </td>
-            <td style="font-family: var(--font-mono); font-weight: 700; color: #10b981;">
-              Q${item.totalPaidQ.toFixed(2)}
+            <td class="col-order-paid">
+              <span class="mobile-td-label">Abonado (Q):</span>
+              <span class="val-mono text-success">Q${item.totalPaidQ.toFixed(2)}</span>
             </td>
-            <td style="font-family: var(--font-mono); font-weight: 800; color: ${hasDebt ? '#ef4444' : '#10b981'}; font-size: 0.95rem;">
-              Q${item.pendingBalanceQ.toFixed(2)}
+            <td class="col-order-balance">
+              <span class="mobile-td-label">Saldo Pendiente (Q):</span>
+              <span class="val-mono val-balance ${hasDebt ? 'text-danger' : 'text-success'}">
+                Q${item.pendingBalanceQ.toFixed(2)}
+              </span>
             </td>
-            <td>
+            <td class="col-order-status">
+              <span class="mobile-td-label">Estado:</span>
               <span class="badge" style="background: ${pMeta.bg}; color: ${pMeta.color}; border-color: ${pMeta.color}; font-size: 0.72rem; white-space: nowrap;">
                 ${pMeta.label}
               </span>
             </td>
-            <td style="text-align: right; white-space: nowrap;">
-              <div style="display: inline-flex; gap: 0.35rem;">
+            <td class="col-order-actions">
+              <span class="mobile-td-label">Acciones de Cobro:</span>
+              <div class="receivables-actions-col">
                 ${hasDebt ? `
-                  <button type="button" class="btn btn-primary btn-quick-pay" data-order-id="${item.orderId}" title="Registrar abono" style="min-height: 38px; padding: 0.35rem 0.65rem; font-size: 0.78rem;">
+                  <button type="button" class="btn btn-primary btn-quick-pay" data-order-id="${item.orderId}" title="Registrar abono">
                     ➕ Abonar
                   </button>
-                  <button type="button" class="btn btn-secondary btn-whatsapp-reminder" data-order-id="${item.orderId}" title="Enviar recordatorio por WhatsApp" style="min-height: 38px; padding: 0.35rem 0.6rem; font-size: 0.78rem; color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                  <button type="button" class="btn btn-secondary btn-whatsapp-reminder" data-order-id="${item.orderId}" title="Enviar recordatorio por WhatsApp">
                     💬 WhatsApp
                   </button>
                 ` : `
-                  <span style="font-size: 0.78rem; color: #10b981; font-weight: 700; padding: 0.4rem;">
+                  <span class="receivables-settled-badge">
                     ✓ Liquidado
                   </span>
                 `}
-                <button type="button" class="btn btn-secondary btn-view-payments" data-order-id="${item.orderId}" title="Ver historial de pagos" style="min-height: 38px; padding: 0.35rem 0.6rem; font-size: 0.78rem;">
-                  👁️
+                <button type="button" class="btn btn-secondary btn-view-payments" data-order-id="${item.orderId}" title="Ver historial de pagos">
+                  Ver Detalle
                 </button>
               </div>
             </td>
@@ -676,28 +687,51 @@ export const receivablesView = {
         const methodMeta = PAYMENT_METHODS[p.method] || { label: p.method, icon: '💵' };
 
         return `
-          <tr>
-            <td style="font-family: var(--font-mono); font-weight: 700; color: var(--cerulean);">${p.id}</td>
-            <td style="white-space: nowrap; font-size: 0.8rem; color: var(--text-secondary);">
-              ${new Date(p.timestamp).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          <tr class="receivables-payment-row">
+            <td class="col-pay-id">
+              <span class="mobile-td-label">ID Pago:</span>
+              <span class="receivables-pay-code">${p.id}</span>
             </td>
-            <td style="font-family: var(--font-mono); font-weight: 800;">${p.orderId}</td>
-            <td><strong>${p.clientName}</strong></td>
-            <td>
+            <td class="col-pay-date">
+              <span class="mobile-td-label">Fecha & Hora:</span>
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                ${new Date(p.timestamp).toLocaleDateString('es-GT', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </td>
+            <td class="col-pay-order">
+              <span class="mobile-td-label">No. Orden:</span>
+              <span style="font-family: var(--font-mono); font-weight: 800;">${p.orderId}</span>
+            </td>
+            <td class="col-pay-client">
+              <span class="mobile-td-label">Cliente / Razón Social:</span>
+              <strong>${p.clientName}</strong>
+            </td>
+            <td class="col-pay-method">
+              <span class="mobile-td-label">Método:</span>
               <span class="badge" style="font-size: 0.72rem;">
                 ${methodMeta.icon} ${methodMeta.label}
               </span>
             </td>
-            <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--cerulean);">
-              ${p.reference || '—'}
+            <td class="col-pay-ref">
+              <span class="mobile-td-label">No. Boleta / Ref:</span>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--cerulean);">
+                ${p.reference || '—'}
+              </span>
             </td>
-            <td style="font-family: var(--font-mono); font-weight: 800; color: #10b981;">
-              Q${p.amountQ.toFixed(2)}
+            <td class="col-pay-amount">
+              <span class="mobile-td-label">Monto (Q):</span>
+              <span style="font-family: var(--font-mono); font-weight: 800; color: #10b981;">
+                Q${p.amountQ.toFixed(2)}
+              </span>
             </td>
-            <td style="font-size: 0.8rem; color: var(--text-secondary);">${p.recordedBy}</td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-delete-payment" data-payment-id="${p.id}" title="Eliminar abono" style="min-height: 34px; padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
-                🗑️
+            <td class="col-pay-recorded">
+              <span class="mobile-td-label">Registrado Por:</span>
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">${p.recordedBy}</span>
+            </td>
+            <td class="col-pay-action">
+              <span class="mobile-td-label">Acción:</span>
+              <button type="button" class="btn btn-secondary btn-delete-payment" data-payment-id="${p.id}" title="Eliminar abono" style="min-height: 44px; padding: 0.4rem 0.75rem; font-size: 0.78rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                🗑️ Anular
               </button>
             </td>
           </tr>

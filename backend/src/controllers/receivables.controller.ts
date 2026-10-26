@@ -13,6 +13,30 @@ const recordPaymentSchema = z.object({
   notes: z.string().optional(),
 });
 
+/**
+ * Genera el siguiente código correlativo de abono/pago de forma segura y libre de colisiones.
+ * Ejemplo: PAY-2026-001, PAY-2026-002, etc.
+ */
+export async function generateNextPaymentCode(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `PAY-${year}-`;
+  const payments = await prisma.payment.findMany({
+    where: { paymentCode: { startsWith: prefix } },
+    select: { paymentCode: true },
+  });
+
+  let maxNum = 0;
+  for (const p of payments) {
+    const numPart = p.paymentCode.replace(prefix, '');
+    const num = parseInt(numPart, 10);
+    if (!isNaN(num) && num > maxNum) {
+      maxNum = num;
+    }
+  }
+
+  return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+}
+
 export async function listReceivables(_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const orders = await prisma.order.findMany({
@@ -84,8 +108,7 @@ export async function recordPayment(req: AuthenticatedRequest, res: Response, ne
     const isFullyPaid = newAmountPaid >= Number(order.totalAmountQ) - 0.01;
     const newPaymentStatus = isFullyPaid ? 'PAID' : 'PARTIAL';
 
-    const count = await prisma.payment.count();
-    const paymentCode = `PAY-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const paymentCode = await generateNextPaymentCode();
 
     const [payment, updatedOrder] = await prisma.$transaction([
       prisma.payment.create({

@@ -2648,3 +2648,385 @@
 }
 
 
+
+
+/* ==========================================================================
+   VISTA DE COBRANZA (RECEIVABLES) — DISEÑO MOBILE-FIRST & RESPONSIVE
+   ========================================================================== */
+
+.receivables-view {
+  width: 100%;
+  max-width: 100%;
+}
+
+.receivables-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.receivables-header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.receivables-bank-bar {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.receivables-section-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  margin-bottom: 2.25rem;
+}
+
+.receivables-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.receivables-filters-bar {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.receivables-filters-bar input {
+  min-height: 44px;
+  font-size: 0.85rem;
+  width: 220px;
+}
+
+.receivables-filters-bar select {
+  min-height: 44px;
+  font-size: 0.85rem;
+}
+
+/* Tabla Estructura Desktop */
+.receivables-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.receivables-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: unset !important; /* Elimina la restricción forzada de 850px */
+}
+
+.receivables-table th,
+.receivables-table td {
+  padding: 0.7rem 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.84rem;
+}
+
+.receivables-table th {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.col-order-code {
+  width: 105px;
+  white-space: nowrap;
+}
+
+.receivables-code-badge {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--cerulean);
+  letter-spacing: 0.03em;
+  font-size: 0.88rem;
+}
+
+.col-order-date {
+  width: 110px;
+  white-space: nowrap;
+}
+
+.receivables-date-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.col-order-client {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.receivables-client-name {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.receivables-client-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.col-order-total,
+.col-order-paid,
+.col-order-balance {
+  width: 90px;
+  white-space: nowrap;
+}
+
+.val-mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  display: block;
+}
+
+.val-balance {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.text-success {
+  color: #10b981;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+.col-order-status {
+  width: 95px;
+  white-space: nowrap;
+}
+
+.col-order-actions {
+  width: 115px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Columna de acciones de cobro vertical */
+.receivables-actions-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: stretch;
+  width: 100%;
+  min-width: 100px;
+}
+
+.receivables-actions-col .btn {
+  font-size: 0.76rem;
+  padding: 0.35rem 0.5rem;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  width: 100%;
+  line-height: 1;
+}
+
+.receivables-actions-col .btn-whatsapp-reminder {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.receivables-settled-badge {
+  font-size: 0.76rem;
+  color: #10b981;
+  font-weight: 700;
+  padding: 0.3rem 0.2rem;
+  display: block;
+  text-align: center;
+}
+
+.mobile-td-label {
+  display: none;
+}
+
+/* Tabla de Pagos */
+.receivables-payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: unset !important;
+}
+
+.receivables-payments-table th,
+.receivables-payments-table td {
+  padding: 0.65rem 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.82rem;
+}
+
+.receivables-pay-code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--cerulean);
+}
+
+/* ==========================================================================
+   MOBILE-FIRST BREAKPOINT (Smartphones & Tablets <= 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .receivables-header-actions {
+    width: 100%;
+  }
+
+  .receivables-header-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .receivables-bank-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .receivables-bank-bar .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .receivables-filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.6rem;
+  }
+
+  .receivables-filters-bar input,
+  .receivables-filters-bar select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+
+  .receivables-mobile-scroll-hint {
+    display: none !important;
+  }
+
+  .receivables-table-wrapper {
+    overflow-x: visible !important;
+  }
+
+  /* Transformación de tabla a tarjetas táctiles en móvil */
+  .receivables-table,
+  .receivables-payments-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .receivables-table thead,
+  .receivables-payments-table thead {
+    display: none !important;
+  }
+
+  .receivables-table tbody,
+  .receivables-payments-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    width: 100% !important;
+  }
+
+  .receivables-row,
+  .receivables-payment-row {
+    display: flex !important;
+    flex-direction: column !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 1.1rem !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .receivables-table td,
+  .receivables-payments-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.35rem 0 !important;
+    border: none !important;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.06) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: right !important;
+    font-size: 0.88rem !important;
+  }
+
+  .receivables-table td:last-child,
+  .receivables-payments-table td:last-child {
+    border-bottom: none !important;
+    padding-top: 0.75rem !important;
+  }
+
+  .mobile-td-label {
+    display: inline-block !important;
+    font-weight: 700 !important;
+    color: var(--text-muted) !important;
+    font-size: 0.82rem !important;
+    text-align: left !important;
+    flex-shrink: 0 !important;
+  }
+
+  .col-order-actions,
+  .col-pay-action {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .receivables-actions-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    margin-top: 0.25rem !important;
+  }
+
+  .receivables-actions-col .btn,
+  .col-pay-action .btn {
+    min-height: 44px !important;
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+}

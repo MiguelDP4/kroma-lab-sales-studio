@@ -27,7 +27,7 @@ describe('Receivables API (/api/receivables)', () => {
 
     await prisma.order.create({
       data: {
-        code: `KL-AGING-OVERDUE-${Date.now()}`,
+        code: `T-${Math.floor(10000 + Math.random() * 89999)}`,
         customerName: 'Cliente Mora Test',
         customerPhone: '+502 5555-0099',
         widthCm: 10,
@@ -48,7 +48,7 @@ describe('Receivables API (/api/receivables)', () => {
 
     await prisma.order.create({
       data: {
-        code: `KL-AGING-WARN-${Date.now()}`,
+        code: `T-${Math.floor(10000 + Math.random() * 89999)}`,
         customerName: 'Cliente Warn Test',
         customerPhone: '+502 5555-0088',
         widthCm: 10,

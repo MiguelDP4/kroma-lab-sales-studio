@@ -193,7 +193,7 @@ describe('Storage & Cloudflare R2 Presigned URLs API (/api/storage)', () => {
     });
 
     it('confirma y vincula el archivo a una orden de producción existente', async () => {
-      const code = `KL-2026-${Date.now()}`;
+      const code = `T-${Math.floor(10000 + Math.random() * 89999)}`;
       const order = await prisma.order.create({
         data: {
           code,
@@ -227,7 +227,7 @@ describe('Storage & Cloudflare R2 Presigned URLs API (/api/storage)', () => {
     });
 
     it('confirma y vincula un comprobante de pago a una orden de producción existente', async () => {
-      const code = `KL-2026-REC-${Date.now()}`;
+      const code = `T-${Math.floor(10000 + Math.random() * 89999)}`;
       const order = await prisma.order.create({
         data: {
           code,
