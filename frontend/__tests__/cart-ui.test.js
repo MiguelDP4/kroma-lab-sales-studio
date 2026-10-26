@@ -30,6 +30,33 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
   });
 
   describe('Badge y Apertura/Cierre del Drawer', () => {
+    it('maneja renderCartDrawer cuando cartDrawerContainer no existe en el DOM', () => {
+      document.getElementById('cartDrawerContainer').remove();
+      expect(() => renderCartDrawer([], {})).not.toThrow();
+    });
+
+    it('renderiza el drawer preservando la clase open si ya estaba abierto', () => {
+      document.body.innerHTML = '<div id="cartDrawerContainer"><div id="cartDrawer" class="open"></div></div>';
+      renderCartDrawer([], {});
+      expect(document.getElementById('cartDrawer').classList.contains('open')).toBe(true);
+    });
+
+    it('muestra etiqueta Piezas en el servicio de corte cuando no aplica mínimo', () => {
+      const mockItems = [{ id: '1', title: 'Test', widthCm: 5, heightCm: 5, qty: 10, actualLinearMeters: 0.5, itemTotalQ: 50 }];
+      renderCartDrawer(mockItems, {
+        items: mockItems,
+        totalBillableMeters: 5,
+        isUnderMin: false,
+        tierRate: 115,
+        materialTotalQ: 575,
+        hasCutting: true,
+        isCuttingMinApplied: false,
+        cuttingTotalQ: 50,
+        grandTotalQ: 625,
+      });
+      expect(document.getElementById('cartDrawerContainer').innerHTML).toContain('Piezas');
+    });
+
     it('actualiza el badge del carrito según la cantidad de ítems', () => {
       const badge = document.getElementById('cartCountBadge');
       updateCartBadge(3);

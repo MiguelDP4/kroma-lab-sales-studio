@@ -275,6 +275,7 @@ kroma-lab-sales-studio/
     * `/reportes`: `reportsView` (`EMPLOYEE`, `ADMIN`)
     * `/rentabilidad`: `profitabilityView` (`EMPLOYEE`, `ADMIN`)
     * `/usuarios`: `usersView` (`ADMIN`)
+    * `/software`, `/spot-studio`, `/preprensa`: `softwareView` (`VISITOR`, `CUSTOMER`, `EMPLOYEE`, `ADMIN`)
 * **Carrito de Compras Multidiseño (`cart-store.js` + `cart-engine.js` + `cart-drawer.js`):**
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
   * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
@@ -472,6 +473,12 @@ kroma-lab-sales-studio/
     * Reporte consolidado de cuentas por cobrar para análisis en Excel, con identificación de cliente, empresa, NIT, teléfono, días de antigüedad y estado de mora.
   * **Persistencia Reactiva:**
     * Almacenado en `localStorage['kromalab_payments']` con notificaciones automáticas Pub/Sub.
+* **Landing de Preprensa y Kroma Spot Studio (`software-view.js` + `kroma_spot_studio_vs_photoshop.gif`):**
+  * **Solución de Preprensa Industrial Kroma Lab:** Presenta **Kroma Spot Studio**, el generador binario ultrarrápido y 100% offline para la creación de canales de tinta plana (`Spot_1` Blanco opaco y `Spot_3` Barniz brillante / relieve 3D) en formato TIFF LZW a 300 DPI, listo para procesar en software RIP sin intervención manual de Adobe Photoshop.
+  * **Comparativa Técnica Animada (GIF a 24 FPS):** Incluye un GIF animado comparativo entre el flujo manual de Photoshop (30 a 45 minutos para un lote de 100 imágenes, con riesgo de cuelgues de memoria y canales invertidos) vs Kroma Spot Studio (4 segundos para 100 imágenes, procesamiento multihilo y calibración pixel-perfect).
+  * **Matriz de Compatibilidad con RIPs Industriales:** Presets probados para PhotoPRINT / FlexiPRINT (Audley), Maintop / Hoson, Roland VersaWorks y Mimaki RasterLink.
+  * **Venta y Distribución:** Presentación del precio de lanzamiento de **Q195 GTQ** con licencia perpetua para un solo equipo, soporte técnico en Guatemala y canal directo de activación por WhatsApp y correo electrónico (`migueldp4@gmail.com`).
+  * **Navegación y Acceso:** Enlace accesible universalmente desde el navbar principal y el menú móvil, además de un banner promocional informativo dentro de la vista del Cotizador (`quoter-view.js`).
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.

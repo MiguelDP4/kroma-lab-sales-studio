@@ -34,6 +34,7 @@ import { inventoryView } from './views/inventory-view.js';
 import { receivablesView } from './views/receivables-view.js';
 import { dispatchView } from './views/dispatch-view.js';
 import { quotesView } from './views/quotes-view.js';
+import { softwareView } from './views/software-view.js';
 
 export const routes = [
   quoterView,
@@ -51,6 +52,9 @@ export const routes = [
   dispatchView,
   { ...dispatchView, path: '/remisiones' },
   usersView,
+  softwareView,
+  { ...softwareView, path: '/spot-studio' },
+  { ...softwareView, path: '/preprensa' },
 ];
 
 export const router = new Router(routes, 'app');
@@ -377,6 +381,10 @@ export function syncNavbarRole(role) {
           <span class="nav-link-icon">📑</span>
           <span>Cotizaciones</span>
         </a>
+        <a href="/software" class="nav-link" data-link>
+          <span class="nav-link-icon">⚡</span>
+          <span>Kroma Spot Studio</span>
+        </a>
         <a href="/clientes" class="nav-link" data-link>
           <span class="nav-link-icon">👥</span>
           <span>Clientes</span>
@@ -394,6 +402,12 @@ export function syncNavbarRole(role) {
         <a href="/rentabilidad" class="nav-link" data-link>
           <span class="nav-link-icon">💵</span>
           <span>Rentabilidad</span>
+        </a>
+
+        <div class="sidebar-section-title">⚡ Software & I+D</div>
+        <a href="/software" class="nav-link" data-link>
+          <span class="nav-link-icon">⚡</span>
+          <span>Kroma Spot Studio</span>
         </a>
 
         ${role === 'ADMIN' ? `
@@ -419,6 +433,12 @@ export function syncNavbarRole(role) {
           <span class="nav-link-icon">📦</span>
           <span>Mis Pedidos</span>
         </a>
+
+        <div class="sidebar-section-title">⚡ Software de Preprensa</div>
+        <a href="/software" class="nav-link" data-link>
+          <span class="nav-link-icon">⚡</span>
+          <span>Kroma Spot Studio</span>
+        </a>
       `;
     } else {
       // Visitante no registrado
@@ -431,6 +451,10 @@ export function syncNavbarRole(role) {
         <a href="/cotizaciones" class="nav-link" data-link>
           <span class="nav-link-icon">📑</span>
           <span>Cotizaciones</span>
+        </a>
+        <a href="/software" class="nav-link" data-link>
+          <span class="nav-link-icon">⚡</span>
+          <span>Kroma Spot Studio</span>
         </a>
         <a href="#contacto" class="nav-link">
           <span class="nav-link-icon">💬</span>

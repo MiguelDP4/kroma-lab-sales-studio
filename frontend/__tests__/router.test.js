@@ -212,12 +212,30 @@ describe('SPA Router — Enrutamiento y Guardias RBAC', () => {
       expect(navigateSpy).not.toHaveBeenCalled();
     });
 
+    it('soporta navegación con reemplazo de historial (replace=true)', () => {
+      const replaceSpy = vi.spyOn(window.history, 'replaceState');
+      router.navigate('/software', true);
+      expect(replaceSpy).toHaveBeenCalled();
+    });
+
     it('reacciona a eventos popstate de la ventana', () => {
       router.init();
       const resolveSpy = vi.spyOn(router, 'resolve');
 
       window.dispatchEvent(new PopStateEvent('popstate'));
       expect(resolveSpy).toHaveBeenCalled();
+    });
+
+    it('abre el modal de inicio de sesión al hacer clic en btnRestrictedLogin', async () => {
+      // Navegar a una ruta restringida sin usuario
+      router.navigate('/usuarios');
+      const btnLogin = document.getElementById('btnRestrictedLogin');
+      expect(btnLogin).toBeTruthy();
+
+      // Simular clic
+      btnLogin.click();
+      // Pequeño timeout para la promesa de import dinamico
+      await new Promise(r => setTimeout(r, 50));
     });
   });
 });

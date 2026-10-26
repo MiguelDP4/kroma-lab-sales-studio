@@ -9,6 +9,7 @@ import { profitabilityView } from '../src/js/views/profitability-view.js';
 import { inventoryView } from '../src/js/views/inventory-view.js';
 import { receivablesView } from '../src/js/views/receivables-view.js';
 import { dispatchView } from '../src/js/views/dispatch-view.js';
+import { softwareView } from '../src/js/views/software-view.js';
 import { store } from '../src/js/store.js';
 
 describe('Vistas Modulares SPA', () => {
@@ -192,6 +193,27 @@ describe('Vistas Modulares SPA', () => {
       if (typeof cleanup === 'function') {
         cleanup();
       }
+    });
+  });
+
+  describe('softwareView', () => {
+    it('renderiza la interfaz de Kroma Spot Studio y el GIF animado', () => {
+      const html = softwareView.render();
+      expect(html).toContain('KROMA SPOT STUDIO');
+      expect(html).toContain('kroma_spot_studio_vs_photoshop.gif');
+      expect(html).toContain('Spot_1');
+      expect(html).toContain('Spot_3');
+      expect(html).toContain('Q195 GTQ');
+    });
+
+    it('ejecuta onMount y retorna una función de limpieza (teardown)', () => {
+      const container = document.createElement('div');
+      container.innerHTML = softwareView.render();
+      document.body.appendChild(container);
+      const cleanup = softwareView.onMount(container);
+      expect(typeof cleanup).toBe('function');
+      cleanup();
+      document.body.removeChild(container);
     });
   });
 });

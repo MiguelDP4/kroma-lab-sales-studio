@@ -98,6 +98,14 @@ describe('PrintHelper — Módulo de Impresión Física y Exportación a PDF', (
     vi.useRealTimers();
   });
 
+  it('no falla si el manejador cleanup se invoca múltiples veces (idempotente)', () => {
+    vi.spyOn(window, 'print').mockImplementation(() => {});
+    printDocument('<div>Test</div>', 'Test Multi');
+    window.dispatchEvent(new Event('afterprint'));
+    window.dispatchEvent(new Event('afterprint'));
+    expect(document.body.classList.contains('printing-document')).toBe(false);
+  });
+
   it('maneja contenido HTML nulo o vacío de manera segura', () => {
     vi.spyOn(window, 'print').mockImplementation(() => {});
 

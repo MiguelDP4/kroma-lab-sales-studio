@@ -229,6 +229,22 @@ export const quoterView = {
         </div>
 
       </div>
+    <!-- Banner informativo Kroma Spot Studio para talleres de impresión -->
+      <div style="max-width: 1100px; margin: 2rem auto 0.5rem; padding: 1.25rem 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div style="max-width: 700px;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+            <span style="font-size: 1.2rem;">⚡</span>
+            <span style="font-weight: 800; color: var(--text-primary); font-size: 1.05rem;">¿Tienes tu propia impresora UV DTF o DTF Textil?</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0; line-height: 1.4;">
+            Descubre <strong>Kroma Spot Studio</strong>: nuestro generador automático de canales Spot (Blanco y Barniz) para PhotoPRINT, Flexi, Maintop, Roland y Mimaki en 0.04s sin usar Photoshop.
+          </p>
+        </div>
+        <a href="/software" class="btn btn-secondary" data-link style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; border-color: var(--cerulean); color: var(--cerulean); font-weight: 700;">
+          <span>Conocer Software</span>
+          <span>→</span>
+        </a>
+      </div>
     </section>
   `,
   onMount: () => {
