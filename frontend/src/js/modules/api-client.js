@@ -38,19 +38,32 @@ export class ApiClient {
 
   _loadToken() {
     try {
-      return localStorage.getItem('kromalab_jwt_token') || null;
+      if (typeof sessionStorage !== 'undefined') {
+        const s = sessionStorage.getItem('kromalab_jwt_token');
+        if (s) return s;
+      }
+      if (typeof localStorage !== 'undefined') {
+        return localStorage.getItem('kromalab_jwt_token') || null;
+      }
     } catch {
       return null;
     }
+    return null;
   }
 
-  setToken(token) {
+  setToken(token, rememberMe = true) {
     this.token = token;
     try {
       if (token) {
-        localStorage.setItem('kromalab_jwt_token', token);
+        if (rememberMe && typeof localStorage !== 'undefined') {
+          localStorage.setItem('kromalab_jwt_token', token);
+          if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('kromalab_jwt_token');
+        } else if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('kromalab_jwt_token', token);
+          if (typeof localStorage !== 'undefined') localStorage.removeItem('kromalab_jwt_token');
+        }
       } else {
-        localStorage.removeItem('kromalab_jwt_token');
+        this.clearToken();
       }
     } catch {
       // Ignorar quota exceeded
@@ -58,7 +71,13 @@ export class ApiClient {
   }
 
   clearToken() {
-    this.setToken(null);
+    this.token = null;
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('kromalab_jwt_token');
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('kromalab_jwt_token');
+    } catch {
+      // Ignorar
+    }
   }
 
   async _request(endpoint, options = {}) {
@@ -112,23 +131,23 @@ export class ApiClient {
 
   // --- Autenticación y Usuarios ---
   auth = {
-    login: async (email, password) => {
+    login: async (email, password, rememberMe = true) => {
       const res = await this._request('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
       if (res.token) {
-        this.setToken(res.token);
+        this.setToken(res.token, rememberMe);
       }
       return res;
     },
-    register: async (userData) => {
+    register: async (userData, rememberMe = true) => {
       const res = await this._request('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
       });
       if (res.token) {
-        this.setToken(res.token);
+        this.setToken(res.token, rememberMe);
       }
       return res;
     },

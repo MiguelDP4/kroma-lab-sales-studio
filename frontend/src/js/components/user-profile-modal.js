@@ -1,7 +1,7 @@
 /**
  * Componente Modal de Autenticación, Creación de Cuentas y Configuración de Usuario (UserProfileModal)
- * Permite a cualquier usuario (Admin, Operador Taller, Cliente B2B o Visitante)
- * iniciar sesión con credenciales reales, registrar nuevas cuentas de clientes B2B,
+ * Permite a cualquier usuario (Admin, Operador Taller, Cliente o Visitante)
+ * iniciar sesión con credenciales reales, registrar nuevas cuentas de clientes,
  * gestionar sus datos de perfil (Nombre, Teléfono, Correo, Empresa, NIT y Dirección de Entrega)
  * y cerrar sesión.
  */
@@ -54,7 +54,7 @@ export function initUserProfileModal() {
             🔑 Iniciar Sesión
           </button>
           <button type="button" id="tabBtnRegister" class="btn btn-secondary auth-tab-btn" style="flex: 1; min-height: 40px; font-size: 0.84rem; padding: 0.4rem 0.5rem;">
-            📝 Crear Cuenta B2B
+            📝 Crear Cuenta
           </button>
         </div>
 
@@ -181,9 +181,16 @@ export function initUserProfileModal() {
                 <input type="email" id="loginEmailInput" class="input-control" required style="min-height: 44px;" placeholder="ejemplo@kromalab.gt" autocomplete="email">
               </div>
 
-              <div class="form-group" style="margin-bottom: 1.25rem;">
+              <div class="form-group" style="margin-bottom: 1rem;">
                 <label class="form-label" for="loginPasswordInput" style="font-weight: 700;">Contraseña: <span style="color: #ef4444;">*</span></label>
                 <input type="password" id="loginPasswordInput" class="input-control" required style="min-height: 44px;" placeholder="••••••••" autocomplete="current-password">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label class="checkbox-wrapper" for="loginRememberMe" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; min-height: 44px; margin: 0; user-select: none;">
+                  <input type="checkbox" id="loginRememberMe" checked style="width: 18px; height: 18px; accent-color: var(--cerulean); cursor: pointer;">
+                  <span style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary);">Mantener sesión iniciada</span>
+                </label>
               </div>
             </div>
 
@@ -212,6 +219,10 @@ export function initUserProfileModal() {
                 <span>🔑 Iniciar Sesión</span>
               </button>
             </div>
+
+            <div style="text-align: center; margin-top: 1.25rem; font-size: 0.88rem; color: var(--text-secondary);">
+              ¿Aún no tienes una cuenta? <button type="button" id="btnSwitchToRegister" style="color: var(--cerulean); font-weight: 700; background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0.25rem; font-size: 0.88rem;">Crear cuenta</button>
+            </div>
           </form>
         </div>
 
@@ -221,7 +232,7 @@ export function initUserProfileModal() {
         <div id="authViewRegister" style="display: none;">
           <form id="formUserRegister">
             <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 1rem;">
-              Registra tu empresa o taller para cotizar de inmediato, enviar archivos para impresión DTF UV y acceder a precios de mayoreo por pliego.
+              Crea tu cuenta para cotizar de inmediato, enviar tus artes de impresión UV DTF y guardar tu historial de pedidos.
             </p>
 
             <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
@@ -267,6 +278,10 @@ export function initUserProfileModal() {
               <button type="submit" class="btn btn-primary" id="btnSubmitRegister" style="min-height: 44px;">
                 <span>✨ Crear Cuenta y Entrar</span>
               </button>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.25rem; font-size: 0.88rem; color: var(--text-secondary);">
+              ¿Ya tienes una cuenta registrada? <button type="button" id="btnSwitchToLogin" style="color: var(--cerulean); font-weight: 700; background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0.25rem; font-size: 0.88rem;">Iniciar sesión</button>
             </div>
           </form>
         </div>
@@ -318,6 +333,12 @@ function attachModalEventListeners() {
   if (tabProfile) tabProfile.addEventListener('click', () => switchAuthTab('profile'));
   if (tabLogin) tabLogin.addEventListener('click', () => switchAuthTab('login'));
   if (tabRegister) tabRegister.addEventListener('click', () => switchAuthTab('register'));
+
+  const btnSwitchReg = document.getElementById('btnSwitchToRegister');
+  if (btnSwitchReg) btnSwitchReg.addEventListener('click', () => switchAuthTab('register'));
+
+  const btnSwitchLog = document.getElementById('btnSwitchToLogin');
+  if (btnSwitchLog) btnSwitchLog.addEventListener('click', () => switchAuthTab('login'));
 
   const modal = typeof document !== 'undefined' ? document.getElementById('userProfileModal') : null;
   if (modal) {
@@ -422,7 +443,7 @@ export function switchAuthTab(tabName) {
       tabRegister.classList.add('is-active', 'btn-primary');
       tabRegister.classList.remove('btn-secondary');
     }
-    if (titleEl) titleEl.textContent = 'Registro de Cliente B2B';
+    if (titleEl) titleEl.textContent = 'Crear Cuenta';
     if (subTitleEl) subTitleEl.textContent = 'Crea tu cuenta de empresa para cotizaciones directas y compras de pliegos.';
     const nameInput = document.getElementById('registerNameInput');
     if (nameInput) setTimeout(() => nameInput.focus(), 50);
@@ -456,7 +477,7 @@ export function openUserProfileModal(preferredTab = null) {
       roleBadge.style.color = 'var(--cerulean)';
       roleBadge.style.borderColor = 'var(--cerulean)';
     } else if (role === 'CUSTOMER') {
-      roleBadge.textContent = '🏢 Cliente B2B Registrado';
+      roleBadge.textContent = '🏢 Cliente Registrado';
       roleBadge.style.color = '#10b981';
       roleBadge.style.borderColor = '#10b981';
     } else {
@@ -522,7 +543,7 @@ export function openUserProfileModal(preferredTab = null) {
   if (preferredTab) {
     switchAuthTab(preferredTab);
   } else if (!user || role === 'VISITOR') {
-    switchAuthTab('profile');
+    switchAuthTab('login');
   } else {
     switchAuthTab('profile');
   }
@@ -543,16 +564,18 @@ export async function handleLoginSubmit(e) {
 
   const emailInput = document.getElementById('loginEmailInput');
   const pwInput = document.getElementById('loginPasswordInput');
+  const rememberInput = document.getElementById('loginRememberMe');
 
   const email = emailInput?.value?.trim() || '';
   const password = pwInput?.value || '';
+  const rememberMe = rememberInput ? rememberInput.checked : true;
 
   if (!email || !password) {
     showFeedback('Por favor ingresa tu correo y contraseña.', 'error');
     return false;
   }
 
-  const user = await loginWithRealCredentials(email, password);
+  const user = await loginWithRealCredentials(email, password, rememberMe);
   return Boolean(user);
 }
 
@@ -612,14 +635,14 @@ export async function handleRegisterSubmit(e) {
   return Boolean(user);
 }
 
-export async function loginWithRealCredentials(email, password) {
+export async function loginWithRealCredentials(email, password, rememberMe = true) {
   try {
     showFeedback('Autenticando credenciales en base de datos...', 'info');
     if (typeof apiClient !== 'undefined' && apiClient.auth) {
-      const res = await apiClient.auth.login(email, password);
+      const res = await apiClient.auth.login(email, password, rememberMe);
       if (res && res.success && res.user) {
         const permissions = res.user.role === 'ADMIN' ? ['ALL'] : (res.user.role === 'EMPLOYEE' ? ['WORKSHOP', 'ORDERS', 'INVENTORY', 'DISPATCH'] : ['ORDERS']);
-        store.setUser(res.user, res.token, permissions);
+        store.setUser(res.user, res.token, permissions, rememberMe);
         openUserProfileModal('profile');
         showFeedback(`✅ Sesión real iniciada: ${res.user.name} (${res.user.role})`, 'success');
         setTimeout(() => {
@@ -640,7 +663,7 @@ export async function registerWithRealAccount(userData) {
     if (typeof apiClient !== 'undefined' && apiClient.auth) {
       const res = await apiClient.auth.register(userData);
       if (res && res.success && res.user) {
-        store.setUser(res.user, res.token, ['ORDERS']);
+        store.setUser(res.user, res.token, ['ORDERS'], true);
         openUserProfileModal('profile');
         showFeedback(`✅ ¡Bienvenido! Cuenta creada exitosamente para ${res.user.name}.`, 'success');
         setTimeout(() => {

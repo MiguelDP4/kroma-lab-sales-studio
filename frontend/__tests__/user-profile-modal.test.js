@@ -106,7 +106,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(viewProfile.style.display).toBe('none');
 
       const title = document.getElementById('userProfileModalTitle');
-      expect(title.textContent).toBe('Registro de Cliente B2B');
+      expect(title.textContent).toBe('Crear Cuenta');
     });
 
     it('cambia a pestaña profile mostrando datos de usuario', () => {
@@ -201,7 +201,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(deptGroup.style.display).toBe('none');
 
       const roleBadge = document.getElementById('profileModalRoleBadge');
-      expect(roleBadge.textContent).toContain('Cliente B2B');
+      expect(roleBadge.textContent).toContain('Cliente Registrado');
     });
 
     it('maneja el modo Visitante con valores limpios e indicación de rol', () => {
@@ -465,7 +465,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
 
       // Permitir que la promesa de login se resuelva
       await vi.waitFor(() => {
-        expect(loginSpy).toHaveBeenCalledWith('taller@kromalab.gt', 'Taller2026!');
+        expect(loginSpy).toHaveBeenCalledWith('taller@kromalab.gt', 'Taller2026!', true);
       });
     });
   });

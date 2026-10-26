@@ -35,6 +35,7 @@ import { receivablesView } from './views/receivables-view.js';
 import { dispatchView } from './views/dispatch-view.js';
 import { quotesView } from './views/quotes-view.js';
 import { softwareView } from './views/software-view.js';
+import { accountView } from './views/account-view.js';
 
 export const routes = [
   quoterView,
@@ -52,6 +53,10 @@ export const routes = [
   dispatchView,
   { ...dispatchView, path: '/remisiones' },
   usersView,
+  accountView,
+  { ...accountView, path: '/cuenta' },
+  { ...accountView, path: '/perfil' },
+  { ...accountView, path: '/configuracion' },
   softwareView,
   { ...softwareView, path: '/spot-studio' },
   { ...softwareView, path: '/preprensa' },
@@ -112,6 +117,17 @@ export async function initBackendSync() {
         } catch (_) {}
       }
       if (apiClient.token) {
+        try {
+          const meRes = await apiClient.auth.me();
+          if (meRes && meRes.success && meRes.user) {
+            const isRemembered = typeof localStorage !== 'undefined' && localStorage.getItem('kromalab_remember_me') === 'true';
+            store.setUser(meRes.user, apiClient.token, store.state.permissions, isRemembered);
+          }
+        } catch (authErr) {
+          if (authErr?.status === 401 || authErr?.message?.includes('401') || authErr?.message?.includes('No autenticado')) {
+            store.clearUser();
+          }
+        }
         await Promise.allSettled([
           ordersStore.syncWithApi(),
           clientsStore.syncWithApi(),
@@ -128,10 +144,146 @@ export async function initBackendSync() {
   }
 }
 
+export function initUserDropdown() {
+  const chipBtn = document.getElementById('userProfileChip');
+  const dropdown = document.getElementById('userProfileDropdown');
+  const wrapper = document.getElementById('userChipDropdownWrapper');
+
+  if (!chipBtn || !dropdown) return;
+
+  function renderDropdownContent() {
+    const user = store.state.user;
+    const role = user?.role || 'VISITOR';
+    const isVisitor = !user || role === 'VISITOR';
+
+    if (isVisitor) {
+      dropdown.innerHTML = `
+        <div class="dropdown-header">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">¡Hola!</div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem;">Accede a tu cuenta de Kroma Lab</div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <button type="button" class="dropdown-item" id="dropdownBtnLogin" style="min-height: 44px;">
+          <span>🔑</span>
+          <span>Iniciar Sesión</span>
+        </button>
+        <button type="button" class="dropdown-item" id="dropdownBtnRegister" style="min-height: 44px;">
+          <span>📝</span>
+          <span>Crear Cuenta</span>
+        </button>
+      `;
+
+      const btnLogin = dropdown.querySelector('#dropdownBtnLogin');
+      if (btnLogin) {
+        btnLogin.addEventListener('click', () => {
+          closeDropdown();
+          openUserProfileModal('login');
+        });
+      }
+
+      const btnReg = dropdown.querySelector('#dropdownBtnRegister');
+      if (btnReg) {
+        btnReg.addEventListener('click', () => {
+          closeDropdown();
+          openUserProfileModal('register');
+        });
+      }
+    } else {
+      const roleBadge = role === 'ADMIN' ? '👑 Admin' : (role === 'EMPLOYEE' ? '🛠️ Taller' : '🏢 Cliente');
+      dropdown.innerHTML = `
+        <div class="dropdown-header">
+          <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${user.name}
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem;">
+            ${user.email}
+          </div>
+          <div style="margin-top: 0.35rem;">
+            <span class="badge" style="font-size: 0.68rem; padding: 0.15rem 0.5rem;">${roleBadge}</span>
+          </div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <a href="/mi-cuenta" class="dropdown-item" id="dropdownBtnAccount" data-link style="min-height: 44px;">
+          <span>⚙️</span>
+          <span>Configuración de la Cuenta</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <button type="button" class="dropdown-item text-danger" id="dropdownBtnLogout" style="min-height: 44px; color: #ef4444;">
+          <span>🚪</span>
+          <span>Cerrar Sesión</span>
+        </button>
+      `;
+
+      const btnAccount = dropdown.querySelector('#dropdownBtnAccount');
+      if (btnAccount) {
+        btnAccount.addEventListener('click', (e) => {
+          e.preventDefault();
+          closeDropdown();
+          if (router) router.navigate('/mi-cuenta');
+        });
+      }
+
+      const btnLogout = dropdown.querySelector('#dropdownBtnLogout');
+      if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+          closeDropdown();
+          handleLogout();
+        });
+      }
+    }
+  }
+
+  function openDropdown() {
+    renderDropdownContent();
+    dropdown.style.display = 'flex';
+    if (wrapper) wrapper.classList.add('is-open');
+    chipBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDropdown() {
+    dropdown.style.display = 'none';
+    if (wrapper) wrapper.classList.remove('is-open');
+    chipBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleDropdown(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const isOpen = dropdown.style.display === 'flex' || dropdown.style.display === 'block';
+    if (isOpen) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
+  }
+
+  chipBtn.addEventListener('click', toggleDropdown);
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDropdown();
+      }
+    });
+  }
+
+  store.subscribe(() => {
+    if (dropdown.style.display === 'flex' || dropdown.style.display === 'block') {
+      renderDropdownContent();
+    }
+  });
+}
+
 export function initApp() {
   purgeLegacyMockStorage();
   initTheme();
   initNavbarRoleSync();
+  initUserDropdown();
   initMobileNav();
   initCartDrawer();
   initUserProfileModal();
@@ -337,9 +489,9 @@ export function syncNavbarRole(role) {
     if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'O';
     if (sidebarUserRole) sidebarUserRole.textContent = 'OPERADOR TALLER';
   } else if (role === 'CUSTOMER') {
-    if (userChipName) userChipName.textContent = currentName || 'Cliente B2B';
+    if (userChipName) userChipName.textContent = currentName || 'Cliente';
     if (userChipAvatar) userChipAvatar.textContent = '🏢';
-    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Cliente B2B';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Cliente';
     if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'C';
     if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
   } else {
@@ -1039,4 +1191,4 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
 
-export { openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };
+export { accountView, openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };

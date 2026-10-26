@@ -1060,7 +1060,7 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('sidebarUserRole').textContent).toBe('OPERADOR TALLER');
 
       syncNavbarRole('CUSTOMER');
-      expect(document.getElementById('userChipName').textContent).toBe('Cliente B2B');
+      expect(document.getElementById('userChipName').textContent).toBe('Cliente');
       expect(document.getElementById('sidebarUserRole').textContent).toBe('CLIENTE REGISTRADO');
 
       syncNavbarRole('VISITOR');
