@@ -155,8 +155,8 @@ describe('Quotes API (/api/quotes)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.order).toBeDefined();
     expect(res.body.order.code).toMatch(/^KL-\d{4}-\d{3}$/);
-    expect(res.body.order.widthCm).toBe(5.0);
-    expect(res.body.order.heightCm).toBe(5.0);
+    expect(Number(res.body.order.widthCm)).toBe(5.0);
+    expect(Number(res.body.order.heightCm)).toBe(5.0);
     expect(res.body.order.qty).toBe(100);
     expect(res.body.order.status).toBe('PENDING_REVIEW');
     expect(res.body.order.notes).toContain('Edición Actualizada');

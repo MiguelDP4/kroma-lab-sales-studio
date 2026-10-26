@@ -42,7 +42,9 @@ model User {
   address           String?
   department        String?   // Taller, Ventas, etc.
   role              Role      @default(CUSTOMER)
-  isVerified        Boolean   @default(true)
+  isVerified        Boolean   @default(false)
+  verificationToken         String?   @unique
+  verificationTokenExpires  DateTime?
   refreshToken      String?
   customerId        String?
   customer          Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)

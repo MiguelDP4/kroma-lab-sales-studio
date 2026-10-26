@@ -662,14 +662,22 @@ export async function registerWithRealAccount(userData) {
     showFeedback('Creando cuenta en base de datos...', 'info');
     if (typeof apiClient !== 'undefined' && apiClient.auth) {
       const res = await apiClient.auth.register(userData);
-      if (res && res.success && res.user) {
-        store.setUser(res.user, res.token, ['ORDERS'], true);
-        openUserProfileModal('profile');
-        showFeedback(`✅ ¡Bienvenido! Cuenta creada exitosamente para ${res.user.name}.`, 'success');
-        setTimeout(() => {
-          closeUserProfileModal();
-        }, 600);
-        return res.user;
+      if (res && res.success) {
+        if (res.requireVerification) {
+          showFeedback(`📧 ¡Cuenta creada! Hemos enviado un correo de confirmación a ${userData.email}. Revisa tu bandeja de entrada o spam y confirma tu identidad para iniciar sesión.`, 'success');
+          setTimeout(() => {
+            switchAuthTab('login');
+          }, 4000);
+          return res.user;
+        } else if (res.user && res.token) {
+          store.setUser(res.user, res.token, ['ORDERS'], true);
+          openUserProfileModal('profile');
+          showFeedback(`✅ ¡Bienvenido! Cuenta creada exitosamente para ${res.user.name}.`, 'success');
+          setTimeout(() => {
+            closeUserProfileModal();
+          }, 600);
+          return res.user;
+        }
       }
     }
   } catch (err) {

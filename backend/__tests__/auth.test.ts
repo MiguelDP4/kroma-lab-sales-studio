@@ -67,7 +67,7 @@ describe('Auth API (/api/auth)', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.token).toBeDefined();
+    expect(res.body.requireVerification).toBe(true);
     expect(res.body.user.email).toBe(randomEmail);
     expect(res.body.user.role).toBe('CUSTOMER');
 

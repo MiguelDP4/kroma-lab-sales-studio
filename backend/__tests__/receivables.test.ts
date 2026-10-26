@@ -93,7 +93,7 @@ describe('Receivables API (/api/receivables)', () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.payment.paymentCode).toMatch(/^PAY-\d{4}-\d{3}$/);
-    expect(res.body.order.amountPaidQ).toBeGreaterThanOrEqual(100.0);
+    expect(Number(res.body.order.amountPaidQ)).toBeGreaterThanOrEqual(100.0);
     createdPaymentId = res.body.payment.id;
   });
 

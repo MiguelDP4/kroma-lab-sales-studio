@@ -36,6 +36,7 @@ import { dispatchView } from './views/dispatch-view.js';
 import { quotesView } from './views/quotes-view.js';
 import { softwareView } from './views/software-view.js';
 import { accountView } from './views/account-view.js';
+import { verifyEmailView } from './views/verify-email-view.js';
 
 export const routes = [
   quoterView,
@@ -57,6 +58,8 @@ export const routes = [
   { ...accountView, path: '/cuenta' },
   { ...accountView, path: '/perfil' },
   { ...accountView, path: '/configuracion' },
+  verifyEmailView,
+  { ...verifyEmailView, path: '/confirmar-correo' },
   softwareView,
   { ...softwareView, path: '/spot-studio' },
   { ...softwareView, path: '/preprensa' },

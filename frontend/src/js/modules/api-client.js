@@ -151,6 +151,22 @@ export class ApiClient {
       }
       return res;
     },
+    verifyEmail: async (token) => {
+      const res = await this._request('/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      });
+      if (res.token) {
+        this.setToken(res.token, true);
+      }
+      return res;
+    },
+    resendVerification: async (email) => {
+      return this._request('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
     logout: async () => {
       try {
         await this._request('/auth/logout', { method: 'POST' });

@@ -9,7 +9,7 @@ export default defineConfig({
     hookTimeout: 20000,
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'file:./test.db',
+      DATABASE_URL: 'postgresql://neondb_owner:npg_Bm5aK1UgeLdt@ep-fragrant-wave-b5s2zyjd-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
     },
     setupFiles: ['./vitest.setup.ts'],
     globalSetup: ['./vitest.global-setup.ts'],

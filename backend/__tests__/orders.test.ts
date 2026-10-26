@@ -85,7 +85,7 @@ describe('Orders API (/api/orders)', () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.order.code).toMatch(/^KL-\d{4}-\d{3}$/);
-    expect(res.body.order.totalAmountQ).toBe(295.5);
+    expect(Number(res.body.order.totalAmountQ)).toBe(295.5);
     createdOrderId = res.body.order.id;
   });
 

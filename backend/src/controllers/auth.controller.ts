@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { seedDatabase } from '../db/seed';
 import { AuthenticatedRequest, signToken } from '../middlewares/auth';
+import { emailService } from '../services/email.service';
 
 const loginSchema = z.object({
   email: z.string().email('Correo electrónico inválido'),
@@ -82,7 +84,18 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
           data: { role: 'ADMIN', isVerified: true },
         });
         user.role = 'ADMIN';
+        user.isVerified = true;
       } catch (_) {}
+    }
+
+    if (!user.isVerified) {
+      res.status(403).json({
+        success: false,
+        unverified: true,
+        email: user.email,
+        message: 'Tu cuenta aún no ha sido verificada. Por favor revisa tu correo electrónico para confirmar tu identidad.',
+      });
+      return;
     }
 
     const token = signToken({
@@ -154,6 +167,9 @@ export async function register(req: Request, res: Response, next: NextFunction):
     }
 
     const isMasterAdmin = data.email.toLowerCase().trim() === 'miguel@kromalab.gt';
+    const verificationToken = isMasterAdmin ? null : crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = isMasterAdmin ? null : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     const user = await prisma.user.create({
       data: {
         name: data.name,
@@ -164,28 +180,56 @@ export async function register(req: Request, res: Response, next: NextFunction):
         taxId: data.taxId,
         address: data.address,
         role: isMasterAdmin ? 'ADMIN' : 'CUSTOMER',
+        isVerified: isMasterAdmin,
+        verificationToken,
+        verificationTokenExpires,
         customerId: customer.id,
       },
     });
 
-    const token = signToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    });
+    if (!isMasterAdmin && verificationToken) {
+      emailService.sendVerificationEmail(user.email, user.name, verificationToken).catch((mailErr) => {
+        console.error('[Auth] Error al enviar correo de verificación:', mailErr);
+      });
+    }
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    if (isMasterAdmin) {
+      const token = signToken({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+      });
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Cuenta de administrador activada exitosamente.',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          phone: user.phone,
+          company: user.company,
+          taxId: user.taxId,
+          address: user.address,
+        },
+      });
+      return;
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Cuenta creada exitosamente.',
-      token,
+      requireVerification: true,
+      message: 'Cuenta creada exitosamente. Hemos enviado un correo de confirmación a tu dirección de correo electrónico.',
       user: {
         id: user.id,
         email: user.email,
@@ -330,6 +374,7 @@ export async function createUser(req: AuthenticatedRequest, res: Response, next:
         address: data.address,
         department: data.department,
         role: data.role,
+        isVerified: true,
       },
       select: {
         id: true,
@@ -403,6 +448,128 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response, next:
     res.json({
       success: true,
       message: 'Usuario eliminado exitosamente.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Verifica la identidad del usuario mediante el token recibido por correo electrónico.
+ */
+export async function verifyEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const rawToken = req.query.token || req.body?.token;
+    const token = typeof rawToken === 'string' ? rawToken.trim() : '';
+
+    if (!token) {
+      res.status(400).json({ success: false, message: 'El token de verificación es requerido.' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { verificationToken: token },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'El enlace de verificación es inválido o ya ha sido utilizado previamente.',
+      });
+      return;
+    }
+
+    if (user.verificationTokenExpires && user.verificationTokenExpires < new Date()) {
+      res.status(400).json({
+        success: false,
+        expired: true,
+        email: user.email,
+        message: 'El enlace de confirmación ha caducado (límite de 24 horas). Por favor solicita uno nuevo.',
+      });
+      return;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      },
+    });
+
+    const authToken = signToken({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      name: updatedUser.name,
+    });
+
+    res.cookie('token', authToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      success: true,
+      message: '¡Tu correo electrónico ha sido verificado con éxito! Bienvenido a Kroma Lab.',
+      token: authToken,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        phone: updatedUser.phone,
+        company: updatedUser.company,
+        taxId: updatedUser.taxId,
+        address: updatedUser.address,
+        department: updatedUser.department,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Reenvía un nuevo correo de verificación con token renovado.
+ */
+export async function resendVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email } = z.object({ email: z.string().email('Correo electrónico inválido') }).parse(req.body);
+    const cleanEmail = email.toLowerCase().trim();
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    // Respuesta genérica para no divulgar si el correo existe
+    if (!user || user.isVerified) {
+      res.json({
+        success: true,
+        message: 'Si el correo está registrado y pendiente de confirmación, te hemos enviado un nuevo enlace.',
+      });
+      return;
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationToken,
+        verificationTokenExpires,
+      },
+    });
+
+    await emailService.sendVerificationEmail(user.email, user.name, verificationToken);
+
+    res.json({
+      success: true,
+      message: 'Correo de verificación reenviado exitosamente. Por favor revisa tu bandeja de entrada o carpeta de spam.',
     });
   } catch (error) {
     next(error);
