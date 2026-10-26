@@ -138,7 +138,7 @@ describe('Orders API (/api/orders)', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.order.paymentStatus).toBe('PARTIAL');
-    expect(res.body.order.amountPaidQ).toBe(150.0);
+    expect(Number(res.body.order.amountPaidQ)).toBe(150.0);
 
     const res2 = await request(app)
       .put(`/api/orders/${createdOrderId}/payment`)

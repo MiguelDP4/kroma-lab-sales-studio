@@ -295,10 +295,7 @@ export function initUserProfileModal() {
 }
 
 function attachModalEventListeners() {
-  const chip = document.getElementById('userProfileChip');
-  if (chip) {
-    chip.addEventListener('click', () => openUserProfileModal());
-  }
+  // Nota: userProfileChip es gestionado exclusivamente por initUserDropdown() en app.js
 
   const sidebarUser = document.getElementById('sidebarUserCard');
   if (sidebarUser) {
@@ -405,6 +402,15 @@ function attachModalEventListeners() {
 }
 
 export function switchAuthTab(tabName) {
+  const currentUser = store.state.user;
+  const currentRole = currentUser?.role || 'VISITOR';
+  const hasActiveSession = currentUser && currentRole !== 'VISITOR';
+
+  // Si ya hay sesión iniciada, las opciones de Iniciar Sesión y Crear Cuenta deben desaparecer
+  if (hasActiveSession && tabName !== 'profile') {
+    tabName = 'profile';
+  }
+
   const viewProfile = document.getElementById('authViewProfile');
   const viewLogin = document.getElementById('authViewLogin');
   const viewRegister = document.getElementById('authViewRegister');
@@ -533,19 +539,26 @@ export function openUserProfileModal(preferredTab = null) {
     feedback.textContent = '';
   }
 
-  // Tab Profile visibilidad
+  const isVisitor = !user || role === 'VISITOR';
+  const authTabs = document.getElementById('authTabsContainer');
   const tabProfile = document.getElementById('tabBtnProfile');
-  if (tabProfile) {
-    tabProfile.style.display = (user && role !== 'VISITOR') ? 'block' : 'none';
-  }
+  const tabLogin = document.getElementById('tabBtnLogin');
+  const tabRegister = document.getElementById('tabBtnRegister');
 
-  // Si no está autenticado o explícitamente se solicita login/register, abrir pestaña correspondiente
-  if (preferredTab) {
-    switchAuthTab(preferredTab);
-  } else if (!user || role === 'VISITOR') {
-    switchAuthTab('login');
-  } else {
+  if (!isVisitor) {
+    // Sesión iniciada: OCULTAR COMPLETAMENTE opciones de Iniciar Sesión y Crear Cuenta
+    if (authTabs) authTabs.style.display = 'none';
+    if (tabLogin) tabLogin.style.display = 'none';
+    if (tabRegister) tabRegister.style.display = 'none';
+    if (tabProfile) tabProfile.style.display = 'none';
     switchAuthTab('profile');
+  } else {
+    // Modo Visitante (sin sesión): Mostrar Iniciar Sesión y Crear Cuenta
+    if (authTabs) authTabs.style.display = 'flex';
+    if (tabProfile) tabProfile.style.display = 'none';
+    if (tabLogin) tabLogin.style.display = 'block';
+    if (tabRegister) tabRegister.style.display = 'block';
+    switchAuthTab(preferredTab || 'login');
   }
 
   modal.style.display = 'block';

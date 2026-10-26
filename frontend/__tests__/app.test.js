@@ -933,9 +933,12 @@ describe('App — Inicialización y DOM', () => {
             <span id="mobileNavIcon">☰</span>
           </button>
           <span id="salesStudioTag" style="display: none;">Sales Studio</span>
-          <div id="userProfileChip">
-            <span id="userChipAvatar">👤</span>
-            <span id="userChipName">Admin</span>
+          <div class="user-chip-dropdown-wrapper" id="userChipDropdownWrapper">
+            <button type="button" id="userProfileChip">
+              <span id="userChipAvatar">👤</span>
+              <span id="userChipName">Admin</span>
+            </button>
+            <div id="userProfileDropdown" class="user-profile-dropdown" style="display: none;"></div>
           </div>
           <button id="themeToggleBtn"><span id="themeToggleIcon">☀️</span></button>
         </header>
@@ -1068,17 +1071,34 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('sidebarUserRole').textContent).toBe('COTIZADOR WEB');
     });
 
-    it('abre el modal de configuración de usuario al pulsar el chip de perfil tras inicializar la app', () => {
+    it('despliega el dropdown de usuario con opciones según el estado de la sesión al pulsar el chip', () => {
       setActivePreviewImg(null);
-      initApp();
       const chip = document.getElementById('userProfileChip');
-      const modal = document.getElementById('userProfileModal');
+      const dropdown = document.getElementById('userProfileDropdown');
 
-      expect(modal).not.toBeNull();
-      expect(modal.style.display).toBe('none');
+      expect(dropdown).not.toBeNull();
+      expect(dropdown.style.display).toBe('none');
 
+      // 1. En modo visitante: debe mostrar Iniciar Sesión y Crear Cuenta, NO Mi Cuenta ni Logout
       chip.click();
-      expect(modal.style.display).toBe('block');
+      expect(dropdown.style.display).toBe('flex');
+      expect(dropdown.querySelector('#dropdownBtnLogin')).not.toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnRegister')).not.toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnAccount')).toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnLogout')).toBeNull();
+
+      // Cerrar dropdown al hacer click nuevamente
+      chip.click();
+      expect(dropdown.style.display).toBe('none');
+
+      // 2. Con sesión iniciada: debe mostrar Mi Cuenta y Logout, NO Iniciar Sesión ni Crear Cuenta
+      store.setUser({ id: 'usr_001', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' }, 'valid-token', ['ALL']);
+      chip.click();
+      expect(dropdown.style.display).toBe('flex');
+      expect(dropdown.querySelector('#dropdownBtnLogin')).toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnRegister')).toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnAccount')).not.toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnLogout')).not.toBeNull();
     });
   });
 

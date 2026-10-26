@@ -80,9 +80,9 @@ describe('Inventory API (/api/inventory)', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.item.currentStock).toBe(initialStock + 50.0);
+    expect(Number(res.body.item.currentStock)).toBe(Number(initialStock) + 50.0);
     expect(res.body.movement.type).toBe('IN_PURCHASE');
-    expect(res.body.movement.totalCostQ).toBe(300.0);
+    expect(Number(res.body.movement.totalCostQ)).toBe(300.0);
   });
 
   it('retorna 404 si se intenta reabastecer un insumo inexistente', async () => {
@@ -112,7 +112,7 @@ describe('Inventory API (/api/inventory)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.item.currentStock).toBe(160.0);
+    expect(Number(res.body.item.currentStock)).toBe(160.0);
     expect(res.body.movement.type).toBe('ADJUSTMENT');
   });
 

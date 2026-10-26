@@ -153,6 +153,8 @@ export function initUserDropdown() {
   const wrapper = document.getElementById('userChipDropdownWrapper');
 
   if (!chipBtn || !dropdown) return;
+  if (chipBtn.dataset.dropdownBound) return;
+  chipBtn.dataset.dropdownBound = 'true';
 
   function renderDropdownContent() {
     const user = store.state.user;

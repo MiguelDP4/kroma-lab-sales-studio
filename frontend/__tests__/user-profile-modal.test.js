@@ -234,21 +234,65 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(modal.style.display).toBe('none');
     });
 
-    it('abre el modal al pulsar el chip del topbar o la tarjeta del sidebar', () => {
-      const chip = document.getElementById('userProfileChip');
+    it('abre el modal al pulsar la tarjeta del sidebar', () => {
       const sidebarCard = document.getElementById('sidebarUserCard');
       const modal = document.getElementById('userProfileModal');
 
       expect(modal.style.display).toBe('none');
 
-      chip.click();
-      expect(modal.style.display).toBe('block');
-
-      closeUserProfileModal();
-      expect(modal.style.display).toBe('none');
-
       sidebarCard.click();
       expect(modal.style.display).toBe('block');
+    });
+
+    it('oculta completamente las pestanas y opciones de Iniciar Sesion y Crear Cuenta cuando la sesion esta activa', () => {
+      const activeUser = {
+        id: 'usr_001',
+        name: 'Miguel Dubois',
+        email: 'miguel@kromalab.gt',
+        role: 'ADMIN',
+      };
+      store.setUser(activeUser, 'valid-token', ['ALL']);
+
+      openUserProfileModal();
+
+      const authTabs = document.getElementById('authTabsContainer');
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabRegister = document.getElementById('tabBtnRegister');
+      const authViewLogin = document.getElementById('authViewLogin');
+      const authViewRegister = document.getElementById('authViewRegister');
+      const authViewProfile = document.getElementById('authViewProfile');
+
+      expect(authTabs.style.display).toBe('none');
+      expect(tabLogin.style.display).toBe('none');
+      expect(tabRegister.style.display).toBe('none');
+      expect(authViewProfile.style.display).toBe('block');
+      expect(authViewLogin.style.display).toBe('none');
+      expect(authViewRegister.style.display).toBe('none');
+
+      // Intentar forzar cambio a pestana login o register no debe surtir efecto si hay sesion activa
+      switchAuthTab('login');
+      expect(authViewLogin.style.display).toBe('none');
+      expect(authViewProfile.style.display).toBe('block');
+
+      switchAuthTab('register');
+      expect(authViewRegister.style.display).toBe('none');
+      expect(authViewProfile.style.display).toBe('block');
+    });
+
+    it('muestra las pestanas de Iniciar Sesion y Crear Cuenta solo cuando esta en modo visitante', () => {
+      store.clearUser();
+
+      openUserProfileModal();
+
+      const authTabs = document.getElementById('authTabsContainer');
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabRegister = document.getElementById('tabBtnRegister');
+      const tabProfile = document.getElementById('tabBtnProfile');
+
+      expect(authTabs.style.display).toBe('flex');
+      expect(tabLogin.style.display).toBe('block');
+      expect(tabRegister.style.display).toBe('block');
+      expect(tabProfile.style.display).toBe('none');
     });
 
     it('cierra el modal al pulsar el botón X o Cancelar', () => {
