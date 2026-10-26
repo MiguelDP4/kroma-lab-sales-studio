@@ -191,7 +191,7 @@ export class Router {
 
     // Ejecutar callback de montaje
     if (typeof route.onMount === 'function') {
-      this.activeViewCleanup = route.onMount();
+      this.activeViewCleanup = route.onMount(mountEl);
     }
 
     this.updateActiveNavLinks(route.path);

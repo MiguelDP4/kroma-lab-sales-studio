@@ -18,7 +18,7 @@ import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
 import { validatePrintFile, readFileAsDataURL, uploadFileToStorage, uploadCanvasSnapshotToStorage } from './modules/file-uploader.js';
-import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
+import { initUserProfileModal, openUserProfileModal, closeUserProfileModal, handleLogout } from './components/user-profile-modal.js';
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
 import { quotesStore } from './modules/quotes-store.js';
@@ -230,9 +230,12 @@ export function initUserDropdown() {
 
       const btnLogout = dropdown.querySelector('#dropdownBtnLogout');
       if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
+        btnLogout.addEventListener('click', async () => {
           closeDropdown();
-          handleLogout();
+          await handleLogout();
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/mi-cuenta')) {
+            window.location.href = '/';
+          }
         });
       }
     }

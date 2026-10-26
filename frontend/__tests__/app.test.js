@@ -1099,6 +1099,12 @@ describe('App — Inicialización y DOM', () => {
       expect(dropdown.querySelector('#dropdownBtnRegister')).toBeNull();
       expect(dropdown.querySelector('#dropdownBtnAccount')).not.toBeNull();
       expect(dropdown.querySelector('#dropdownBtnLogout')).not.toBeNull();
+
+      // 3. Cerrar sesión desde el botón del dropdown debe limpiar store y cerrar dropdown
+      const logoutBtn = dropdown.querySelector('#dropdownBtnLogout');
+      logoutBtn.click();
+      expect(store.state.user).toBeNull();
+      expect(dropdown.style.display).toBe('none');
     });
   });
 

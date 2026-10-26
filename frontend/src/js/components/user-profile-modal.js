@@ -701,6 +701,9 @@ export async function registerWithRealAccount(userData) {
 
 export async function handleLogout() {
   store.clearUser();
+  if (typeof apiClient !== 'undefined' && apiClient.clearToken) {
+    apiClient.clearToken();
+  }
   showFeedback('Sesión finalizada. Has pasado al modo Visitante.', 'info');
   setTimeout(() => {
     closeUserProfileModal();

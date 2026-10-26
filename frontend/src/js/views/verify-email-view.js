@@ -99,12 +99,13 @@ export const verifyEmailView = {
   },
 
   onMount: async (container) => {
-    if (!container) return;
+    const root = container || document.getElementById('app') || (typeof document !== 'undefined' ? document : null);
+    if (!root) return;
 
-    const stateLoading = container.querySelector('#verifyStateLoading');
-    const stateSuccess = container.querySelector('#verifyStateSuccess');
-    const stateError = container.querySelector('#verifyStateError');
-    const errorMsg = container.querySelector('#verifyErrorMsg');
+    const stateLoading = root.querySelector('#verifyStateLoading');
+    const stateSuccess = root.querySelector('#verifyStateSuccess');
+    const stateError = root.querySelector('#verifyStateError');
+    const errorMsg = root.querySelector('#verifyErrorMsg');
 
     // Obtener token de la query string
     let token = '';
@@ -144,8 +145,8 @@ export const verifyEmailView = {
 
     // Manejar reenvío de correo
     const formResend = container.querySelector('#formResendVerification');
-    const resendEmailInput = container.querySelector('#resendEmailInput');
-    const resendFeedback = container.querySelector('#resendFeedbackMsg');
+    const resendEmailInput = root.querySelector('#resendEmailInput');
+    const resendFeedback = root.querySelector('#resendFeedbackMsg');
     const btnSubmitResend = container.querySelector('#btnSubmitResend');
 
     if (formResend) {

@@ -170,32 +170,33 @@ export const accountView = {
   },
 
   onMount: (container) => {
-    if (!container) return;
+    const root = container || document.getElementById('app') || (typeof document !== 'undefined' ? document : null);
+    if (!root) return;
 
     // Si es visitante, enlazar botones rápidos a los modales correspondientes
-    const btnVisitorLogin = container.querySelector('#btnVisitorGoLogin');
+    const btnVisitorLogin = root.querySelector('#btnVisitorGoLogin');
     if (btnVisitorLogin) {
       btnVisitorLogin.addEventListener('click', () => openUserProfileModal('login'));
     }
 
-    const btnVisitorRegister = container.querySelector('#btnVisitorGoRegister');
+    const btnVisitorRegister = root.querySelector('#btnVisitorGoRegister');
     if (btnVisitorRegister) {
       btnVisitorRegister.addEventListener('click', () => openUserProfileModal('register'));
     }
 
     // Botón de Cerrar Sesión
-    const btnLogout = container.querySelector('#btnAccountLogout');
+    const btnLogout = root.querySelector('#btnAccountLogout');
     if (btnLogout) {
-      btnLogout.addEventListener('click', () => {
-        handleLogout();
+      btnLogout.addEventListener('click', async () => {
+        await handleLogout();
         window.location.href = '/';
       });
     }
 
     // Formulario de Guardado
-    const form = container.querySelector('#formAccountSettings');
-    const feedback = container.querySelector('#accountFeedbackMsg');
-    const submitBtn = container.querySelector('#btnSaveAccountSettings');
+    const form = root.querySelector('#formAccountSettings');
+    const feedback = root.querySelector('#accountFeedbackMsg');
+    const submitBtn = root.querySelector('#btnSaveAccountSettings');
 
     function showFeedback(msg, type = 'success') {
       if (!feedback) return;
@@ -216,12 +217,12 @@ export const accountView = {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const nameInput = container.querySelector('#accountNameInput');
-        const phoneInput = container.querySelector('#accountPhoneInput');
-        const companyInput = container.querySelector('#accountCompanyInput');
-        const nitInput = container.querySelector('#accountNitInput');
-        const deptInput = container.querySelector('#accountDeptInput');
-        const addressInput = container.querySelector('#accountAddressInput');
+        const nameInput = root.querySelector('#accountNameInput');
+        const phoneInput = root.querySelector('#accountPhoneInput');
+        const companyInput = root.querySelector('#accountCompanyInput');
+        const nitInput = root.querySelector('#accountNitInput');
+        const deptInput = root.querySelector('#accountDeptInput');
+        const addressInput = root.querySelector('#accountAddressInput');
 
         const name = nameInput?.value?.trim() || '';
         const phone = phoneInput?.value?.trim() || '';

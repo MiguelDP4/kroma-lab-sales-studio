@@ -166,4 +166,29 @@ describe('AccountView — Vista de Mi Cuenta y Configuración (/mi-cuenta)', () 
     expect(logoutSpy).toHaveBeenCalled();
     logoutSpy.mockRestore();
   });
+
+  it('enlaza eventos y previene recarga completa al guardar cuando onMount es llamado sin argumentos', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    const appEl = document.getElementById('app');
+    const user = {
+      id: 'USR_TEST_01',
+      name: 'Miguel Dubois',
+      email: 'miguel@kromalab.gt',
+      phone: '+502 5406-6217',
+      role: 'ADMIN'
+    };
+    store.setUser(user, 'fake-token-test', ['*']);
+
+    appEl.innerHTML = accountView.render();
+    // Invocación como lo hace router.js: sin argumentos
+    accountView.onMount();
+
+    const form = appEl.querySelector('#formAccountSettings');
+    expect(form).not.toBeNull();
+
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+    form.dispatchEvent(submitEvent);
+
+    expect(submitEvent.defaultPrevented).toBe(true);
+  });
 });
