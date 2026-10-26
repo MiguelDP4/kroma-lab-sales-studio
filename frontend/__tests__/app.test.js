@@ -10,6 +10,7 @@ import {
   setActivePreviewImg,
   getActiveRotation,
   getActiveImageAspectRatio,
+  router,
 } from '../src/js/app.js';
 import { store } from '../src/js/store.js';
 import * as fileUploader from '../src/js/modules/file-uploader.js';
@@ -35,6 +36,8 @@ vi.mock('../src/js/modules/file-uploader.js', async () => {
 
 describe('App — Inicialización y DOM', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+    router.destroy();
     setActivePreviewImg(null);
     document.body.innerHTML = `
       <header>
@@ -377,15 +380,20 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
+      for (let i = 0; i < 50; i++) {
+        if (document.getElementById('dropzoneFileName')?.textContent === validFile.name) break;
+        await new Promise(r => setTimeout(r, 20));
+      }
 
       const btnAddToCart = document.getElementById('btnAddToCart');
       btnAddToCart.click();
-      await new Promise(r => setTimeout(r, 100));
+      for (let i = 0; i < 50; i++) {
+        if (document.getElementById('cartDrawer')?.classList.contains('open')) break;
+        await new Promise(r => setTimeout(r, 20));
+      }
 
       expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
-      const drawer = document.getElementById('cartDrawer');
-      expect(drawer.classList.contains('open')).toBe(true);
+      expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(true);
     });
 
     it('muestra badge local cuando provider retornado es local', async () => {
@@ -404,13 +412,18 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
-
-      const btnAddToCart = document.getElementById('btnAddToCart');
-      btnAddToCart.click();
-      await new Promise(r => setTimeout(r, 100));
+      for (let i = 0; i < 50; i++) {
+        if (document.getElementById('dropzoneFileName')?.textContent === validFile.name) break;
+        await new Promise(r => setTimeout(r, 20));
+      }
 
       const uploadBadge = document.getElementById('dropzoneUploadBadge');
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      btnAddToCart.click();
+      for (let i = 0; i < 50; i++) {
+        if (uploadBadge?.textContent?.includes('Local')) break;
+        await new Promise(r => setTimeout(r, 20));
+      }
       expect(uploadBadge.textContent).toContain('Local');
     });
 
@@ -698,7 +711,7 @@ describe('App — Inicialización y DOM', () => {
       const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
       const aspectRatioRow = document.getElementById('aspectRatioRow');
 
-      expect(aspectRatioRow.style.display).toBe('none');
+      expect(document.getElementById('aspectRatioRow')?.style?.display).toBe('none');
       expect(keepAspectCheckbox.checked).toBe(true);
 
       widthInput.value = '8';
@@ -710,11 +723,11 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 50; i++) {
         if (aspectRatioRow && aspectRatioRow.style.display === 'flex') break;
         await new Promise(r => setTimeout(r, 20));
       }
-
+      
       expect(aspectRatioRow.style.display).toBe('flex');
       expect(getActiveImageAspectRatio()).toBe(0.5);
       // Al cargarse con ancho 8, el alto debe ajustarse a 8 * 0.5 = 4.0
@@ -836,9 +849,13 @@ describe('App — Inicialización y DOM', () => {
       // Pulsar eliminar archivo -> debe resetear rotación y ocultar controles
       const btnRemove = document.getElementById('btnRemoveFile');
       btnRemove.click();
+      for (let i = 0; i < 50; i++) {
+        if (document.getElementById('aspectRatioRow')?.style?.display === 'none') break;
+        await new Promise(r => setTimeout(r, 20));
+      }
       expect(getActiveRotation()).toBe(0);
       expect(getActiveImageAspectRatio()).toBeNull();
-      expect(aspectRatioRow.style.display).toBe('none');
+      expect(document.getElementById('aspectRatioRow')?.style?.display).toBe('none');
 
       global.Image = originalImage;
     });

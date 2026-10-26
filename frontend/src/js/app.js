@@ -818,7 +818,9 @@ export function initQuoter() {
     currentRotation = 0;
     currentImageAspectRatio = null;
 
-    if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+    if (aspectRatioRow) {
+      aspectRatioRow.style.display = 'none';
+    }
 
     redrawRollCanvas();
 
@@ -891,6 +893,7 @@ export function initQuoter() {
     if (currentPreviewUrl && typeof Image !== 'undefined') {
       const img = new Image();
       img.onload = () => {
+        if (currentRawFile !== file) return;
         currentPreviewImg = img;
         currentRotation = 0;
         const nw = img.naturalWidth || img.width || 1;
@@ -914,7 +917,8 @@ export function initQuoter() {
         currentPreviewImg = null;
         currentRotation = 0;
         currentImageAspectRatio = null;
-        if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+        const aspectRowEl = document.getElementById('aspectRatioRow');
+    if (aspectRowEl) aspectRowEl.style.display = 'none';
         redrawRollCanvas();
       };
       img.src = currentPreviewUrl;

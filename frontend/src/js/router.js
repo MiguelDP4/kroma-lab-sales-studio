@@ -34,6 +34,11 @@ export class Router {
       window.removeEventListener('popstate', this.handlePopState);
       document.removeEventListener('click', this.handleLinkClick);
     }
+    this.currentRoute = null;
+    if (this.activeViewCleanup) {
+      this.activeViewCleanup();
+      this.activeViewCleanup = null;
+    }
   }
 
   /**
