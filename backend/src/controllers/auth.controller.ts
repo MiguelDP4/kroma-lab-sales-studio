@@ -77,7 +77,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    if (user.email.toLowerCase().trim() === 'miguel@kromalab.gt' && user.role !== 'ADMIN') {
+    if (user.email.toLowerCase().trim() === 'miguel@kromalab.gt' && (!user.isVerified || user.role !== 'ADMIN')) {
       try {
         await prisma.user.update({
           where: { id: user.id },
