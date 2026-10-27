@@ -114,7 +114,7 @@ class QuotesStore {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             if (!IS_TEST_ENV) {
-              const clean = parsed.filter(q => !q.id?.startsWith('COT-2026-00') && !q.code?.startsWith('COT-2026-00') && !['qt_001', 'qt_002', 'qt_003'].includes(q.id));
+              const clean = parsed.filter(q => !['qt_001', 'qt_002', 'qt_003'].includes(q.id) && q.leadEmail !== 'rodrigo@promoguate.gt');
               this.quotes = clean;
               this.saveToStorage();
               return;
@@ -208,9 +208,8 @@ class QuotesStore {
         if (res && res.success && Array.isArray(res.quotes)) {
           const apiQuotes = res.quotes.map(q => this._mapBackendQuote(q));
           const apiIds = new Set(apiQuotes.map(q => q.id));
-          const localOnly = IS_TEST_ENV
-            ? this.quotes.filter(q => !q.backendId && !apiIds.has(q.id))
-            : [];
+          const apiCodes = new Set(apiQuotes.map(q => q.code));
+          const localOnly = this.quotes.filter(q => !q.backendId && !apiIds.has(q.id) && !apiCodes.has(q.code));
           this.quotes = [...apiQuotes, ...localOnly];
           this.saveToStorage();
           this.notify();

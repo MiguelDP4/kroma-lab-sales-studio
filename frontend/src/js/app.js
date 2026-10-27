@@ -43,6 +43,7 @@ export const routes = [
   { ...quoterView, path: '/cotizador' },
   quotesView,
   { ...quotesView, path: '/cotizaciones' },
+  { ...quotesView, path: '/cotizaciones-guardadas' },
   ordersView,
   productionView,
   clientsView,
@@ -66,6 +67,9 @@ export const routes = [
 ];
 
 export const router = new Router(routes, 'app');
+if (typeof window !== 'undefined') {
+  window.router = router;
+}
 
 export function purgeLegacyMockStorage(force = false) {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -92,11 +96,7 @@ export function purgeLegacyMockStorage(force = false) {
         raw.includes('Rodrigo Méndez') ||
         raw.includes('Barbería Vintage') ||
         raw.includes('Sport Gym') ||
-        raw.includes('REM-2026-00') ||
-        raw.includes('KL-0004') ||
-        raw.includes('CLI-00') ||
-        raw.includes('COT-2026-00') ||
-        raw.includes('PAY-2026-00') ||
+        raw.includes('rodrigo@promoguate.gt') ||
         raw.includes('carlos.taller@kromalab.gt') ||
         raw.includes('sofia.ventas@kromalab.gt')
       ) {

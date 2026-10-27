@@ -372,8 +372,13 @@ export async function handleSaveQuoteSubmit(e) {
   // Redirigir o dar opción de ver
   setTimeout(() => {
     closeSaveQuoteModal();
-    if (typeof window !== 'undefined' && window.location) {
-      window.location.hash = '#/quotes';
+    if (typeof window !== 'undefined') {
+      if (window.router) {
+        window.router.navigate('/cotizaciones');
+      }
+      if (window.location) {
+        window.location.hash = '#/quotes';
+      }
     }
   }, 750);
 

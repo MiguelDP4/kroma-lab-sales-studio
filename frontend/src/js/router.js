@@ -12,6 +12,7 @@ export class Router {
     this.activeViewCleanup = null;
 
     this.handlePopState = this.handlePopState.bind(this);
+    this.handleHashChange = this.handleHashChange.bind(this);
     this.handleLinkClick = this.handleLinkClick.bind(this);
   }
 
@@ -21,8 +22,13 @@ export class Router {
   init() {
     if (typeof window !== 'undefined') {
       window.addEventListener('popstate', this.handlePopState);
+      window.addEventListener('hashchange', this.handleHashChange);
       document.addEventListener('click', this.handleLinkClick);
-      this.resolve(window.location.pathname);
+      if (window.location.hash && window.location.hash.startsWith('#/')) {
+        this.resolve(window.location.hash.slice(1));
+      } else {
+        this.resolve(window.location.pathname);
+      }
     }
   }
 
@@ -32,6 +38,7 @@ export class Router {
   destroy() {
     if (typeof window !== 'undefined') {
       window.removeEventListener('popstate', this.handlePopState);
+      window.removeEventListener('hashchange', this.handleHashChange);
       document.removeEventListener('click', this.handleLinkClick);
     }
     this.currentRoute = null;
@@ -78,7 +85,17 @@ export class Router {
   }
 
   handlePopState() {
-    this.resolve(window.location.pathname);
+    if (typeof window !== 'undefined' && window.location.hash && window.location.hash.startsWith('#/')) {
+      this.resolve(window.location.hash.slice(1));
+    } else if (typeof window !== 'undefined') {
+      this.resolve(window.location.pathname);
+    }
+  }
+
+  handleHashChange() {
+    if (typeof window !== 'undefined' && window.location.hash && window.location.hash.startsWith('#/')) {
+      this.resolve(window.location.hash.slice(1));
+    }
   }
 
   /**
@@ -132,6 +149,9 @@ export class Router {
 
   normalizePath(path) {
     if (!path || path === '') return '/';
+    if (path.startsWith('#/')) {
+      path = path.slice(1);
+    }
     const clean = path.split('?')[0].split('#')[0];
     return clean.endsWith('/') && clean.length > 1 ? clean.slice(0, -1) : clean;
   }

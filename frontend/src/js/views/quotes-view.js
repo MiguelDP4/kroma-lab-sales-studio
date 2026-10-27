@@ -41,7 +41,7 @@ export const quotesView = {
             </p>
           </div>
 
-          <a href="#/" class="btn btn-primary" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+          <a href="/" class="btn btn-primary" data-link style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
             <span>+ Nueva Cotización</span>
             <span>📐</span>
           </a>
@@ -181,7 +181,7 @@ function renderQuotesCards(quotes) {
         <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 420px; margin: 0 auto 1.25rem;">
           Calcula un tiraje en el cotizador interactivo y pulsa "Guardar Cotización" para conservarla o enviarla a producción.
         </p>
-        <a href="#/" class="btn btn-primary" style="min-height: 44px;">
+        <a href="/" class="btn btn-primary" data-link style="min-height: 44px;">
           Ir al Cotizador UV DTF 📐
         </a>
       </div>
@@ -321,7 +321,7 @@ function renderQuotesCards(quotes) {
                 <span style="font-size: 0.85rem; font-weight: 700; color: #10b981;">
                   ✅ Orden en Taller: ${q.convertedOrderCode || 'KL-2026-XXX'}
                 </span>
-                <a href="#/orders" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.3rem 0.65rem; min-height: 36px;">
+                <a href="/pedidos" class="btn btn-secondary" data-link style="font-size: 0.78rem; padding: 0.3rem 0.65rem; min-height: 36px;">
                   🔍 Ver en Pedidos
                 </a>
               </div>
@@ -497,8 +497,13 @@ function handleDeleteQuote(quoteId) {
 }
 
 function loadQuoteIntoQuoter({ width, height, qty, cutting }) {
-  if (typeof window !== 'undefined' && window.location) {
-    window.location.hash = '#/';
+  if (typeof window !== 'undefined') {
+    if (window.router) {
+      window.router.navigate('/');
+    }
+    if (window.location) {
+      window.location.hash = '#/';
+    }
     setTimeout(() => {
       const wInput = document.getElementById('stickerWidth');
       const hInput = document.getElementById('stickerHeight');
