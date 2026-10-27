@@ -89,8 +89,8 @@ export function renderCartDrawer(items, totals) {
         ${totals.items.map((item) => `
           <div class="cart-item-card" data-item-id="${item.id}">
             <div class="cart-item-preview">
-              ${item.previewUrl 
-                ? `<img src="${item.previewUrl}" alt="Arte" class="cart-thumb-img">`
+              ${(item.previewUrl || item.fileUrl)
+                ? `<img src="${item.previewUrl || item.fileUrl}" alt="Arte" class="cart-thumb-img">`
                 : `<div class="cart-thumb-placeholder">📄</div>`
               }
             </div>
@@ -111,8 +111,8 @@ export function renderCartDrawer(items, totals) {
                 <span class="badge ${item.includeCutting ? 'badge-cut' : ''}">
                   ${item.includeCutting ? `✂️ Con corte (+Q${item.cuttingRawQ.toFixed(2)})` : `📜 En rollo`}
                 </span>
-                ${item.fileInfo 
-                  ? `<span class="badge badge-file" title="${item.fileInfo.name}">📁 ${item.fileInfo.name}</span>`
+                ${(item.fileInfo || item.fileName || item.fileUrl)
+                  ? `<span class="badge badge-file" title="${item.fileName || item.fileInfo?.name || 'Archivo adjunto'}">📁 ${item.fileName || item.fileInfo?.name || 'Archivo adjunto'}</span>`
                   : `<span class="badge badge-warning">⚠️ Sin archivo adjunto</span>`
                 }
               </div>
@@ -281,6 +281,37 @@ function attachCartEventListeners(items, totals) {
       const text = formatWhatsAppCartOrder(totals);
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
+    });
+  }
+
+  // Guardar como cotización
+  const btnSaveQuote = document.getElementById('btnCartSaveQuote');
+  if (btnSaveQuote) {
+    btnSaveQuote.addEventListener('click', () => {
+      closeCartDrawer();
+      const firstItem = items[0] || {};
+      openSaveQuoteModal({
+        widthCm: firstItem.widthCm || 5,
+        heightCm: firstItem.heightCm || 5,
+        qty: totals.totalStickers || firstItem.qty || 50,
+        linearMeters: totals.totalBillableMeters || 1.0,
+        stickersPerRow: firstItem.stickersPerRow || 1,
+        rows: firstItem.rows || 1,
+        withCutting: totals.hasCutting,
+        unitRateQ: totals.tierRate || 140,
+        materialPriceQ: totals.materialTotalQ,
+        cuttingPriceQ: totals.cuttingTotalQ,
+        totalPriceQ: totals.grandTotalQ,
+        rawFile: firstItem.rawFile || null,
+        fileName: firstItem.fileName || firstItem.fileInfo?.name || null,
+        fileUrl: firstItem.fileUrl || firstItem.fileInfo?.fileUrl || null,
+        fileKey: firstItem.fileKey || null,
+        fileSizeBytes: firstItem.fileSizeBytes || firstItem.fileInfo?.size || null,
+        previewUrl: firstItem.previewUrl || firstItem.fileUrl || null,
+        canvasSnapshot: firstItem.canvasSnapshot || null,
+        canvasSnapshotUrl: firstItem.canvasSnapshotUrl || null,
+        rotationDeg: firstItem.rotationDeg || 0,
+      });
     });
   }
 

@@ -326,7 +326,10 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     // 2. Verificar que NO está el chip "✨ Barniz Relieve 3D"
     expect(document.body.innerHTML).not.toContain('Barniz Relieve 3D');
 
-    // 3. Verificar botón de agregar al carrito
+    // 3. Verificar botón de agregar al carrito y renderizado del arte adjunto
+    expect(document.querySelector('.quote-artwork-box')).not.toBeNull();
+    expect(document.body.innerHTML).toContain('https://pub-r2.dev/assets/quotes/maria_logo.png');
+
     const btnAddToCart = document.querySelector('.btn-add-quote-to-cart');
     expect(btnAddToCart).not.toBeNull();
 
@@ -335,12 +338,16 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
 
     btnAddToCart.click();
 
-    // 4. Se agregó al carrito
+    // 4. Se agregó al carrito conservando la imagen y metadatos de archivo
     const cartItems = cartStore.getItems();
     expect(cartItems.length).toBe(1);
     expect(cartItems[0].title).toBe('Prueba Carrito Quote');
     expect(cartItems[0].widthCm).toBe(5);
     expect(cartItems[0].qty).toBe(100);
+    expect(cartItems[0].fileUrl).toBe('https://pub-r2.dev/assets/quotes/maria_logo.png');
+    expect(cartItems[0].previewUrl).toBe('https://pub-r2.dev/assets/quotes/maria_logo.png');
+    expect(cartItems[0].fileInfo).not.toBeNull();
+    expect(cartItems[0].fileInfo.fileUrl).toBe('https://pub-r2.dev/assets/quotes/maria_logo.png');
 
     // 5. La cotización NO se eliminó de quotesStore
     expect(quotesStore.getQuoteById('q-cart-test')).not.toBeNull();

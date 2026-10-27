@@ -1086,6 +1086,8 @@ export function initQuoter() {
         fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
         fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
         provider: currentAttachedFile ? currentAttachedFile.provider : null,
+        previewUrl: currentPreviewUrl || (currentAttachedFile ? currentAttachedFile.fileUrl : null) || null,
+        fileInfo: currentAttachedFile ? { ...currentAttachedFile } : null,
         canvasSnapshot,
         rotationDeg: currentRotation,
       });

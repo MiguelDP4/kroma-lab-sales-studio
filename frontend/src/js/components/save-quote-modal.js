@@ -6,7 +6,7 @@
 
 import { store } from '../store.js';
 import { quotesStore } from '../modules/quotes-store.js';
-import { uploadFileToStorage, uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
+import { uploadFileToStorage, uploadCanvasSnapshotToStorage, readFileAsDataURL } from '../modules/file-uploader.js';
 import { generateCanvasSnapshot } from '../modules/roll-simulator.js';
 
 let modalInitialized = false;
@@ -61,6 +61,13 @@ export function initSaveQuoteModal() {
             <span style="font-size: 0.78rem; color: var(--text-secondary);">
               📐 <strong>Disposición técnica en bobina registrada</strong>
             </span>
+          </div>
+          <div id="saveQuoteArtWrap" style="display: none; margin-top: 0.65rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; align-items: center; gap: 0.75rem;">
+            <img id="saveQuoteArtImg" src="" alt="Arte del cliente" style="width: 44px; height: 44px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+            <div style="font-size: 0.82rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              🖼️ <strong id="saveQuoteArtName">archivo.png</strong>
+              <div id="saveQuoteArtSize" style="font-size: 0.75rem; color: var(--text-muted);"></div>
+            </div>
           </div>
         </div>
 
@@ -205,6 +212,34 @@ export function openSaveQuoteModal(quoteData = null) {
     }
   }
 
+  // Previsualización del arte del cliente
+  const artWrap = document.getElementById('saveQuoteArtWrap');
+  const artImg = document.getElementById('saveQuoteArtImg');
+  const artName = document.getElementById('saveQuoteArtName');
+  const artSize = document.getElementById('saveQuoteArtSize');
+
+  const artUrl = currentQuoteData.previewUrl || currentQuoteData.fileUrl || null;
+  const fileName = currentQuoteData.fileName || (currentQuoteData.rawFile ? currentQuoteData.rawFile.name : null);
+
+  if (artWrap && artImg && artName) {
+    if (artUrl || fileName) {
+      artWrap.style.display = 'flex';
+      if (artUrl) {
+        artImg.src = artUrl;
+        artImg.style.display = 'block';
+      } else {
+        artImg.style.display = 'none';
+      }
+      artName.textContent = fileName || 'Diseño adjunto';
+      if (artSize) {
+        const sizeBytes = currentQuoteData.fileSizeBytes || (currentQuoteData.rawFile ? currentQuoteData.rawFile.size : null);
+        artSize.textContent = sizeBytes ? `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB` : '';
+      }
+    } else {
+      artWrap.style.display = 'none';
+    }
+  }
+
   // Pre-llenar datos de usuario logeado si está autenticado
   const user = store.state.user;
   const projectInput = document.getElementById('saveQuoteProjectName');
@@ -334,6 +369,27 @@ export async function handleSaveQuoteSubmit(e) {
     }
   }
 
+  // Fallback seguro: si no hay fileUrl remoto pero sí previewUrl o rawFile en memoria, asegurar URL
+  if (!specs.fileUrl) {
+    if (specs.previewUrl) {
+      specs.fileUrl = specs.previewUrl;
+    } else if (specs.rawFile && typeof FileReader !== 'undefined') {
+      try {
+        specs.fileUrl = await readFileAsDataURL(specs.rawFile);
+      } catch (_) {}
+    }
+  }
+
+  if (!specs.previewUrl && specs.fileUrl) {
+    specs.previewUrl = specs.fileUrl;
+  }
+  if (!specs.fileName && specs.rawFile) {
+    specs.fileName = specs.rawFile.name;
+  }
+  if (!specs.fileSizeBytes && specs.rawFile) {
+    specs.fileSizeBytes = specs.rawFile.size;
+  }
+
   // Si la instantánea del canvas es un base64 y no se ha subido aún, subir ahora a R2
   if (specs.canvasSnapshot && specs.canvasSnapshot.startsWith('data:') && !specs.canvasSnapshotUrl) {
     try {
@@ -363,6 +419,7 @@ export async function handleSaveQuoteSubmit(e) {
     rotationDeg: specs.rotationDeg || 0,
     fileName: specs.fileName || (specs.rawFile ? specs.rawFile.name : null),
     fileUrl: specs.fileUrl || null,
+    previewUrl: specs.previewUrl || specs.fileUrl || null,
     fileKey: specs.fileKey || null,
     fileSizeBytes: specs.fileSizeBytes || (specs.rawFile ? specs.rawFile.size : null),
   });

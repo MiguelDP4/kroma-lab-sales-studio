@@ -152,6 +152,9 @@ export async function createQuote(req: AuthenticatedRequest, res: Response, next
         notes: data.notes || '',
         source: data.source || 'web',
         status: 'SAVED',
+        fileUrl: data.fileUrl || null,
+        fileName: data.fileName || null,
+        fileSizeBytes: data.fileSizeBytes || null,
       },
     });
 

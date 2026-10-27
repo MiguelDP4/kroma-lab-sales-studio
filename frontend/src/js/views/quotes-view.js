@@ -283,6 +283,32 @@ function renderQuotesCards(quotes) {
           
         </div>
 
+        <!-- Previsualización del Arte Adjunto por el Cliente -->
+        ${(q.fileUrl || q.fileName || q.previewUrl) ? `
+          <div class="quote-artwork-box" style="margin-top: -0.25rem; margin-bottom: 0.75rem; background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px;">
+              ${(q.previewUrl || q.fileUrl) ? `
+                <img src="${q.previewUrl || q.fileUrl}" alt="Arte del cliente" style="width: 44px; height: 44px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+              ` : `
+                <div style="width: 44px; height: 44px; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">📁</div>
+              `}
+              <div style="overflow: hidden;">
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                  🖼️ ${q.fileName || 'Diseño UV DTF adjunto'}
+                </div>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">
+                  ${q.fileSizeBytes ? `${(q.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • ` : ''}Archivo listo para impresión
+                </div>
+              </div>
+            </div>
+            ${(q.fileUrl && !q.fileUrl.startsWith('data:')) ? `
+              <a href="${q.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Ver archivo original">
+                <span>🔗 Ver Archivo</span>
+              </a>
+            ` : ''}
+          </div>
+        ` : ''}
+
         <!-- Previsualización del montaje en bobina (Snapshot técnico) -->
         ${q.canvasSnapshot ? `
           <div class="quote-snapshot-box" style="margin-top: -0.25rem; margin-bottom: 1rem; background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
@@ -491,14 +517,26 @@ function handleAddQuoteToCart(quoteId) {
   const q = quotesStore.getQuoteById(quoteId);
   if (!q) return;
 
+  const fileUrl = q.fileUrl || null;
+  const fileName = q.fileName || null;
+  const fileSizeBytes = q.fileSizeBytes || null;
+  const previewUrl = q.previewUrl || fileUrl || null;
+
   cartStore.addItem({
     title: q.projectName || ('Sticker ' + q.widthCm + 'x' + q.heightCm + 'cm'),
     widthCm: q.widthCm,
     heightCm: q.heightCm,
     qty: q.qty,
     includeCutting: Boolean(q.withCutting),
-    fileUrl: q.fileUrl || null,
-    fileName: q.fileName || null,
+    fileUrl,
+    fileName,
+    previewUrl,
+    fileSizeBytes,
+    fileInfo: (fileName || fileUrl) ? {
+      name: fileName || 'Diseño UV DTF',
+      fileUrl: fileUrl,
+      size: fileSizeBytes || 0,
+    } : null,
     canvasSnapshot: q.canvasSnapshot || null,
     canvasSnapshotUrl: q.canvasSnapshotUrl || null,
     rotationDeg: q.rotationDeg || 0,

@@ -41,6 +41,14 @@ class CartStore {
   }
 
   addItem(item) {
+    const fileUrl = item.fileUrl || item.fileInfo?.fileUrl || null;
+    const fileName = item.fileName || item.fileInfo?.name || null;
+    const fileInfo = item.fileInfo || (fileUrl || fileName ? {
+      name: fileName || 'Diseño UV DTF',
+      fileUrl: fileUrl,
+      size: item.fileSizeBytes || item.fileInfo?.size || 0,
+    } : null);
+
     const newItem = {
       id: item.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       title: item.title || `Sticker ${item.widthCm}x${item.heightCm}cm`,
@@ -48,10 +56,10 @@ class CartStore {
       heightCm: parseFloat(item.heightCm) || 5,
       qty: parseInt(item.qty, 10) || 50,
       includeCutting: Boolean(item.includeCutting),
-      fileInfo: item.fileInfo || null,
-      fileUrl: item.fileUrl || item.fileInfo?.fileUrl || null,
-      fileName: item.fileName || item.fileInfo?.name || null,
-      previewUrl: item.previewUrl || null,
+      fileInfo,
+      fileUrl,
+      fileName,
+      previewUrl: item.previewUrl || fileUrl || null,
       canvasSnapshot: item.canvasSnapshot || null,
       canvasSnapshotUrl: item.canvasSnapshotUrl || (item.canvasSnapshot && !item.canvasSnapshot.startsWith('data:') ? item.canvasSnapshot : null),
       rotationDeg: Number(item.rotationDeg) || 0,

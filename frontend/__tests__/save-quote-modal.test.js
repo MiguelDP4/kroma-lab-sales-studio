@@ -354,4 +354,44 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     expect(() => openSaveQuoteModal()).not.toThrow();
     expect(() => closeSaveQuoteModal()).not.toThrow();
   });
+
+  it('renderiza la previsualización del arte del cliente en el resumen y lo asocia a la cotización', async () => {
+    vi.useFakeTimers();
+
+    openSaveQuoteModal({
+      widthCm: 10,
+      heightCm: 10,
+      qty: 80,
+      linearMeters: 2.5,
+      totalPriceQ: 350.0,
+      previewUrl: 'data:image/png;base64,mockArtworkPreview',
+      fileName: 'mi-diseno-premium.png',
+      fileSizeBytes: 2048576,
+    });
+
+    const artWrap = document.getElementById('saveQuoteArtWrap');
+    const artImg = document.getElementById('saveQuoteArtImg');
+    const artName = document.getElementById('saveQuoteArtName');
+    const artSize = document.getElementById('saveQuoteArtSize');
+
+    expect(artWrap.style.display).toBe('flex');
+    expect(artImg.src).toContain('mockArtworkPreview');
+    expect(artName.textContent).toBe('mi-diseno-premium.png');
+    expect(artSize.textContent).toContain('MB');
+
+    document.getElementById('saveQuoteProjectName').value = 'Proyecto Con Arte';
+    document.getElementById('saveQuoteLeadName').value = 'Miguel Dubois';
+    document.getElementById('saveQuoteLeadPhone').value = '+502 5555-8888';
+
+    const ok = await handleSaveQuoteSubmit();
+    expect(ok).toBe(true);
+
+    const quote = quotesStore.filterQuotes('Proyecto Con Arte')[0];
+    expect(quote).toBeDefined();
+    expect(quote.previewUrl).toBe('data:image/png;base64,mockArtworkPreview');
+    expect(quote.fileName).toBe('mi-diseno-premium.png');
+
+    vi.advanceTimersByTime(800);
+    vi.useRealTimers();
+  });
 });

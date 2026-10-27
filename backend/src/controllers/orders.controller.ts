@@ -171,10 +171,12 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
 
     const code = await generateNextOrderCode();
 
+    const { canvasSnapshot, rotationDeg, ...orderData } = data;
+
     const order = await prisma.order.create({
       data: {
         code,
-        ...data,
+        ...orderData,
       },
     });
 
