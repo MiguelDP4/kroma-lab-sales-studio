@@ -1874,20 +1874,32 @@
   color: #fff;
 }
 
-/* Hoja de Taller Imprimible */
-.workshop-sheet-card {
+/* Hoja de Taller y Recibo Imprimible Unificado Kroma Lab */
+.workshop-sheet-card,
+.dispatch-sheet-card,
+.kroma-print-sheet {
   background: #ffffff;
-  color: #111827;
-  padding: 2.5rem;
+  color: #21295c;
+  padding: 2rem;
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
+}
+
+.kroma-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kroma-receipt-meta-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .workshop-sheet-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid #111827;
+  border-bottom: 3px solid #1c7293;
   padding-bottom: 1.25rem;
   margin-bottom: 1.5rem;
 }
@@ -1897,10 +1909,11 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
-  background: #f8fafc;
+  background: #eef3f8;
   padding: 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid #9eb3c2;
+  border-left: 5px solid #065a82;
+  border-radius: 4px;
 }
 
 .workshop-table {
@@ -1911,14 +1924,15 @@
 
 .workshop-table th,
 .workshop-table td {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #9eb3c2;
   padding: 0.65rem 0.75rem;
   font-size: 0.85rem;
   text-align: left;
 }
 
 .workshop-table th {
-  background: #f1f5f9;
+  background: #21295c;
+  color: #ffffff;
   font-weight: 700;
 }
 

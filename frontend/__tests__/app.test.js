@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   initApp,
+  initBackendSync,
+  purgeLegacyMockStorage,
   syncNavbarRole,
   renderQuoteResults,
   sendWhatsAppQuote,
@@ -13,6 +15,7 @@ import {
   router,
 } from '../src/js/app.js';
 import { store } from '../src/js/store.js';
+import { apiClient } from '../src/js/modules/api-client.js';
 import * as fileUploader from '../src/js/modules/file-uploader.js';
 
 vi.mock('../src/js/modules/file-uploader.js', async () => {
@@ -58,6 +61,7 @@ describe('App — Inicialización y DOM', () => {
     `;
     store.setTheme('dark');
     store.clearUser();
+    vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'offline' });
     fileUploader.uploadFileToStorage.mockReset();
     fileUploader.uploadFileToStorage.mockImplementation(async (file, options) => {
       if (options && typeof options.onProgress === 'function') {
@@ -380,17 +384,15 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      for (let i = 0; i < 50; i++) {
-        if (document.getElementById('dropzoneFileName')?.textContent === validFile.name) break;
-        await new Promise(r => setTimeout(r, 20));
-      }
+      await vi.waitFor(() => {
+        expect(document.getElementById('dropzoneFileName')?.textContent).toBe(validFile.name);
+      }, { timeout: 5000 });
 
       const btnAddToCart = document.getElementById('btnAddToCart');
       btnAddToCart.click();
-      for (let i = 0; i < 50; i++) {
-        if (document.getElementById('cartDrawer')?.classList.contains('open')) break;
-        await new Promise(r => setTimeout(r, 20));
-      }
+      await vi.waitFor(() => {
+        expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(true);
+      }, { timeout: 5000 });
 
       expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
       expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(true);
@@ -412,19 +414,16 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      for (let i = 0; i < 50; i++) {
-        if (document.getElementById('dropzoneFileName')?.textContent === validFile.name) break;
-        await new Promise(r => setTimeout(r, 20));
-      }
+      await vi.waitFor(() => {
+        expect(document.getElementById('dropzoneFileName')?.textContent).toBe(validFile.name);
+      }, { timeout: 5000 });
 
       const uploadBadge = document.getElementById('dropzoneUploadBadge');
       const btnAddToCart = document.getElementById('btnAddToCart');
       btnAddToCart.click();
-      for (let i = 0; i < 50; i++) {
-        if (uploadBadge?.textContent?.includes('Local')) break;
-        await new Promise(r => setTimeout(r, 20));
-      }
-      expect(uploadBadge.textContent).toContain('Local');
+      await vi.waitFor(() => {
+        expect(uploadBadge.textContent).toContain('Local');
+      }, { timeout: 5000 });
     });
 
     it('maneja evento onerror al fallar carga de preview de imagen', async () => {
@@ -1109,7 +1108,19 @@ describe('App — Inicialización y DOM', () => {
       expect(dropdown.style.display).toBe('none');
 
       // 2. Con sesión iniciada: debe mostrar Mi Cuenta y Logout, NO Iniciar Sesión ni Crear Cuenta
-      store.setUser({ id: 'usr_001', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' }, 'valid-token', ['ALL']);
+      store.setUser({ id: 'usr_001', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' }, 'valid-token', ['ALL'], true);
+      expect(store.getInitialSession()?.user?.email).toBe('miguel@kromalab.gt');
+      store.setTheme('light');
+      expect(store.getInitialTheme()).toBe('light');
+      store.setTheme('dark');
+      expect(store.getInitialTheme()).toBe('dark');
+      localStorage.setItem('kromalab_orders', '[{"client":"Claudia Estrada"}]');
+      localStorage.setItem('kromalab_users', '[{"email":"sofia.ventas@kromalab.gt"}]');
+      localStorage.setItem('kromalab_quotes', '[{"valid":true}]');
+      purgeLegacyMockStorage(true);
+      expect(localStorage.getItem('kromalab_orders')).toBeNull();
+      expect(localStorage.getItem('kromalab_users')).toBeNull();
+      expect(localStorage.getItem('kromalab_quotes')).toBe('[{"valid":true}]');
       chip.click();
       expect(dropdown.style.display).toBe('flex');
       expect(dropdown.querySelector('#dropdownBtnLogin')).toBeNull();
@@ -1121,6 +1132,24 @@ describe('App — Inicialización y DOM', () => {
       const logoutBtn = dropdown.querySelector('#dropdownBtnLogout');
       logoutBtn.click();
       expect(store.state.user).toBeNull();
+
+      apiClient.setToken(null);
+      vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
+      vi.spyOn(apiClient.auth, 'login').mockResolvedValueOnce({ token: 'mock-jwt-sync' });
+      vi.spyOn(apiClient.auth, 'me').mockResolvedValueOnce({
+        success: true,
+        user: { id: 'usr_sync', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' },
+      });
+      return initBackendSync().then(async () => {
+        expect(store.state.user?.email).toBe('miguel@kromalab.gt');
+        vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
+        vi.spyOn(apiClient.auth, 'me').mockRejectedValueOnce({ status: 401, message: '401 No autenticado' });
+        await initBackendSync();
+        expect(store.state.user).toBeNull();
+        vi.spyOn(apiClient, 'checkHealth').mockRejectedValueOnce(new Error('Network offline'));
+        await initBackendSync();
+        apiClient.setToken(null);
+      });
       expect(dropdown.style.display).toBe('none');
     });
   });
