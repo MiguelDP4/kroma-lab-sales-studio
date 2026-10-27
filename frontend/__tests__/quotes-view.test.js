@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { quotesView, resetQuotesViewFilters } from '../src/js/views/quotes-view.js';
 import { quotesStore } from '../src/js/modules/quotes-store.js';
+import { cartStore } from '../src/js/modules/cart-store.js';
 import { store } from '../src/js/store.js';
 
 describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orden', () => {
@@ -295,12 +296,12 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     expect(modal.style.display).toBe('none');
   });
 
-  it('incluye enlaces al arte del cliente y al montaje del canvas en el botón de compartir por WhatsApp', () => {
+  it('no muestra el chip de barniz ni botón de WhatsApp, y permite agregar la cotización al carrito sin eliminarla', () => {
     quotesStore.quotes = [
       {
-        id: 'q-wa-test',
-        code: 'COT-WA-001',
-        projectName: 'Prueba WhatsApp Links',
+        id: 'q-cart-test',
+        code: 'COT-CART-001',
+        projectName: 'Prueba Carrito Quote',
         leadName: 'María López',
         leadPhone: '50255551234',
         widthCm: 5,
@@ -317,11 +318,31 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     ];
 
     document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
-    const waBtn = document.querySelector('a.btn-whatsapp');
-    expect(waBtn).not.toBeNull();
-    const href = waBtn.getAttribute('href');
-    const decoded = decodeURIComponent(href);
-    expect(decoded).toContain('🖼️ *Arte del cliente:* https://pub-r2.dev/assets/quotes/maria_logo.png');
-    expect(decoded).toContain('📐 *Montaje en bobina:* https://pub-r2.dev/assets/quotes/maria_esquema.png');
+    quotesView.onMount();
+
+    // 1. Verificar que NO hay botón de WhatsApp en la tarjeta de cotización
+    expect(document.querySelector('a.btn-whatsapp')).toBeNull();
+
+    // 2. Verificar que NO está el chip "✨ Barniz Relieve 3D"
+    expect(document.body.innerHTML).not.toContain('Barniz Relieve 3D');
+
+    // 3. Verificar botón de agregar al carrito
+    const btnAddToCart = document.querySelector('.btn-add-quote-to-cart');
+    expect(btnAddToCart).not.toBeNull();
+
+    cartStore.clearCart();
+    expect(cartStore.getItems().length).toBe(0);
+
+    btnAddToCart.click();
+
+    // 4. Se agregó al carrito
+    const cartItems = cartStore.getItems();
+    expect(cartItems.length).toBe(1);
+    expect(cartItems[0].title).toBe('Prueba Carrito Quote');
+    expect(cartItems[0].widthCm).toBe(5);
+    expect(cartItems[0].qty).toBe(100);
+
+    // 5. La cotización NO se eliminó de quotesStore
+    expect(quotesStore.getQuoteById('q-cart-test')).not.toBeNull();
   });
 });

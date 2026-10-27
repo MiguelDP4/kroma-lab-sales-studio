@@ -5,12 +5,12 @@ import { AuthenticatedRequest } from '../middlewares/auth';
 import { generateNextPaymentCode } from './receivables.controller';
 
 const createOrderSchema = z.object({
-  customerId: z.string().optional(),
+  customerId: z.string().nullable().optional(),
   customerName: z.string().min(2, 'El nombre del cliente es requerido'),
   customerPhone: z.string().min(8, 'El número de teléfono es requerido'),
-  customerEmail: z.string().email().optional().or(z.literal('')),
-  customerTaxId: z.string().optional().or(z.literal('')),
-  customerAddress: z.string().optional().or(z.literal('')),
+  customerEmail: z.string().email().optional().or(z.literal('')).or(z.null()),
+  customerTaxId: z.string().nullable().optional().or(z.literal('')),
+  customerAddress: z.string().nullable().optional().or(z.literal('')),
 
   widthCm: z.number().positive(),
   heightCm: z.number().positive(),
@@ -26,14 +26,14 @@ const createOrderSchema = z.object({
   stickersPerRow: z.number().int().positive().default(1),
   rows: z.number().int().positive().default(1),
 
-  fileUrl: z.string().optional(),
-  fileName: z.string().optional(),
-  fileSizeBytes: z.number().int().optional(),
-  notes: z.string().optional(),
-  canvasSnapshot: z.string().optional(),
-  rotationDeg: z.number().int().optional(),
-  paymentReceiptUrl: z.string().optional(),
-  paymentReceiptFileName: z.string().optional(),
+  fileUrl: z.string().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  fileSizeBytes: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  canvasSnapshot: z.string().nullable().optional(),
+  rotationDeg: z.number().int().nullable().optional(),
+  paymentReceiptUrl: z.string().nullable().optional(),
+  paymentReceiptFileName: z.string().nullable().optional(),
 });
 
 const updateStatusSchema = z.object({
@@ -164,6 +164,10 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response, nex
 export async function createOrder(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = createOrderSchema.parse(req.body);
+
+    if (req.user && (!data.customerEmail || data.customerEmail === '')) {
+      data.customerEmail = req.user.email;
+    }
 
     const code = await generateNextOrderCode();
 

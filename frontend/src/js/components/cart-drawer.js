@@ -7,6 +7,7 @@ import { cartStore } from '../modules/cart-store.js';
 import { formatWhatsAppCartOrder } from '../modules/cart-engine.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { openCheckoutModal } from './checkout-modal.js';
+import { openSaveQuoteModal } from './save-quote-modal.js';
 import { uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
 
 export function initCartDrawer() {
@@ -175,13 +176,16 @@ export function renderCartDrawer(items, totals) {
           </div>
 
           <div class="cart-actions">
+            <button class="btn btn-primary" id="btnCartCheckout" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>Enviar Pedido para Confirmación</span>
+              <span>🚀</span>
+            </button>
+            <button class="btn btn-secondary" id="btnCartSaveQuote" style="width: 100%; border-color: var(--cerulean); color: var(--cerulean); min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>💾 Guardar como Cotización</span>
+            </button>
             <button class="btn btn-whatsapp" id="btnCartWhatsApp" style="width: 100%;">
               <span>Enviar Pedido Completo por WhatsApp</span>
               <span>💬</span>
-            </button>
-            <button class="btn btn-primary" id="btnCartCheckout" style="width: 100%;">
-              <span>Confirmar Pedido y Datos de Entrega</span>
-              <span>🚀</span>
             </button>
             <button class="btn-clear-cart" id="btnClearCart">Vaciar Carrito</button>
           </div>

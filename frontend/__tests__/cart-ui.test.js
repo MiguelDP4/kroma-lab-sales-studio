@@ -236,9 +236,14 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
   });
 
   describe('Checkout Modal', () => {
+    beforeEach(() => {
+      ordersStore.resetToInitial();
+      store.clearUser();
+    });
+
     it('abre el modal de checkout y envía el formulario de confirmación con datos de usuario', () => {
       // Probar cuando no existe container previo en el DOM
-      document.getElementById('checkoutModalContainer').remove();
+      document.getElementById('checkoutModalContainer')?.remove();
 
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
@@ -262,7 +267,17 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const form = document.getElementById('checkoutForm');
       form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
-      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('Carlos%20Rivera'), '_blank');
+      const orders = ordersStore.getOrders();
+      expect(orders.length).toBeGreaterThan(0);
+      expect(orders[0].customer.name).toBe('Carlos Rivera');
+
+      const formEl = document.getElementById('checkoutForm');
+      expect(formEl.textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
+      expect(formEl.textContent).toContain('Tu pedido será revisado y confirmado por nuestro equipo a la brevedad.');
+
+      const waBtn = document.getElementById('btnWhatsAppConfirm');
+      expect(waBtn).not.toBeNull();
+      expect(waBtn.getAttribute('href')).toContain('Carlos%20Rivera');
     });
 
     it('sube instantáneas en base64 de ítems a R2 al enviar checkout form', async () => {
@@ -281,7 +296,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
       expect(spy).toHaveBeenCalled();
-      expect(window.open).toHaveBeenCalled();
+      expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
       spy.mockRestore();
     });
 
@@ -300,22 +315,24 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const form = document.getElementById('checkoutForm');
       await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
-      expect(window.open).toHaveBeenCalled();
+      expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
       spy.mockRestore();
     });
 
     it('inicializa el modal de checkout con datos prellenados si el usuario ha iniciado sesión', () => {
-      import('../src/js/store.js').then(({ store }) => {
-        store.setUser({ name: 'Empresa Test', phone: '99887766', nit: '98765-4' }, 'token');
-      });
+      store.setUser({ name: 'Empresa Test', phone: '99887766', nit: '98765-4' }, 'token');
 
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
 
+      expect(document.getElementById('custName').value).toBe('Empresa Test');
+      expect(document.getElementById('custPhone').value).toBe('99887766');
+      expect(document.getElementById('custNit').value).toBe('98765-4');
+
       const form = document.getElementById('checkoutForm');
       form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
-      expect(window.open).toHaveBeenCalled();
+      expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
     });
 
     it('cierra el modal al hacer clic en btnCloseCheckout o en el backdrop', () => {
@@ -332,7 +349,8 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(document.getElementById('checkoutModal')).toBeNull();
     });
 
-    it('permite autocompletar campos de checkout al seleccionar un cliente B2B y desvincularlo', () => {
+    it('permite autocompletar campos de checkout al seleccionar un cliente B2B y desvincularlo (Modo Staff)', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
 
@@ -363,7 +381,8 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(document.getElementById('custAddress').value).toBe('');
     });
 
-    it('sincroniza y crea nuevo cliente en clientsStore al procesar checkout', () => {
+    it('sincroniza y crea nuevo cliente en clientsStore al procesar checkout (Modo Staff)', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
 
@@ -386,7 +405,8 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(orders[0].customer.clientId).toBe(createdClient.id);
     });
 
-    it('actualiza cliente B2B existente y asocia el pedido al confirmar checkout', () => {
+    it('actualiza cliente B2B existente y asocia el pedido al confirmar checkout (Modo Staff)', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
 
@@ -407,8 +427,9 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(orders[0].customer.clientId).toBe('CLI-002');
     });
 
-    it('preselecciona automáticamente el cliente si el usuario en sesión tiene clientId asociado', () => {
+    it('preselecciona automáticamente el cliente si el usuario en sesión tiene clientId asociado (Modo Staff)', () => {
       store.setUser({
+        role: 'ADMIN',
         name: 'Rodrigo Méndez',
         email: 'rodrigo@cafesancristobal.gt',
         clientId: 'CLI-001',
@@ -428,19 +449,19 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       store.clearUser();
     });
 
-    it('preselecciona cliente si el usuario coincide por NIT, teléfono o email', () => {
+    it('preselecciona cliente si el usuario coincide por NIT, teléfono o email (Modo Staff)', () => {
       // Coincidencia por NIT
-      store.setUser({ nit: '7845129-4' }, 'token');
+      store.setUser({ role: 'ADMIN', nit: '7845129-4' }, 'token');
       openCheckoutModal(cartStore.getTotals());
       expect(document.getElementById('clientAutofillSelect').value).toBe('CLI-001');
 
       // Coincidencia por teléfono
-      store.setUser({ phone: '+502 5111-2233' }, 'token');
+      store.setUser({ role: 'ADMIN', phone: '+502 5111-2233' }, 'token');
       openCheckoutModal(cartStore.getTotals());
       expect(document.getElementById('clientAutofillSelect').value).toBe('CLI-002');
 
       // Coincidencia por email
-      store.setUser({ email: 'ventas@elinjerto.gt' }, 'token');
+      store.setUser({ role: 'ADMIN', email: 'ventas@elinjerto.gt' }, 'token');
       openCheckoutModal(cartStore.getTotals());
       expect(document.getElementById('clientAutofillSelect').value).toBe('CLI-003');
 
@@ -448,6 +469,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
     });
 
     it('resetea selección al cambiar select a opción vacía y procesa submit sin sincronizar cuando checkbox está desmarcado', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
       openCheckoutModal(cartStore.getTotals());
       const select = document.getElementById('clientAutofillSelect');
       select.value = 'CLI-001';
@@ -467,10 +489,11 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const form = document.getElementById('checkoutForm');
       form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
-      expect(window.open).toHaveBeenCalled();
+      expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
     });
 
     it('vincula automáticamente a un cliente existente por NIT si no fue seleccionado en el dropdown', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
       openCheckoutModal(cartStore.getTotals());
 
       // Ingresar manualmente datos de Café San Cristóbal sin seleccionarlo
@@ -485,6 +508,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const orders = ordersStore.getOrders();
       expect(orders[0].customer.clientId).toBe('CLI-001');
     });
+
     it('muestra cuentas bancarias autorizadas y permite seleccionar, previsualizar y remover una boleta', async () => {
       openCheckoutModal(cartStore.getTotals());
 
@@ -583,11 +607,14 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
       expect(uploadSpy).toHaveBeenCalledWith(validFile, expect.objectContaining({ context: 'payments' }));
-      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('boleta_bancaria_ok.jpg'), '_blank');
 
       const latestOrder = ordersStore.getOrders()[0];
       expect(latestOrder.paymentReceiptUrl).toBe('https://pub-r2.dev/assets/payments/boleta_bancaria_ok.jpg');
       expect(latestOrder.paymentReceiptFileName).toBe('boleta_bancaria_ok.jpg');
+
+      const waBtn = document.getElementById('btnWhatsAppConfirm');
+      expect(waBtn).not.toBeNull();
+      expect(waBtn.getAttribute('href')).toContain('boleta_bancaria_ok.jpg');
 
       uploadSpy.mockRestore();
     });
@@ -605,11 +632,51 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const form = document.getElementById('checkoutForm');
       await form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
-      expect(window.open).toHaveBeenCalled();
       const latestOrder = ordersStore.getOrders()[0];
       expect(latestOrder.paymentReceiptFileName).toBe('boleta_offline.jpg');
+      expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
 
       uploadSpy.mockRestore();
+    });
+
+    it('en modo cliente oculta la sección de autocompletado B2B y auto-rellena los datos de la cuenta', () => {
+      store.setUser({
+        role: 'CUSTOMER',
+        name: 'Cliente Juan Perez',
+        phone: '50212345678',
+        nit: '998877-6',
+        address: 'Zona 11, Las Majadas',
+        email: 'migueldp4@gmail.com',
+      }, 'token');
+
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      // 1. La sección B2B no debe mostrarse
+      expect(document.getElementById('autofillBox')).toBeNull();
+      expect(document.getElementById('clientAutofillSelect')).toBeNull();
+
+      // 2. No debe mostrar el checkbox de guardar en cartera B2B
+      const syncCheck = document.getElementById('checkSaveToClients');
+      expect(syncCheck).not.toBeNull();
+      expect(syncCheck.type).toBe('hidden');
+      expect(syncCheck.value).toBe('false');
+
+      // 3. Los datos deben estar prellenados automáticamente
+      expect(document.getElementById('custName').value).toBe('Cliente Juan Perez');
+      expect(document.getElementById('custPhone').value).toBe('50212345678');
+      expect(document.getElementById('custNit').value).toBe('998877-6');
+      expect(document.getElementById('custAddress').value).toBe('Zona 11, Las Majadas');
+
+      // 4. Enviar el pedido
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      // 5. El pedido incluye el email del usuario cliente y mensaje de confirmación
+      const latest = ordersStore.getOrders()[0];
+      expect(latest.customer.email).toBe('migueldp4@gmail.com');
+      expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
+      expect(document.getElementById('checkoutForm').textContent).toContain('Tu pedido será revisado y confirmado por nuestro equipo a la brevedad.');
     });
   });
 });

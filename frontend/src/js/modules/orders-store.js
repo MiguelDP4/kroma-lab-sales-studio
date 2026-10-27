@@ -343,9 +343,7 @@ class OrdersStore {
       if (res && res.success && Array.isArray(res.orders)) {
         const apiOrders = res.orders.map(o => this._mapBackendOrder(o));
         const apiCodes = new Set(apiOrders.map(o => o.id));
-        const localOnly = IS_TEST_ENV
-          ? this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId)
-          : [];
+        const localOnly = this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId);
         this.orders = [...apiOrders, ...localOnly];
         this._saveOrders();
         this._notify();

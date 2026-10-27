@@ -1087,7 +1087,7 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('sidebarUserRole').textContent).toBe('COTIZADOR WEB');
     });
 
-    it('despliega el dropdown de usuario con opciones según el estado de la sesión al pulsar el chip', () => {
+    it('despliega el dropdown de usuario con opciones según el estado de la sesión al pulsar el chip', async () => {
       setActivePreviewImg(null);
       const chip = document.getElementById('userProfileChip');
       const dropdown = document.getElementById('userProfileDropdown');
@@ -1131,26 +1131,28 @@ describe('App — Inicialización y DOM', () => {
       // 3. Cerrar sesión desde el botón del dropdown debe limpiar store y cerrar dropdown
       const logoutBtn = dropdown.querySelector('#dropdownBtnLogout');
       logoutBtn.click();
+      await new Promise(r => setTimeout(r, 50));
       expect(store.state.user).toBeNull();
+      expect(dropdown.style.display).toBe('none');
 
       apiClient.setToken(null);
-      vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
+      const healthSpy = vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' });
       vi.spyOn(apiClient.auth, 'login').mockResolvedValueOnce({ token: 'mock-jwt-sync' });
-      vi.spyOn(apiClient.auth, 'me').mockResolvedValueOnce({
+      const meSpy = vi.spyOn(apiClient.auth, 'me').mockResolvedValueOnce({
         success: true,
         user: { id: 'usr_sync', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' },
       });
-      return initBackendSync().then(async () => {
-        expect(store.state.user?.email).toBe('miguel@kromalab.gt');
-        vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
-        vi.spyOn(apiClient.auth, 'me').mockRejectedValueOnce({ status: 401, message: '401 No autenticado' });
-        await initBackendSync();
-        expect(store.state.user).toBeNull();
-        vi.spyOn(apiClient, 'checkHealth').mockRejectedValueOnce(new Error('Network offline'));
-        await initBackendSync();
-        apiClient.setToken(null);
-      });
-      expect(dropdown.style.display).toBe('none');
+
+      await initBackendSync();
+      expect(store.state.user?.email).toBe('miguel@kromalab.gt');
+
+      meSpy.mockRejectedValueOnce({ status: 401, message: '401 No autenticado' });
+      await initBackendSync();
+      expect(store.state.user).toBeNull();
+
+      healthSpy.mockRejectedValueOnce(new Error('Network offline'));
+      await initBackendSync();
+      apiClient.setToken(null);
     });
   });
 

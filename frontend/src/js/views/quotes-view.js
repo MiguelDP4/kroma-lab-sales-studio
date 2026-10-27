@@ -4,6 +4,8 @@
  */
 
 import { quotesStore } from '../modules/quotes-store.js';
+import { cartStore } from '../modules/cart-store.js';
+import { openCartDrawer } from '../components/cart-drawer.js';
 import { store } from '../store.js';
 
 let currentFilter = 'ALL';
@@ -278,9 +280,7 @@ function renderQuotesCards(quotes) {
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem; color: ${q.withCutting ? '#10b981' : 'var(--text-muted)'};">
             ${q.withCutting ? '✂️ Con corte (+Q' + Number(q.cuttingPriceQ).toFixed(2) + ')' : '📦 En rollo continuo'}
           </span>
-          <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
-            ✨ Barniz Relieve 3D
-          </span>
+          
         </div>
 
         <!-- Previsualización del montaje en bobina (Snapshot técnico) -->
@@ -341,9 +341,9 @@ function renderQuotesCards(quotes) {
 
           <!-- Lado Derecho: Acciones Secundarias (WhatsApp, Cotizador, Eliminar) -->
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Compartir presupuesto por WhatsApp">
-              <span>💬 WhatsApp</span>
-            </a>
+            <button type="button" class="btn btn-primary btn-add-quote-to-cart" data-quote-id="${q.id}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Agregar esta cotización al carrito">
+              <span>🛒 Agregar al Carrito</span>
+            </button>
 
             <button type="button" class="btn btn-secondary btn-load-quoter" data-width="${q.widthCm}" data-height="${q.heightCm}" data-qty="${q.qty}" data-cutting="${q.withCutting}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px;" title="Cargar en Cotizador">
               <span>🔄 Cotizador</span>
@@ -390,6 +390,14 @@ function attachQuotesViewEvents() {
   const container = document.getElementById('quotesListContainer');
   if (container) {
     container.addEventListener('click', async (e) => {
+      // Agregar al Carrito
+      const btnAddToCart = e.target.closest('.btn-add-quote-to-cart');
+      if (btnAddToCart) {
+        const quoteId = btnAddToCart.dataset.quoteId;
+        handleAddQuoteToCart(quoteId);
+        return;
+      }
+
       // 1. Convertir a Orden en 1 Clic
       const btnConvert = e.target.closest('.btn-convert-quote');
       if (btnConvert) {
@@ -477,6 +485,30 @@ async function handleConvertQuote(quoteId) {
   } catch (err) {
     showQuotesFeedback(err?.message || 'Error al convertir cotización.', 'error');
   }
+}
+
+function handleAddQuoteToCart(quoteId) {
+  const q = quotesStore.getQuoteById(quoteId);
+  if (!q) return;
+
+  cartStore.addItem({
+    title: q.projectName || ('Sticker ' + q.widthCm + 'x' + q.heightCm + 'cm'),
+    widthCm: q.widthCm,
+    heightCm: q.heightCm,
+    qty: q.qty,
+    includeCutting: Boolean(q.withCutting),
+    fileUrl: q.fileUrl || null,
+    fileName: q.fileName || null,
+    canvasSnapshot: q.canvasSnapshot || null,
+    canvasSnapshotUrl: q.canvasSnapshotUrl || null,
+    rotationDeg: q.rotationDeg || 0,
+    actualLinearMeters: q.linearMeters || 0,
+    stickersPerRow: q.stickersPerRow || 1,
+    rows: q.rows || 1,
+  });
+
+  showQuotesFeedback('Cotización "' + (q.projectName || q.code) + '" agregada al carrito de compras.', 'success');
+  openCartDrawer();
 }
 
 function handleDeleteQuote(quoteId) {
