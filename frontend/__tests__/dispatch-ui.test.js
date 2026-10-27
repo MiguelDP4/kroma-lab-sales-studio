@@ -394,6 +394,129 @@ describe('Dispatch View — Interfaz de Remisiones y Guías de Entrega UV DTF', 
 
       // Notificación de ordersStore
       expect(() => ordersStore._notify()).not.toThrow();
+
+      // Cambio interactivo de estado desde selector (.select-dispatch-status)
+      const statusSelect = document.querySelector('.select-dispatch-status');
+      if (statusSelect) {
+        const noteId = statusSelect.dataset.noteId;
+        statusSelect.value = 'IN_TRANSIT';
+        statusSelect.dispatchEvent(new Event('change'));
+        expect(dispatchStore.getDispatchNoteById(noteId).status).toBe('IN_TRANSIT');
+
+        const freshSelect = document.querySelector(`.select-dispatch-status[data-note-id="${noteId}"]`);
+        freshSelect.value = 'DELIVERED';
+        freshSelect.dispatchEvent(new Event('change'));
+        expect(document.getElementById('updateDispatchStatusModal').style.display).toBe('block');
+
+        // Si ya está DELIVERED y abrimos el modal de estado, conserva DELIVERED (líneas 585-586)
+        dispatchStore.updateDispatchStatus(noteId, 'DELIVERED', { receivedBy: 'Receptor Final', receiverIdDoc: '1234' });
+        const btnStatus = document.querySelector(`.btn-status-dispatch[data-note-id="${noteId}"]`);
+        if (btnStatus) btnStatus.click();
+        expect(document.getElementById('selectNewDispatchStatus').value).toBe('DELIVERED');
+
+        // Fallback window.print si sheetContainer está vacío (líneas 550-551)
+        const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+        document.getElementById('dispatchSheetDocumentContainer').innerHTML = '';
+        document.getElementById('btnPrintDispatchSheet').click();
+        expect(printSpy).toHaveBeenCalled();
+
+        // Cobertura de ramas en renderDispatchSheetHtml (sin order, bultos plurales, saldo pendiente, items con 0m)
+        const sheetUnpaid = renderDispatchSheetHtml(
+          {
+            id: 'REM-TEST-99',
+            orderId: 'KL-9999',
+            dispatchedAt: new Date().toISOString(),
+            dispatchedBy: 'Miguel Dubois',
+            clientName: 'Cliente Prueba',
+            clientPhone: '5555-1234',
+            deliveryMethod: 'UNKNOWN_METHOD',
+            packageType: 'UNKNOWN_PACK',
+            packagesCount: 3,
+            courierName: '',
+            trackingNumber: '',
+            deliveryAddress: 'Zona 10',
+            shippingCostQ: 35,
+            shippingPaidBy: 'Cliente',
+            totalOrderMeters: 0,
+            totalOrderAmountQ: 300,
+            pendingBalanceQ: 150,
+            receivedBy: 'Juan',
+            receiverIdDoc: '9876543210101',
+          },
+          {
+            customer: { nit: '' },
+            metrics: { tierRate: 0 },
+            items: [
+              { title: 'Item A', widthCm: 5, heightCm: 5, qty: 10, actualLinearMeters: 0, finishType: '', includeCutting: true },
+            ],
+          }
+        );
+        expect(sheetUnpaid).toContain('COBRO CONTRAENTREGA: Q150.00');
+        expect(sheetUnpaid).toContain('3 bultos');
+        expect(sheetUnpaid).toContain('(DPI: 9876543210101)');
+
+        // Cobertura de ramas en renderDispatchCardsHtml (CANCELLED, sin teléfono, método/empaque desconocido) y renderDispatchSheetHtml sin order
+        const cardsFallback = renderDispatchCardsHtml([
+          {
+            id: 'REM-CARD-99',
+            orderId: 'KL-9999',
+            dispatchedAt: new Date().toISOString(),
+            status: 'CANCELLED',
+            deliveryMethod: 'UNKNOWN',
+            packageType: 'UNKNOWN',
+            clientName: 'Cliente Sin Tel',
+            clientPhone: '',
+            trackingNumber: '',
+            deliveryAddress: 'Guatemala',
+            totalOrderMeters: 5,
+            packagesCount: 1,
+            totalOrderAmountQ: 150,
+            pendingBalanceQ: 0,
+          },
+          {
+            id: 'REM-CARD-100',
+            orderId: 'KL-1000',
+            dispatchedAt: new Date().toISOString(),
+            status: 'UNKNOWN_STATUS',
+            deliveryMethod: 'MOTO_LOCAL',
+            packageType: 'RIGID_TUBE',
+            clientName: 'Cliente Con Guía',
+            clientPhone: '5555-9999',
+            trackingNumber: 'GUIA-ABC',
+            deliveryAddress: 'Mixco',
+            totalOrderMeters: 10,
+            packagesCount: 2,
+            totalOrderAmountQ: 300,
+            pendingBalanceQ: 50,
+          },
+        ]);
+        expect(cardsFallback).toContain('Sin teléfono');
+        expect(cardsFallback).toContain('Guía: GUIA-ABC');
+
+        const sheetNoOrder = renderDispatchSheetHtml({
+          id: 'REM-NO-ORD',
+          orderId: 'KL-0000',
+          dispatchedAt: new Date().toISOString(),
+          dispatchedBy: 'Miguel Dubois',
+          clientName: 'Cliente Pagado',
+          clientPhone: '5555-0000',
+          deliveryMethod: 'MOTO_LOCAL',
+          packageType: 'RIGID_TUBE',
+          packagesCount: 1,
+          courierName: 'Mensajero Kroma',
+          trackingNumber: 'TRK-01',
+          deliveryAddress: 'Villa Nueva',
+          shippingCostQ: 0,
+          shippingPaidBy: 'Kroma Lab',
+          totalOrderMeters: 5,
+          totalOrderAmountQ: 150,
+          pendingBalanceQ: 0,
+          receivedBy: '',
+          receiverIdDoc: '',
+        });
+        expect(sheetNoOrder).toContain('1 bulto');
+        expect(sheetNoOrder).toContain('Firma de Recibido Conforme');
+      }
     });
   });
 });

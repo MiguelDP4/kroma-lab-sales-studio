@@ -9,8 +9,219 @@ import { ordersStore, PAYMENT_STATUS, PAYMENT_STATUS_LABELS, PRODUCTION_STATUS_L
 import { ORDER_STATUS, BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 import { calculateOrderProfitability } from '../modules/profitability-engine.js';
-import { printDocument } from '../modules/print-helper.js';
+import {
+  printDocument,
+  KROMA_PRINT_PALETTE,
+  renderKromaDocumentHeader,
+  renderKromaReceiptItemsAndSummary,
+} from '../modules/print-helper.js';
 import { uploadFileToStorage, readFileAsDataURL, validateReceiptFile, formatFileSize } from '../modules/file-uploader.js';
+
+/**
+ * Genera el HTML unificado del Recibo de Servicio de Impresión UV DTF / Orden de Trabajo
+ * siguiendo la identidad visual y paleta oficial de Kroma Lab.
+ * @param {object} order
+ * @returns {string}
+ */
+export function renderOrderReceiptSheetHtml(order) {
+  if (!order) return '';
+  const P = KROMA_PRINT_PALETTE;
+
+  const formattedDate = new Date(order.createdAt).toLocaleDateString('es-GT', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const metrics = order.metrics;
+  const totalMeters = Number(metrics.totalBillableMeters);
+  const grandTotalQ = Number(metrics.grandTotalQ);
+  const cuttingTotalQ = Number(metrics.cuttingTotalQ || 0);
+  const tierRate = Number(metrics.tierRate || 115.0);
+
+  const rawItems = order.items.length > 0
+    ? order.items
+    : [
+        {
+          title: 'Impresión UV DTF en Bobina Audley',
+          widthCm: 28,
+          heightCm: 100,
+          qty: 1,
+          actualLinearMeters: totalMeters,
+          stickersPerRow: 1,
+          rows: 1,
+          finishType: 'Barniz con Relieve 3D',
+        },
+      ];
+
+  const receiptItems = rawItems.map((it) => {
+    const qty = Number(it.qty);
+    const meters = Number(it.actualLinearMeters);
+    const itemFileUrl = it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl;
+    const itemFileName = it.fileInfo?.name || it.fileName || order.fileName || 'Descargar Arte R2';
+    const fileBadgeHtml = itemFileUrl
+      ? `<a href="${itemFileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 4px; background: rgba(28, 114, 147, 0.12); color: ${P.CERULEAN}; font-weight: 600; text-decoration: none;"><span>⬇️</span><span>${itemFileName}</span></a>`
+      : (it.fileInfo ? it.fileInfo.name : 'Archivo RIP directo');
+
+    const lineSubQ = Number((meters * tierRate).toFixed(2));
+    const unitRef = lineSubQ / qty;
+
+    return {
+      qty,
+      descriptionHtml: `<strong>${it.title}</strong><div style="font-size: 0.72rem; color: ${P.TEXT_MUTED}; margin-top: 2px;">${it.stickersPerRow} / fila (${it.rows} filas) • ${fileBadgeHtml}</div>`,
+      measure: `${it.widthCm} × ${it.heightCm} cm`,
+      linearMeters: `${meters.toFixed(2)} m`,
+      ratePerMeter: `Q${tierRate.toFixed(2)}`,
+      unitCostRef: `Q${unitRef.toFixed(2)}`,
+      subtotal: `Q${lineSubQ.toFixed(2)}`,
+    };
+  });
+
+  const totalPieces = receiptItems.reduce((acc, it) => acc + it.qty, 0);
+  const finishLabel = rawItems[0].finishType || 'Barniz con Relieve 3D';
+  const cuttingModeLabel = metrics.hasCutting ? '✂️ CORTE INDIVIDUAL' : '📜 EN ROLLO CONTINUO';
+  const customer = order.customer;
+
+  const headerHtml = renderKromaDocumentHeader({
+    title: 'RECIBO DE SERVICIO DE IMPRESIÓN UV DTF — ORDEN DE TRABAJO',
+    subtitle: 'KROMA LAB — IMPRESIÓN INDUSTRIAL UV DTF (BOBINA AUDLEY 28 CM)',
+    folioBadge: `Orden #${order.id}`,
+    logoIdPrefix: `order-logo-${order.id}`,
+    metaRows: [
+      {
+        label: 'Proveedor:',
+        value: 'Kroma Lab — Miguel Dubois',
+        highlight: true,
+      },
+      {
+        label: 'Cliente:',
+        value: `${customer.company || customer.name} (${customer.name} • ${customer.phone} • NIT: ${customer.nit || 'CF'})`,
+        highlight: true,
+      },
+      {
+        label: 'Fecha:',
+        value: `${formattedDate}   |   Pedido #${order.id}`,
+      },
+      {
+        label: 'Modalidad:',
+        value: `Servicio de impresión UV DTF (únicamente impresión, sin cobro de material) — Acabado: ${cuttingModeLabel} (${finishLabel})`,
+      },
+      {
+        label: 'Tarifa acordada:',
+        value: `Q${tierRate.toFixed(2)} por metro lineal (${totalMeters.toFixed(2)} metros lineales)`,
+        highlight: true,
+      },
+    ],
+  });
+
+  const checklistAndNotesHtml = `
+    <div style="border: 1px solid ${P.POWDER_BLUE}; background: ${P.BG_LIGHT}; padding: 0.75rem 0.9rem; border-radius: 4px; border-left: 4px solid ${P.REGAL_NAVY}; height: 100%;">
+      <strong style="font-size: 0.78rem; text-transform: uppercase; color: ${P.REGAL_NAVY}; display: block; margin-bottom: 0.35rem;">
+        Control de Calidad del Operador (Checklist):
+      </strong>
+      <div class="workshop-checklist" style="font-size: 0.76rem; color: ${P.SPACE_INDIGO}; display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 0.25rem 0.65rem;">
+        <div>[ ] Test de inyectores (Nozzle check) OK</div>
+        <div>[ ] Cama blanca fotográfica alineada</div>
+        <div>[ ] Lámpara UV curando barniz</div>
+        <div>[ ] Calandrado con Film B completado</div>
+        <div>[ ] ${metrics.hasCutting ? 'Corte perimetral recto finalizado' : 'Rebobinado en tubo rígido'}</div>
+        <div>[ ] Etiquetas de código #${order.id} colocadas</div>
+      </div>
+      ${order.workshopNotes ? `
+        <div style="margin-top: 0.55rem; padding-top: 0.45rem; border-top: 1px dashed ${P.POWDER_BLUE}; font-size: 0.8rem; color: ${P.SPACE_INDIGO};">
+          <strong style="color: ${P.REGAL_NAVY};">Instrucciones Especiales:</strong> ${order.workshopNotes}
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  const summaryLines = [
+    {
+      label: 'Total de piezas impresas:',
+      value: `${totalPieces.toLocaleString('es-GT')} unidades`,
+    },
+    {
+      label: 'Total de metros lineales procesados:',
+      value: `${totalMeters.toFixed(2)} m`,
+    },
+  ];
+
+  if (cuttingTotalQ > 0) {
+    summaryLines.push({
+      label: 'Servicio de corte individual:',
+      value: `Q ${cuttingTotalQ.toFixed(2)}`,
+    });
+  }
+
+  summaryLines.push({
+    label: 'TOTAL A CANCELAR:',
+    value: `Q ${grandTotalQ.toFixed(2)}`,
+    isGrand: true,
+  });
+
+  const tableAndSummaryHtml = renderKromaReceiptItemsAndSummary({
+    items: receiptItems,
+    totals: {
+      totalQty: `${totalPieces.toLocaleString('es-GT')}`,
+      totalMeters: `${totalMeters.toFixed(2)} m`,
+      rateLabel: `Q${tierRate.toFixed(2)}`,
+      grandTotal: `Q${grandTotalQ.toFixed(2)}`,
+    },
+    summaryLines,
+    leftSlotHtml: checklistAndNotesHtml,
+  });
+
+  const hasSnapshots = order.items.some(it => it.canvasSnapshot) || Boolean(order.canvasSnapshot);
+  const snapshotsHtml = hasSnapshots ? `
+    <div class="workshop-snapshot-section" style="margin: 1rem 0 0; padding: 0.85rem; border: 1px solid ${P.POWDER_BLUE}; border-left: 4px solid ${P.CERULEAN}; background: ${P.BG_ELEVATED}; border-radius: 4px;">
+      <div style="margin-bottom: 0.65rem;">
+        <strong style="font-size: 0.88rem; text-transform: uppercase; color: ${P.BALTIC_BLUE}; display: flex; align-items: center; gap: 0.4rem;">
+          <span>📐</span>
+          <span>Montaje Técnico en Bobina Audley (Orientación Requerida):</span>
+        </strong>
+        <div style="font-size: 0.78rem; color: ${P.TEXT_MUTED}; margin-top: 0.15rem;">
+          Disposición configurada sobre los 28 cm útiles de bobina. Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem;">
+        ${order.items.map((it, idx) => {
+          const snap = it.canvasSnapshot || order.canvasSnapshot;
+          if (!snap) return '';
+          const fileLink = it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl;
+          return `
+            <div style="background: #ffffff; border: 1px solid ${P.POWDER_BLUE}; border-radius: 4px; padding: 0.65rem; text-align: center;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: ${P.SPACE_INDIGO}; margin-bottom: 0.35rem;">
+                ${idx + 1}. ${it.title} (${it.stickersPerRow}/fila × ${it.rows} filas${it.rotationDeg ? ` • 🔄 ${it.rotationDeg}°` : ''})
+              </div>
+              <div style="background: #090e1c; border-radius: 4px; padding: 4px; display: inline-block; max-width: 100%;">
+                <img src="${snap}" alt="Esquema Bobina" class="workshop-snapshot-img" data-snapshot="${snap}" style="max-width: 100%; max-height: 180px; object-fit: contain; cursor: pointer; display: block;" title="Haz clic para ampliar">
+              </div>
+              <div class="btn-print-hide" style="margin-top: 0.45rem; display: flex; justify-content: center; gap: 0.45rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary btn-expand-order-snapshot" data-snapshot="${snap}" style="font-size: 0.74rem; padding: 0.22rem 0.5rem; min-height: 30px;">
+                  <span>🔍 Ampliar Esquema</span>
+                </button>
+                ${fileLink ? `
+                  <a href="${fileLink}" target="_blank" rel="noopener noreferrer" style="font-size: 0.74rem; padding: 0.22rem 0.5rem; border-radius: 4px; background: ${P.CERULEAN}; color: #ffffff; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    <span>⬇️ Archivo RIP</span>
+                  </a>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  return `
+    <div class="workshop-sheet-card kroma-print-sheet">
+      ${headerHtml}
+      ${tableAndSummaryHtml}
+      ${snapshotsHtml}
+    </div>
+  `;
+}
 
 export function formatOrderWhatsAppMessage(order) {
   if (!order) return '';
@@ -539,6 +750,14 @@ export const ordersView = {
             ordersStore.updateProductionStatus(o.id, ORDER_STATUS.IN_AUDLEY_QUEUE);
             showOrderDetailsModal(o.id);
           }
+          return;
+        }
+
+        // Abrir Recibo / Hoja de Taller desde el modal de detalle
+        const btnOpenReceipt = e.target.closest('.btn-open-receipt-from-detail');
+        if (btnOpenReceipt && btnOpenReceipt.dataset.orderId) {
+          toggleModal(detailModal, false);
+          showWorkshopSheetModal(btnOpenReceipt.dataset.orderId);
           return;
         }
       });
@@ -1318,7 +1537,11 @@ export const ordersView = {
             </div>
           ` : ''}
 
-          <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-open-receipt-from-detail" data-order-id="${order.id}" style="font-size: 0.85rem; padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+              <span>🖨️</span>
+              <span>Imprimir Recibo / Orden</span>
+            </button>
             <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="font-size: 0.85rem; padding: 0.5rem 1rem; text-decoration: none;">
               <span>💬 Enviar / Consultar por WhatsApp</span>
             </a>
@@ -1335,144 +1558,7 @@ export const ordersView = {
 
       const container = document.getElementById('workshopSheetContainer');
       if (container) {
-        container.innerHTML = `
-          <div class="workshop-sheet-card">
-            <div class="workshop-sheet-header">
-              <div>
-                <h1 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.02em;">
-                  KROMA LAB — ORDEN DE TRABAJO
-                </h1>
-                <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: #475569;">
-                  Taller de Impresión Industrial UV DTF (Bobina Audley 28 cm útiles)
-                </p>
-              </div>
-              <div style="text-align: right;">
-                <div style="font-family: monospace; font-size: 1.4rem; font-weight: 900; color: #0284c7;">#${order.id}</div>
-                <div style="font-size: 0.8rem; color: #64748b;">
-                  Fecha: ${new Date(order.createdAt).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                </div>
-              </div>
-            </div>
-
-            <div class="workshop-meta-grid">
-              <div>
-                <strong style="display: block; font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Cliente / Marca:</strong>
-                <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${order.customer.company || order.customer.name}</span>
-                <div style="font-size: 0.85rem; color: #334155;">Contacto: ${order.customer.name} (${order.customer.phone})</div>
-                <div style="font-size: 0.82rem; color: #64748b;">NIT: ${order.customer.nit || 'CF'}</div>
-              </div>
-              <div>
-                <strong style="display: block; font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Especificaciones de Tirada:</strong>
-                <div style="font-size: 0.95rem; font-weight: 700; color: #0284c7;">
-                  Metraje Total: ${order.metrics.totalBillableMeters.toFixed(2)} metros lineales
-                </div>
-                <div style="font-size: 0.85rem; color: #334155;">
-                  Acabado: <strong>${order.metrics.hasCutting ? '✂️ CORTE INDIVIDUAL' : '📜 EN ROLLO CONTINUO'}</strong>
-                </div>
-                <div style="font-size: 0.85rem; color: #334155;">
-                  Barniz: <strong>${order.items[0]?.finishType || 'Barniz UV 3D'}</strong>
-                </div>
-              </div>
-            </div>
-
-            <h3 style="font-size: 1rem; font-weight: 800; margin: 1rem 0 0.5rem; color: #0f172a;">
-              Detalle de Diseños a Imprimir:
-            </h3>
-            <table class="workshop-table">
-              <thead>
-                <tr>
-                  <th>No.</th>
-                  <th>Diseño / Arte</th>
-                  <th>Medidas (cm)</th>
-                  <th>Cantidad</th>
-                  <th>Acomodo / Fila</th>
-                  <th>Metros</th>
-                  <th>Archivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${order.items.map((it, idx) => `
-                  <tr>
-                    <td style="font-weight: 700;">${idx + 1}</td>
-                    <td><strong>${it.title}</strong></td>
-                    <td style="font-family: monospace;">${it.widthCm} × ${it.heightCm} cm</td>
-                    <td style="font-weight: 800; font-family: monospace;">${it.qty} pcs</td>
-                    <td>${it.stickersPerRow} / fila (${it.rows} filas)</td>
-                    <td style="font-family: monospace; font-weight: 700;">${it.actualLinearMeters.toFixed(2)}m</td>
-                    <td style="font-size: 0.8rem; color: #475569;">
-    ${(it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl) ? `
-      <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; background: rgba(2, 132, 199, 0.1); color: #0284c7; font-weight: 600; text-decoration: none;">
-        <span>⬇️</span>
-        <span>${it.fileInfo?.name || it.fileName || order.fileName || 'Descargar Arte R2'}</span>
-      </a>
-    ` : (it.fileInfo ? it.fileInfo.name : 'Archivo RIP directo')}
-  </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-
-            <!-- MONTAJE TÉCNICO Y DISPOSICIÓN EN BOBINA AUDLEY -->
-            ${(order.items.some(it => it.canvasSnapshot) || order.canvasSnapshot) ? `
-              <div class="workshop-snapshot-section" style="margin: 1.25rem 0; padding: 1rem; border: 1px solid #0284c7; background: #f0f9ff; border-radius: 6px;">
-                <div style="margin-bottom: 0.75rem;">
-                  <strong style="font-size: 0.95rem; text-transform: uppercase; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
-                    <span>📐</span>
-                    <span>Montaje Técnico en Bobina Audley (Orientación Requerida):</span>
-                  </strong>
-                  <div style="font-size: 0.8rem; color: #475569; margin-top: 0.2rem;">
-                    Disposición configurada sobre los 28 cm útiles de bobina. Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.
-                  </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-                  ${order.items.map((it, idx) => {
-                    const snap = it.canvasSnapshot || order.canvasSnapshot;
-                    if (!snap) return '';
-                    return `
-                      <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: 6px; padding: 0.75rem; text-align: center;">
-                        <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 0.4rem;">
-                          ${idx + 1}. ${it.title} (${it.stickersPerRow}/fila × ${it.rows} filas${it.rotationDeg ? ` • 🔄 ${it.rotationDeg}°` : ''})
-                        </div>
-                        <div style="background: #090e1c; border-radius: 4px; padding: 4px; display: inline-block; max-width: 100%;">
-                          <img src="${snap}" alt="Esquema Bobina" class="workshop-snapshot-img" data-snapshot="${snap}" style="max-width: 100%; max-height: 200px; object-fit: contain; cursor: pointer; display: block;" title="Haz clic para ampliar">
-                        </div>
-                        <div style="margin-top: 0.5rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
-                          <button type="button" class="btn btn-secondary btn-expand-order-snapshot" data-snapshot="${snap}" style="font-size: 0.76rem; padding: 0.25rem 0.55rem; min-height: 32px;">
-                            <span>🔍 Ampliar Esquema</span>
-                          </button>
-                          ${(it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl) ? `
-                            <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 0.76rem; padding: 0.25rem 0.55rem; border-radius: 4px; background: #0284c7; color: #ffffff; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                              <span>⬇️ Archivo RIP</span>
-                            </a>
-                          ` : ''}
-                        </div>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
-              </div>
-            ` : ''}
-
-            <div style="border: 1px solid #e2e8f0; background: #f8fafc; padding: 1rem; border-radius: 6px;">
-              <strong style="font-size: 0.85rem; text-transform: uppercase; color: #0f172a;">Control de Calidad del Operador (Checklist):</strong>
-              <div class="workshop-checklist">
-                <div>[ ] Test de inyectores (Nozzle check) OK</div>
-                <div>[ ] Cama blanca fotográfica alineada</div>
-                <div>[ ] Lámpara UV curando barniz</div>
-                <div>[ ] Calandrado con Film B completado</div>
-                <div>[ ] ${order.metrics.hasCutting ? 'Corte perimetral recto finalizado' : 'Rebobinado en tubo rígido'}</div>
-                <div>[ ] Etiquetas de código #${order.id} colocadas</div>
-              </div>
-            </div>
-
-            ${order.workshopNotes ? `
-              <div style="margin-top: 1rem; padding: 0.75rem; border: 1px dashed #cbd5e1; font-size: 0.88rem; color: #1e293b;">
-                <strong>Instrucciones Especiales:</strong> ${order.workshopNotes}
-              </div>
-            ` : ''}
-          </div>
-        `;
+        container.innerHTML = renderOrderReceiptSheetHtml(order);
       }
 
       toggleModal(workshopModal, true);

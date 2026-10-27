@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { printDocument, initPrintListeners } from '../src/js/modules/print-helper.js';
+import {
+  printDocument,
+  initPrintListeners,
+  KROMA_PRINT_PALETTE,
+  renderKromaLogoSvg,
+  renderKromaDocumentHeader,
+  renderKromaReceiptItemsAndSummary,
+} from '../src/js/modules/print-helper.js';
 
 describe('PrintHelper — Módulo de Impresión Física y Exportación a PDF', () => {
   let originalTitle;
@@ -165,5 +172,96 @@ describe('PrintHelper — Módulo de Impresión Física y Exportación a PDF', (
     window.dispatchEvent(new Event('beforeprint'));
     // No debe duplicar o sobreescribir
     expect(document.getElementById('printContainer')).toBeNull();
+  });
+
+  describe('Plantillas Unificadas de Recibo Kroma Lab (Logo, Encabezado, Tabla y Liquidación)', () => {
+    it('exporta la paleta oficial KROMA_PRINT_PALETTE con los colores de marca', () => {
+      expect(KROMA_PRINT_PALETTE.SPACE_INDIGO).toBe('#21295c');
+      expect(KROMA_PRINT_PALETTE.REGAL_NAVY).toBe('#1b3b6f');
+      expect(KROMA_PRINT_PALETTE.BALTIC_BLUE).toBe('#065a82');
+      expect(KROMA_PRINT_PALETTE.CERULEAN).toBe('#1c7293');
+      expect(KROMA_PRINT_PALETTE.POWDER_BLUE).toBe('#9eb3c2');
+    });
+
+    it('renderiza el logotipo vectorial SVG de Kroma Lab con idPrefix y dimensiones', () => {
+      const svgDefault = renderKromaLogoSvg();
+      expect(svgDefault).toContain('<svg');
+      expect(svgDefault).toContain('kroma-print-logo-top-outer');
+
+      const svgCustom = renderKromaLogoSvg('custom-id', 100);
+      expect(svgCustom).toContain('custom-id-top-outer');
+      expect(svgCustom).toContain('width="100"');
+    });
+
+    it('renderiza el encabezado corporativo renderKromaDocumentHeader con y sin filas de metadatos', () => {
+      const headerWithMeta = renderKromaDocumentHeader({
+        title: 'RECIBO DE SERVICIO DE IMPRESIÓN UV DTF',
+        subtitle: 'KROMA LAB — IMPRESIÓN INDUSTRIAL UV DTF',
+        folioBadge: 'Folio #001',
+        logoIdPrefix: 'hdr-test',
+        metaRows: [
+          { label: 'Proveedor:', value: 'Kroma Lab — Miguel Dubois', highlight: true },
+          { label: 'Cliente:', value: 'Arte Modelo Dubois', highlight: false },
+        ],
+      });
+
+      expect(headerWithMeta).toContain('RECIBO DE SERVICIO DE IMPRESIÓN UV DTF');
+      expect(headerWithMeta).toContain('Folio #001');
+      expect(headerWithMeta).toContain('Kroma Lab — Miguel Dubois');
+      expect(headerWithMeta).toContain('Arte Modelo Dubois');
+      expect(headerWithMeta).toContain('kroma-print-meta-table');
+
+      const headerMinimal = renderKromaDocumentHeader({
+        title: 'RECIBO SIMPLE',
+      });
+      expect(headerMinimal).toContain('RECIBO SIMPLE');
+      expect(headerMinimal).not.toContain('kroma-print-meta-table');
+    });
+
+    it('renderiza la tabla de artículos y cuadro Resumen de Liquidación con y sin leftSlotHtml', () => {
+      const htmlWithSlot = renderKromaReceiptItemsAndSummary({
+        items: [
+          {
+            qty: 622,
+            descriptionHtml: '<strong>Vírgenes de Suyapa</strong>',
+            measure: '14.5 cm',
+            linearMeters: '37.32 m',
+            ratePerMeter: 'Q30.00',
+            unitCostRef: 'Q1.80',
+            subtotal: 'Q1,119.60',
+          },
+          {
+            qty: 500,
+            descriptionHtml: '<strong>Vírgenes de Suyapa</strong>',
+            measure: '7.25 cm',
+            linearMeters: '7.73 m',
+            ratePerMeter: 'Q30.00',
+            unitCostRef: 'Q0.46',
+            subtotal: 'Q231.90',
+          },
+        ],
+        totals: {
+          totalQty: '1,122',
+          totalMeters: '45.05 m',
+          rateLabel: 'Q30.00',
+          grandTotal: 'Q1,351.50',
+        },
+        summaryLines: [
+          { label: 'Total de piezas impresas:', value: '1,122 unidades' },
+          { label: 'TOTAL A CANCELAR:', value: 'Q 1,351.50', isGrand: true },
+        ],
+        leftSlotHtml: '<div>Checklist de Taller</div>',
+      });
+
+      expect(htmlWithSlot).toContain('Vírgenes de Suyapa');
+      expect(htmlWithSlot).toContain('37.32 m');
+      expect(htmlWithSlot).toContain('TOTALES');
+      expect(htmlWithSlot).toContain('RESUMEN DE LIQUIDACIÓN');
+      expect(htmlWithSlot).toContain('Q 1,351.50');
+      expect(htmlWithSlot).toContain('Checklist de Taller');
+
+      const htmlDefaults = renderKromaReceiptItemsAndSummary({});
+      expect(htmlDefaults).toContain('RESUMEN DE LIQUIDACIÓN');
+    });
   });
 });

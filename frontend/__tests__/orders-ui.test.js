@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ordersView, formatOrderWhatsAppMessage } from '../src/js/views/orders-view.js';
+import { ordersView, formatOrderWhatsAppMessage, renderOrderReceiptSheetHtml } from '../src/js/views/orders-view.js';
 import { ordersStore, PAYMENT_STATUS } from '../src/js/modules/orders-store.js';
 import { clientsStore } from '../src/js/modules/clients-store.js';
 import { store } from '../src/js/store.js';
@@ -852,6 +852,80 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       selectProd.value = ORDER_STATUS.COMPLETED;
       selectProd.dispatchEvent(new Event('change'));
       expect(ordersStore.getOrderById('KL-00042').productionStatus).toBe(ORDER_STATUS.COMPLETED);
+    });
+
+    it('permite abrir el recibo imprimible directamente desde el modal de detalle del pedido', () => {
+      const btnView = document.querySelector('.btn-view-order[data-order-id="KL-00042"]');
+      btnView.click();
+
+      const detailModal = document.getElementById('orderDetailModal');
+      expect(detailModal.style.display).toBe('block');
+
+      const btnOpenReceipt = detailModal.querySelector('.btn-open-receipt-from-detail');
+      expect(btnOpenReceipt).not.toBeNull();
+      btnOpenReceipt.click();
+
+      expect(detailModal.style.display).toBe('none');
+      const workshopModal = document.getElementById('workshopSheetModal');
+      expect(workshopModal.style.display).toBe('block');
+      expect(document.getElementById('workshopSheetContainer').textContent).toContain('RECIBO DE SERVICIO DE IMPRESIÓN UV DTF');
+      expect(document.getElementById('workshopSheetContainer').textContent).toContain('RESUMEN DE LIQUIDACIÓN');
+    });
+
+    it('renderOrderReceiptSheetHtml maneja orden nula y órdenes sin items usando fallbacks seguros', () => {
+      expect(renderOrderReceiptSheetHtml(null)).toBe('');
+
+      const fallbackHtml = renderOrderReceiptSheetHtml({
+        id: 'KL-FALLBACK-01',
+        customer: { name: 'Arte Modelo Dubois', company: 'Arte Modelo Dubois' },
+        metrics: { totalBillableMeters: 58.27, tierRate: 30.0, grandTotalQ: 1748.10, cuttingTotalQ: 0 },
+        items: [],
+      });
+
+      expect(fallbackHtml).toContain('Arte Modelo Dubois');
+      expect(fallbackHtml).toContain('Q30.00 por metro lineal');
+      expect(fallbackHtml).toContain('58.27 m');
+      expect(fallbackHtml).toContain('Q 1748.10');
+      expect(fallbackHtml).toContain('Impresión UV DTF en Bobina Audley');
+
+      const fullBranchHtml = renderOrderReceiptSheetHtml({
+        id: 'KL-BRANCH-02',
+        createdAt: new Date().toISOString(),
+        workshopNotes: 'Empacar con cuidado',
+        canvasSnapshot: 'data:image/png;base64,fallback',
+        fileUrl: 'https://r2.kroma.gt/global.png',
+        customer: { name: 'Lesly Rivera', company: '', phone: '5555-0000', nit: '' },
+        metrics: { totalBillableMeters: 10, tierRate: 30.0, grandTotalQ: 325.0, cuttingTotalQ: 25.0, hasCutting: true },
+        items: [
+          {
+            title: 'Sticker A',
+            widthCm: 5,
+            heightCm: 5,
+            qty: 50,
+            actualLinearMeters: 5,
+            stickersPerRow: 5,
+            rows: 10,
+            rotationDeg: 90,
+            finishType: '',
+            canvasSnapshot: 'data:image/png;base64,item1',
+            fileInfo: { name: 'arte1.png', fileUrl: 'https://r2.kroma.gt/arte1.png' },
+          },
+          {
+            title: 'Sticker B',
+            widthCm: 5,
+            heightCm: 5,
+            qty: 50,
+            actualLinearMeters: 5,
+            stickersPerRow: 5,
+            rows: 10,
+            canvasSnapshot: '',
+            fileInfo: { name: 'arte2-local.png' },
+          },
+        ],
+      });
+      expect(fullBranchHtml).toContain('Servicio de corte individual:');
+      expect(fullBranchHtml).toContain('Empacar con cuidado');
+      expect(fullBranchHtml).toContain('🔄 90°');
     });
   });
 });

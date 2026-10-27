@@ -67,10 +67,10 @@ export const routes = [
 
 export const router = new Router(routes, 'app');
 
-export function purgeLegacyMockStorage() {
+export function purgeLegacyMockStorage(force = false) {
   if (typeof window === 'undefined' || !window.localStorage) return;
   const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-  if (IS_TEST) return;
+  if (IS_TEST && !force) return;
 
   const keysToClean = [
     'kromalab_dispatch_notes',
@@ -635,9 +635,14 @@ export function syncNavbarRole(role) {
 }
 
 let lastSyncedRole = null;
+let unsubscribeNavbarRole = null;
 
 function initNavbarRoleSync() {
-  store.subscribe((state) => {
+  if (unsubscribeNavbarRole) {
+    unsubscribeNavbarRole();
+    unsubscribeNavbarRole = null;
+  }
+  unsubscribeNavbarRole = store.subscribe((state) => {
     const role = state.user?.role || 'VISITOR';
     if (role !== lastSyncedRole) {
       lastSyncedRole = role;
