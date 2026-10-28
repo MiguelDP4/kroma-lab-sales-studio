@@ -614,3 +614,7 @@ class OrdersStore {
 }
 
 export const ordersStore = new OrdersStore();
+
+if (typeof window !== 'undefined') {
+  window.ordersStore = ordersStore;
+}

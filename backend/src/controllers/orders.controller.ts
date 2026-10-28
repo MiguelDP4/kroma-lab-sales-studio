@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { AuthenticatedRequest } from '../middlewares/auth';
 import { generateNextPaymentCode } from './receivables.controller';
+import { emailService } from '../services/email.service';
 
 const createOrderSchema = z.object({
   customerId: z.string().nullable().optional(),
@@ -199,6 +200,19 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
       where: { id },
       data: { status },
     });
+
+    if (status === 'IN_AUDLEY_QUEUE' && updated.customerEmail) {
+      try {
+        await emailService.sendOrderConfirmationEmail(
+          updated.customerEmail,
+          updated.customerName,
+          updated.code,
+          updated
+        );
+      } catch (emailErr) {
+        console.warn('[OrdersController] Error enviando email de confirmación:', emailErr);
+      }
+    }
 
     res.json({
       success: true,

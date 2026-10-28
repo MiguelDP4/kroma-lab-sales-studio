@@ -6,6 +6,7 @@
 
 import { store } from '../store.js';
 import { ordersStore, PAYMENT_STATUS, PAYMENT_STATUS_LABELS, PRODUCTION_STATUS_LABELS } from '../modules/orders-store.js';
+import { productionStore } from '../modules/production-store.js';
 import { ORDER_STATUS, BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
 import { calculateOrderProfitability } from '../modules/profitability-engine.js';
@@ -24,6 +25,8 @@ import { uploadFileToStorage, readFileAsDataURL, validateReceiptFile, formatFile
  * @returns {string}
  */
 export function renderOrderReceiptSheetHtml(order) {
+  const isCustomer = (store.state.user?.role || 'CUSTOMER') === 'CUSTOMER';
+  const isStaff = store.state.user?.role === 'ADMIN' || store.state.user?.role === 'EMPLOYEE';
   if (!order) return '';
   const P = KROMA_PRINT_PALETTE;
 
@@ -84,7 +87,7 @@ export function renderOrderReceiptSheetHtml(order) {
 
   const headerHtml = renderKromaDocumentHeader({
     title: 'RECIBO DE SERVICIO DE IMPRESIÓN UV DTF — ORDEN DE TRABAJO',
-    subtitle: 'KROMA LAB — IMPRESIÓN INDUSTRIAL UV DTF (BOBINA AUDLEY 28 CM)',
+    subtitle: 'KROMA LAB — IMPRESIÓN INDUSTRIAL UV DTF',
     folioBadge: `Orden #${order.id}`,
     logoIdPrefix: `order-logo-${order.id}`,
     metaRows: [
@@ -104,7 +107,7 @@ export function renderOrderReceiptSheetHtml(order) {
       },
       {
         label: 'Modalidad:',
-        value: `Servicio de impresión UV DTF (únicamente impresión, sin cobro de material) — Acabado: ${cuttingModeLabel} (${finishLabel})`,
+        value: `Servicio de impresión UV DTF — Acabado: ${cuttingModeLabel}`,
       },
       {
         label: 'Tarifa acordada:',
@@ -114,7 +117,7 @@ export function renderOrderReceiptSheetHtml(order) {
     ],
   });
 
-  const checklistAndNotesHtml = `
+    const checklistAndNotesHtml = !isCustomer ? `
     <div style="border: 1px solid ${P.POWDER_BLUE}; background: ${P.BG_LIGHT}; padding: 0.75rem 0.9rem; border-radius: 4px; border-left: 4px solid ${P.REGAL_NAVY}; height: 100%;">
       <strong style="font-size: 0.78rem; text-transform: uppercase; color: ${P.REGAL_NAVY}; display: block; margin-bottom: 0.35rem;">
         Control de Calidad del Operador (Checklist):
@@ -133,7 +136,13 @@ export function renderOrderReceiptSheetHtml(order) {
         </div>
       ` : ''}
     </div>
-  `;
+  ` : (order.workshopNotes ? `
+    <div style="border: 1px solid ${P.POWDER_BLUE}; background: ${P.BG_LIGHT}; padding: 0.75rem 0.9rem; border-radius: 4px; border-left: 4px solid ${P.REGAL_NAVY}; height: 100%;">
+      <div style="font-size: 0.8rem; color: ${P.SPACE_INDIGO};">
+        <strong style="color: ${P.REGAL_NAVY};">Instrucciones Especiales:</strong> ${order.workshopNotes}
+      </div>
+    </div>
+  ` : '');
 
   const summaryLines = [
     {
@@ -176,11 +185,10 @@ export function renderOrderReceiptSheetHtml(order) {
     <div class="workshop-snapshot-section" style="margin: 1rem 0 0; padding: 0.85rem; border: 1px solid ${P.POWDER_BLUE}; border-left: 4px solid ${P.CERULEAN}; background: ${P.BG_ELEVATED}; border-radius: 4px;">
       <div style="margin-bottom: 0.65rem;">
         <strong style="font-size: 0.88rem; text-transform: uppercase; color: ${P.BALTIC_BLUE}; display: flex; align-items: center; gap: 0.4rem;">
-          <span>📐</span>
-          <span>Montaje Técnico en Bobina Audley (Orientación Requerida):</span>
+          <span>📐 Montaje en Superficie de Impresión:</span>
         </strong>
         <div style="font-size: 0.78rem; color: ${P.TEXT_MUTED}; margin-top: 0.15rem;">
-          Disposición configurada sobre los 28 cm útiles de bobina. Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.
+          Disposición configurada sobre los 28 cm útiles.${isCustomer ? '' : ' Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.'}
         </div>
       </div>
 
@@ -301,8 +309,8 @@ export const ordersView = {
             <select id="filterProductionStatus" class="input-control" style="max-width: 190px;">
               <option value="ALL">Producción: Todos</option>
               <option value="${ORDER_STATUS.PENDING_REVIEW}">Por Confirmar</option>
-              <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}">En Cola Audley</option>
-              <option value="${ORDER_STATUS.PRINTING}">Imprimiendo UV</option>
+              <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}">En cola de impresión</option>
+              <option value="${ORDER_STATUS.PRINTING}">Imprimiendo</option>
               <option value="${ORDER_STATUS.LAMINATING_CUTTING}">Laminado y Corte</option>
               <option value="${ORDER_STATUS.READY_FOR_DELIVERY}">Listo para Entrega</option>
               <option value="${ORDER_STATUS.COMPLETED}">Entregado</option>
@@ -386,9 +394,9 @@ export const ordersView = {
           </div>
 
           <div class="btn-print-hide" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-            <span style="font-size: 0.85rem; color: var(--text-muted);">
+            ${isStaff ? `<span style="font-size: 0.85rem; color: var(--text-muted);">
               💡 Imprime esta ficha o colócala junto a la bobina montada en la máquina.
-            </span>
+            </span>` : ''}
             <div style="display: flex; gap: 0.75rem;">
               <button type="button" class="btn btn-secondary" id="btnCancelWorkshopModal">Cerrar</button>
               <button type="button" class="btn btn-primary" id="btnPrintWorkshopSheet">
@@ -1073,7 +1081,9 @@ export const ordersView = {
           ? `${order.items[0].title} (${order.items[0].qty} uds)`
           : 'Diseños varios';
 
-        const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus] || { label: order.productionStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
+        const prodOrder = productionStore?.state?.orders?.find(po => po.id === order.id || po.id === order.code);
+        const currentProdStatus = prodOrder?.status || order.productionStatus;
+        const prodStyle = PRODUCTION_STATUS_LABELS[currentProdStatus] || { label: currentProdStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
         const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
         const orderWaMsg = formatOrderWhatsAppMessage(order);
 
@@ -1118,22 +1128,10 @@ export const ordersView = {
               Q${order.metrics.grandTotalQ.toFixed(2)}
             </td>
 
-            <td>
-              ${isStaff ? `
-                <select class="select-status select-prod-status" data-order-id="${order.id}" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color};">
-                  <option value="${ORDER_STATUS.PENDING_REVIEW}" ${order.productionStatus === ORDER_STATUS.PENDING_REVIEW ? 'selected' : ''}>Por Confirmar</option>
-                  <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}" ${order.productionStatus === ORDER_STATUS.IN_AUDLEY_QUEUE ? 'selected' : ''}>En Cola Audley</option>
-                  <option value="${ORDER_STATUS.PRINTING}" ${order.productionStatus === ORDER_STATUS.PRINTING ? 'selected' : ''}>Imprimiendo UV</option>
-                  <option value="${ORDER_STATUS.LAMINATING_CUTTING}" ${order.productionStatus === ORDER_STATUS.LAMINATING_CUTTING ? 'selected' : ''}>Laminado y Corte</option>
-                  <option value="${ORDER_STATUS.READY_FOR_DELIVERY}" ${order.productionStatus === ORDER_STATUS.READY_FOR_DELIVERY ? 'selected' : ''}>Listo para Entrega</option>
-                  <option value="${ORDER_STATUS.COMPLETED}" ${order.productionStatus === ORDER_STATUS.COMPLETED ? 'selected' : ''}>Entregado</option>
-                  <option value="${ORDER_STATUS.CANCELLED}" ${order.productionStatus === ORDER_STATUS.CANCELLED ? 'selected' : ''}>Cancelado</option>
-                </select>
-              ` : `
-                <span class="badge" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color};">
-                  ${prodStyle.label}
-                </span>
-              `}
+                        <td>
+              <span class="badge" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color};">
+                ${prodStyle.label}
+              </span>
             </td>
 
             ${isStaff ? `
@@ -1154,9 +1152,9 @@ export const ordersView = {
                 <button class="btn-action-icon btn-workshop-sheet" data-order-id="${order.id}" title="Hoja de Taller Audley">
                   <span>🖨️</span>
                 </button>
-                <a href="/despacho" data-link class="btn-action-icon" data-order-id="${order.id}" title="${order.dispatchNoteId ? `Ver Remisión ${order.dispatchNoteId}` : 'Generar Guía de Despacho'}">
-                  <span>🚚</span>
-                </a>
+                <button type="button" class="btn-action-icon btn-add-to-production" data-order-id="${order.id}" title="Agregar a Cola de Producción">
+                  <span>⚙️</span>
+                </button>
               ` : ''}
               <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" target="_blank" rel="noopener noreferrer" class="btn-action-icon" title="Chat WhatsApp">
                 <span>💬</span>
@@ -1172,7 +1170,9 @@ export const ordersView = {
             ? `${order.items[0].title} (${order.items[0].qty} uds)`
             : 'Diseños varios';
 
-          const prodStyle = PRODUCTION_STATUS_LABELS[order.productionStatus] || { label: order.productionStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
+          const prodOrder = productionStore?.state?.orders?.find(po => po.id === order.id || po.id === order.code);
+        const currentProdStatus = prodOrder?.status || order.productionStatus;
+        const prodStyle = PRODUCTION_STATUS_LABELS[currentProdStatus] || { label: currentProdStatus || 'Por Confirmar', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' };
           const payStyle = PAYMENT_STATUS_LABELS[order.paymentStatus];
           const orderWaMsg = formatOrderWhatsAppMessage(order);
           const totalPieces = order.items.reduce((acc, i) => acc + (i.qty || 0), 0);
@@ -1200,26 +1200,16 @@ export const ordersView = {
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <span class="badge" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color}; padding: 0.35rem 0.65rem;">
+                    ${prodStyle.label}
+                  </span>
                   ${isStaff ? `
-                    <select class="select-status select-prod-status" data-order-id="${order.id}" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color}; min-height: 38px; padding: 0.35rem 0.65rem;">
-                      <option value="${ORDER_STATUS.PENDING_REVIEW}" ${order.productionStatus === ORDER_STATUS.PENDING_REVIEW ? 'selected' : ''}>Por Confirmar</option>
-                      <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}" ${order.productionStatus === ORDER_STATUS.IN_AUDLEY_QUEUE ? 'selected' : ''}>En Cola Audley</option>
-                      <option value="${ORDER_STATUS.PRINTING}" ${order.productionStatus === ORDER_STATUS.PRINTING ? 'selected' : ''}>Imprimiendo UV</option>
-                      <option value="${ORDER_STATUS.LAMINATING_CUTTING}" ${order.productionStatus === ORDER_STATUS.LAMINATING_CUTTING ? 'selected' : ''}>Laminado y Corte</option>
-                      <option value="${ORDER_STATUS.READY_FOR_DELIVERY}" ${order.productionStatus === ORDER_STATUS.READY_FOR_DELIVERY ? 'selected' : ''}>Listo para Entrega</option>
-                      <option value="${ORDER_STATUS.COMPLETED}" ${order.productionStatus === ORDER_STATUS.COMPLETED ? 'selected' : ''}>Entregado</option>
-                      <option value="${ORDER_STATUS.CANCELLED}" ${order.productionStatus === ORDER_STATUS.CANCELLED ? 'selected' : ''}>Cancelado</option>
-                    </select>
-
                     <select class="select-status select-pay-status" data-order-id="${order.id}" style="background: ${payStyle.bg}; color: ${payStyle.color}; border-color: ${payStyle.color}; min-height: 38px; padding: 0.35rem 0.65rem;">
                       <option value="${PAYMENT_STATUS.PENDING}" ${order.paymentStatus === PAYMENT_STATUS.PENDING ? 'selected' : ''}>Pendiente</option>
                       <option value="${PAYMENT_STATUS.PARTIAL}" ${order.paymentStatus === PAYMENT_STATUS.PARTIAL ? 'selected' : ''}>Anticipo 50%</option>
                       <option value="${PAYMENT_STATUS.PAID}" ${order.paymentStatus === PAYMENT_STATUS.PAID ? 'selected' : ''}>Pagado</option>
                     </select>
                   ` : `
-                    <span class="badge" style="background: ${prodStyle.bg}; color: ${prodStyle.color}; border-color: ${prodStyle.color}; padding: 0.35rem 0.65rem;">
-                      ${prodStyle.label}
-                    </span>
                     <span class="badge" style="background: ${payStyle.bg}; color: ${payStyle.color}; border-color: ${payStyle.color}; padding: 0.35rem 0.65rem;">
                       ${payStyle.label}
                     </span>
@@ -1299,16 +1289,16 @@ export const ordersView = {
                       <span>Taller</span>
                     </button>
 
-                    <a 
-                      href="/despacho" 
-                      data-link 
-                      class="btn-action-icon" 
+                    <button 
+                      type="button" 
+                      class="btn btn-primary btn-add-to-production" 
                       data-order-id="${order.id}" 
-                      title="${order.dispatchNoteId ? `Ver Remisión ${order.dispatchNoteId}` : 'Generar Guía de Despacho'}"
-                      style="min-height: 42px; min-width: 42px;"
+                      title="Agregar a Cola de Producción"
+                      style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
                     >
-                      <span>🚚</span>
-                    </a>
+                      <span>⚙️</span>
+                      <span>A Producción</span>
+                    </button>
                   ` : ''}
 
                   <a 

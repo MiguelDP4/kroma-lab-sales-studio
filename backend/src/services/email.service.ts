@@ -266,6 +266,52 @@ Villa Nueva, Guatemala
     }
   }
 
+  /**
+   * Envía un correo al cliente confirmando que su pedido fue ingresado a la cola de producción (Task 14).
+   */
+  async sendOrderConfirmationEmail(email: string, customerName: string, orderCode: string, orderDetails?: any): Promise<boolean> {
+    const sender = process.env.SMTP_FROM || `"Kroma Lab Producción" <${process.env.SMTP_USER || 'no-reply@kromalab.gt'}>`;
+    const subject = `¡Tu pedido #${orderCode} ha sido confirmado y está en producción! — Kroma Lab`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head><meta charset="UTF-8"><title>${subject}</title></head>
+      <body style="font-family: sans-serif; background: #f8fafc; padding: 20px;">
+        <div style="max-width: 580px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #1c7293; margin-top: 0;">🚀 ¡Tu Pedido ha Sido Confirmado!</h2>
+          <p>Hola, <strong>${customerName}</strong>.</p>
+          <p>Te informamos con gusto que tu orden <strong>#${orderCode}</strong> ha sido verificada y agregada exitosamente a la cola de producción de impresión UV DTF industrial.</p>
+          ${orderDetails ? `
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 14px;">
+              <div><strong>Estado actual:</strong> En cola de impresión</div>
+              ${orderDetails.linearMeters ? `<div><strong>Metros lineales:</strong> ${orderDetails.linearMeters} m</div>` : ''}
+              ${orderDetails.totalAmountQ ? `<div><strong>Total acordado:</strong> Q${Number(orderDetails.totalAmountQ).toFixed(2)}</div>` : ''}
+            </div>
+          ` : ''}
+          <p>Nuestro equipo está procesando tus archivos y te notificaremos cuando tu pedido esté listo para entrega.</p>
+          <p style="font-size: 13px; color: #64748b; margin-top: 25px;">Kroma Lab — Impresión UV DTF Profesional</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `Hola ${customerName},\n\nTu pedido #${orderCode} ha sido confirmado y se encuentra en la cola de producción de Kroma Lab.\n\n¡Gracias por tu confianza!`;
+
+    if (this.isConfigured && this.transporter) {
+      try {
+        await this.transporter.sendMail({ from: sender, to: email, subject, text: textContent, html: htmlContent });
+        return true;
+      } catch (e) {
+        console.error('[EmailService] Error enviando correo de confirmación de pedido:', e);
+        return false;
+      }
+    } else {
+      console.log(`[EmailService MOCK/DEV] Notificación de confirmación de pedido #${orderCode} para ${email}`);
+      return true;
+    }
+  }
+
 }
 
 export const emailService = new EmailService();
