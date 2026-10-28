@@ -13,10 +13,7 @@ export const STORAGE_KEY_PAYMENTS = 'kromalab_payments';
 
 export const PAYMENT_METHODS = {
   TRANSFER: { id: 'TRANSFER', label: 'Transferencia Bancaria', icon: '🏦' },
-  CASH: { id: 'CASH', label: 'Efectivo en Taller', icon: '💵' },
-  CARD: { id: 'CARD', label: 'Tarjeta Débito/Crédito (POS)', icon: '💳' },
-  DEPOSIT: { id: 'DEPOSIT', label: 'Boleta de Depósito Bancario', icon: '📄' },
-  CHECK: { id: 'CHECK', label: 'Cheque Compensable', icon: '📑' },
+  CASH: { id: 'CASH', label: 'Efectivo contra entrega', icon: '💵' },
 };
 
 export const AGING_STATUS = {

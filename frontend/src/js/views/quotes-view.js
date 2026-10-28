@@ -269,7 +269,7 @@ function renderQuotesCards(quotes) {
         <!-- Chips de Especificaciones Técnicas -->
         <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 1rem;">
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
-            📏 ${q.widthCm} × ${q.heightCm} cm
+            ${(q.items && q.items.length > 1) ? `🎨 ${q.items.length} Diseños` : `📏 ${q.widthCm} × ${q.heightCm} cm`}
           </span>
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
             📦 ${q.qty} piezas
@@ -280,8 +280,31 @@ function renderQuotesCards(quotes) {
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem; color: ${q.withCutting ? '#10b981' : 'var(--text-muted)'};">
             ${q.withCutting ? '✂️ Con corte (+Q' + Number(q.cuttingPriceQ).toFixed(2) + ')' : '📦 En rollo continuo'}
           </span>
-          
         </div>
+
+        ${(q.items && q.items.length > 1) ? `
+          <!-- Desglose de Diseños en la Cotización -->
+          <div class="quote-multi-items-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.85rem;">
+            ${q.items.map((it, idx) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  ${(it.previewUrl || it.fileUrl) ? `
+                    <img src="${it.previewUrl || it.fileUrl}" alt="${it.title || 'Diseño'}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+                  ` : `
+                    <div style="width: 38px; height: 38px; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">📁</div>
+                  `}
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">${it.title || ('Diseño #' + (idx + 1))}</div>
+                    <div style="font-size: 0.76rem; color: var(--text-muted);">${it.widthCm} × ${it.heightCm} cm • ${it.includeCutting ? '✂️ Con corte' : '📦 En rollo'}</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span class="badge" style="font-size: 0.75rem; font-weight: 700;">${it.qty} piezas</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
 
         <!-- Previsualización del Arte Adjunto por el Cliente -->
         ${(q.fileUrl || q.fileName || q.previewUrl) ? `
@@ -517,33 +540,66 @@ function handleAddQuoteToCart(quoteId) {
   const q = quotesStore.getQuoteById(quoteId);
   if (!q) return;
 
-  const fileUrl = q.fileUrl || null;
-  const fileName = q.fileName || null;
-  const fileSizeBytes = q.fileSizeBytes || null;
-  const previewUrl = q.previewUrl || fileUrl || null;
+  if (Array.isArray(q.items) && q.items.length > 0) {
+    q.items.forEach((it, idx) => {
+      const itemFileUrl = it.fileUrl || it.fileInfo?.fileUrl || (idx === 0 ? q.fileUrl : null);
+      const itemFileName = it.fileName || it.fileInfo?.name || (idx === 0 ? q.fileName : null);
+      const itemPreview = it.previewUrl || itemFileUrl || (idx === 0 ? q.previewUrl : null);
+      const itemSize = it.fileSizeBytes || it.fileInfo?.size || (idx === 0 ? q.fileSizeBytes : null);
 
-  cartStore.addItem({
-    title: q.projectName || ('Sticker ' + q.widthCm + 'x' + q.heightCm + 'cm'),
-    widthCm: q.widthCm,
-    heightCm: q.heightCm,
-    qty: q.qty,
-    includeCutting: Boolean(q.withCutting),
-    fileUrl,
-    fileName,
-    previewUrl,
-    fileSizeBytes,
-    fileInfo: (fileName || fileUrl) ? {
-      name: fileName || 'Diseño UV DTF',
-      fileUrl: fileUrl,
-      size: fileSizeBytes || 0,
-    } : null,
-    canvasSnapshot: q.canvasSnapshot || null,
-    canvasSnapshotUrl: q.canvasSnapshotUrl || null,
-    rotationDeg: q.rotationDeg || 0,
-    actualLinearMeters: q.linearMeters || 0,
-    stickersPerRow: q.stickersPerRow || 1,
-    rows: q.rows || 1,
-  });
+      cartStore.addItem({
+        title: it.title || q.projectName || `Sticker ${it.widthCm}x${it.heightCm}cm`,
+        widthCm: Number(it.widthCm) || Number(q.widthCm) || 5,
+        heightCm: Number(it.heightCm) || Number(q.heightCm) || 5,
+        qty: Number(it.qty) || 50,
+        includeCutting: it.includeCutting !== undefined ? Boolean(it.includeCutting) : Boolean(q.withCutting),
+        unitRateQ: Number(q.unitRateQ) || 140,
+        actualLinearMeters: Number(it.actualLinearMeters) || Number(q.linearMeters) || 1,
+        stickersPerRow: Number(it.stickersPerRow) || Number(q.stickersPerRow) || 1,
+        rows: Number(it.rows) || Number(q.rows) || 1,
+        fileUrl: itemFileUrl,
+        fileName: itemFileName,
+        fileSizeBytes: itemSize,
+        previewUrl: itemPreview,
+        fileInfo: (itemFileName || itemFileUrl) ? {
+          name: itemFileName || 'Diseño UV DTF',
+          fileUrl: itemFileUrl,
+          size: itemSize || 0,
+        } : null,
+        canvasSnapshot: it.canvasSnapshot || (idx === 0 ? q.canvasSnapshot : null),
+        canvasSnapshotUrl: it.canvasSnapshotUrl || (idx === 0 ? q.canvasSnapshotUrl : null),
+        rotationDeg: Number(it.rotationDeg) || 0,
+      });
+    });
+  } else {
+    const fileUrl = q.fileUrl || null;
+    const fileName = q.fileName || null;
+    const fileSizeBytes = q.fileSizeBytes || null;
+    const previewUrl = q.previewUrl || fileUrl || null;
+
+    cartStore.addItem({
+      title: q.projectName || ('Sticker ' + q.widthCm + 'x' + q.heightCm + 'cm'),
+      widthCm: q.widthCm,
+      heightCm: q.heightCm,
+      qty: q.qty,
+      includeCutting: Boolean(q.withCutting),
+      fileUrl,
+      fileName,
+      previewUrl,
+      fileSizeBytes,
+      fileInfo: (fileName || fileUrl) ? {
+        name: fileName || 'Diseño UV DTF',
+        fileUrl: fileUrl,
+        size: fileSizeBytes || 0,
+      } : null,
+      canvasSnapshot: q.canvasSnapshot || null,
+      canvasSnapshotUrl: q.canvasSnapshotUrl || null,
+      rotationDeg: q.rotationDeg || 0,
+      actualLinearMeters: q.linearMeters || 0,
+      stickersPerRow: q.stickersPerRow || 1,
+      rows: q.rows || 1,
+    });
+  }
 
   showQuotesFeedback('Cotización "' + (q.projectName || q.code) + '" agregada al carrito de compras.', 'success');
   openCartDrawer();

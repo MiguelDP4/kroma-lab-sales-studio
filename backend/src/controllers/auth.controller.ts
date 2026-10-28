@@ -624,8 +624,33 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
       updateData.password = pendingAction.newPassword;
       customSuccessMsg = '¡Tu contraseña ha sido actualizada y confirmada exitosamente!';
     } else if (pendingAction?.type === 'CHANGE_EMAIL' && pendingAction.newEmail) {
-      updateData.email = pendingAction.newEmail;
-      customSuccessMsg = `¡Tu dirección de correo electrónico ha sido cambiada a ${pendingAction.newEmail} exitosamente!`;
+      const oldEmail = user.email;
+      const newEmail = pendingAction.newEmail;
+      updateData.email = newEmail;
+      customSuccessMsg = `¡Tu dirección de correo electrónico ha sido cambiada a ${newEmail} exitosamente!`;
+
+      try {
+        if (user.customerId) {
+          await prisma.customer.updateMany({
+            where: { id: user.customerId },
+            data: { email: newEmail },
+          });
+          await prisma.order.updateMany({
+            where: { customerId: user.customerId },
+            data: { customerEmail: newEmail },
+          });
+        }
+        await prisma.order.updateMany({
+          where: { customerEmail: oldEmail },
+          data: { customerEmail: newEmail },
+        });
+        await prisma.quote.updateMany({
+          where: { leadEmail: oldEmail },
+          data: { leadEmail: newEmail },
+        });
+      } catch (syncErr) {
+        console.warn('[VerifyEmail] Error al sincronizar nuevo email en órdenes y cotizaciones:', syncErr);
+      }
     }
 
     const updatedUser = await prisma.user.update({

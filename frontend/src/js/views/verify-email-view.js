@@ -98,14 +98,23 @@ export const verifyEmailView = {
     `;
   },
 
-  onMount: async (container) => {
+  onMount: (container) => {
     const root = container || document.getElementById('app') || (typeof document !== 'undefined' ? document : null);
-    if (!root) return;
+    if (!root) return () => {};
 
     const stateLoading = root.querySelector('#verifyStateLoading');
     const stateSuccess = root.querySelector('#verifyStateSuccess');
     const stateError = root.querySelector('#verifyStateError');
     const errorMsg = root.querySelector('#verifyErrorMsg');
+
+    function showState(stateName) {
+      if (stateLoading) stateLoading.style.display = stateName === 'loading' ? 'block' : 'none';
+      if (stateSuccess) stateSuccess.style.display = stateName === 'success' ? 'block' : 'none';
+      if (stateError) stateError.style.display = stateName === 'error' ? 'block' : 'none';
+    }
+
+    // Inicialmente sólo cargando
+    showState('loading');
 
     // Obtener token de la query string
     let token = '';
@@ -115,39 +124,41 @@ export const verifyEmailView = {
     }
 
     if (!token) {
-      if (stateLoading) stateLoading.style.display = 'none';
-      if (stateError) stateError.style.display = 'block';
+      showState('error');
       if (errorMsg) errorMsg.textContent = 'No se proporcionó ningún token de verificación en el enlace.';
-      return;
+      return () => {};
     }
 
-    try {
-      const res = await apiClient.auth.verifyEmail(token);
-      if (res && res.success) {
-        if (stateLoading) stateLoading.style.display = 'none';
-        if (stateSuccess) stateSuccess.style.display = 'block';
-
-        // Actualizar sesión en store si recibimos datos del usuario
-        if (res.user && res.token) {
-          const perms = res.user.role === 'ADMIN' ? ['*'] : (res.user.role === 'EMPLOYEE' ? ['ORDERS', 'WORKSHOP'] : ['ORDERS']);
-          store.setUser(res.user, res.token, perms, true);
+    // Procesar validación con backend
+    (async () => {
+      try {
+        const res = await apiClient.auth.verifyEmail(token);
+        if (res && res.success) {
+          showState('success');
+          if (res.message) {
+            const successMsgEl = root.querySelector('#verifySuccessMsg');
+            if (successMsgEl) successMsgEl.textContent = res.message;
+          }
+          if (res.user && res.token) {
+            const perms = res.user.role === 'ADMIN' ? ['*'] : (res.user.role === 'EMPLOYEE' ? ['ORDERS', 'WORKSHOP'] : ['ORDERS']);
+            store.setUser(res.user, res.token, perms, true);
+          }
+        } else {
+          throw new Error(res?.message || 'Error al validar el enlace.');
         }
-      } else {
-        throw new Error(res?.message || 'Error al validar el enlace.');
+      } catch (err) {
+        showState('error');
+        if (errorMsg) {
+          errorMsg.textContent = err.message || 'El enlace de confirmación no es válido o ha expirado.';
+        }
       }
-    } catch (err) {
-      if (stateLoading) stateLoading.style.display = 'none';
-      if (stateError) stateError.style.display = 'block';
-      if (errorMsg) {
-        errorMsg.textContent = err.message || 'El enlace de confirmación no es válido o ha expirado.';
-      }
-    }
+    })();
 
     // Manejar reenvío de correo
-    const formResend = container.querySelector('#formResendVerification');
+    const formResend = root.querySelector('#formResendVerification');
     const resendEmailInput = root.querySelector('#resendEmailInput');
     const resendFeedback = root.querySelector('#resendFeedbackMsg');
-    const btnSubmitResend = container.querySelector('#btnSubmitResend');
+    const btnSubmitResend = root.querySelector('#btnSubmitResend');
 
     if (formResend) {
       formResend.addEventListener('submit', async (e) => {
@@ -184,6 +195,8 @@ export const verifyEmailView = {
         }
       });
     }
+
+    return () => {};
   },
 };
 export default verifyEmailView;

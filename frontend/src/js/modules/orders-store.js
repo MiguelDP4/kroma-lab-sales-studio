@@ -240,6 +240,7 @@ class OrdersStore {
   constructor() {
     this.listeners = new Set();
     this.orders = this._loadOrders();
+    this.isLoading = false;
   }
 
   _loadOrders() {
@@ -348,6 +349,10 @@ class OrdersStore {
   }
 
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
     try {
       const res = await apiClient.orders.list();
       if (res && res.success && Array.isArray(res.orders)) {
@@ -356,13 +361,29 @@ class OrdersStore {
         const localOnly = this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId);
         this.orders = [...apiOrders, ...localOnly];
         this._saveOrders();
-        this._notify();
         return this.orders;
       }
     } catch (err) {
-      console.warn('[OrdersStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[OrdersStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
     return this.orders;
+  }
+
+  clearOrdersCache() {
+    this.orders = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_ORDERS);
+      } catch (_) {}
+    }
+    this._notify();
   }
 
   subscribe(listener) {

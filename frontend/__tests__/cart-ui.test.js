@@ -175,7 +175,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(document.getElementById('checkoutModal')).not.toBeNull();
     });
 
-    it('vacía el carrito al hacer clic en btnClearCart', () => {
+    it('vacía el carrito al hacer clic en btnClearCart y confirmar en el modal', () => {
       initCartDrawer();
       cartStore.addItem({ widthCm: 5, heightCm: 5, qty: 50 });
       expect(cartStore.getItems().length).toBe(1);
@@ -183,7 +183,14 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       const btnClear = document.getElementById('btnClearCart');
       btnClear.click();
 
+      const modal = document.getElementById('clearCartConfirmModal');
+      expect(modal.style.display).toBe('block');
+
+      const btnConfirm = document.getElementById('btnConfirmClearCartModal');
+      btnConfirm.click();
+
       expect(cartStore.getItems().length).toBe(0);
+      expect(modal.style.display).toBe('none');
     });
 
     it('despacha pedido a WhatsApp desde el carrito', () => {

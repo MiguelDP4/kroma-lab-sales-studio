@@ -35,6 +35,17 @@ export class Router {
   /**
    * Destruye escuchas de eventos (útil para tests).
    */
+    _runActiveCleanup() {
+    if (typeof this.activeViewCleanup === 'function') {
+      try {
+        this.activeViewCleanup();
+      } catch (err) {
+        console.warn('[Router] Error ejecutando cleanup de vista:', err);
+      }
+    }
+    this.activeViewCleanup = null;
+  }
+
   destroy() {
     if (typeof window !== 'undefined') {
       window.removeEventListener('popstate', this.handlePopState);
@@ -42,10 +53,7 @@ export class Router {
       document.removeEventListener('click', this.handleLinkClick);
     }
     this.currentRoute = null;
-    if (this.activeViewCleanup) {
-      this.activeViewCleanup();
-      this.activeViewCleanup = null;
-    }
+    this._runActiveCleanup();
   }
 
   /**
@@ -160,10 +168,7 @@ export class Router {
     const mountEl = document.getElementById(this.mountElementId);
     if (!mountEl) return;
 
-    if (this.activeViewCleanup) {
-      this.activeViewCleanup();
-      this.activeViewCleanup = null;
-    }
+    this._runActiveCleanup();
 
     mountEl.innerHTML = `
       <div style="text-align: center; padding: 4rem 1rem; max-width: 600px; margin: 0 auto;">
@@ -200,10 +205,7 @@ export class Router {
     if (!mountEl) return;
 
     // Ejecutar limpieza de la vista anterior
-    if (this.activeViewCleanup) {
-      this.activeViewCleanup();
-      this.activeViewCleanup = null;
-    }
+    this._runActiveCleanup();
 
     this.currentRoute = route;
 

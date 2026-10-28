@@ -192,6 +192,25 @@ export function renderCartDrawer(items, totals) {
         </div>
       ` : ''}
     </div>
+
+    <!-- Modal Confirmación Vaciar Carrito (Modelo Consistente) -->
+    <div id="clearCartConfirmModal" class="modal-backdrop" style="display: none; z-index: 2000;" role="dialog" aria-modal="true" aria-labelledby="clearCartModalTitle">
+      <div class="modal-card" style="width: min(440px, 94vw);">
+        <div class="modal-header">
+          <h2 id="clearCartModalTitle" style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0;">Vaciar Carrito</h2>
+          <button type="button" class="btn-close-modal" id="btnCloseClearCartModal" aria-label="Cerrar modal">✕</button>
+        </div>
+
+        <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+          ¿Estás seguro que quieres vaciar todos los diseños de tu carrito?
+        </p>
+
+        <div class="modal-actions-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" id="btnCancelClearCartModal" style="min-height: 44px;">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmClearCartModal" style="background: #ef4444; border-color: #ef4444; min-height: 44px;">Sí, Vaciar Carrito</button>
+        </div>
+      </div>
+    </div>
   `;
 
   // Asignar eventos del DOM
@@ -252,13 +271,32 @@ function attachCartEventListeners(items, totals) {
     });
   });
 
-  // Vaciar carrito
+  // Vaciar carrito con modal consistente (Item 12 & 18)
   const btnClear = document.getElementById('btnClearCart');
-  if (btnClear) {
+  const clearModal = document.getElementById('clearCartConfirmModal');
+  const btnCloseClear = document.getElementById('btnCloseClearCartModal');
+  const btnCancelClear = document.getElementById('btnCancelClearCartModal');
+  const btnConfirmClear = document.getElementById('btnConfirmClearCartModal');
+
+  if (btnClear && clearModal) {
     btnClear.addEventListener('click', () => {
-      if (confirm('¿Deseas vaciar todos los diseños de tu carrito?')) {
-        cartStore.clearCart();
-      }
+      clearModal.style.display = 'block';
+    });
+  }
+  if (btnCloseClear && clearModal) {
+    btnCloseClear.addEventListener('click', () => {
+      clearModal.style.display = 'none';
+    });
+  }
+  if (btnCancelClear && clearModal) {
+    btnCancelClear.addEventListener('click', () => {
+      clearModal.style.display = 'none';
+    });
+  }
+  if (btnConfirmClear && clearModal) {
+    btnConfirmClear.addEventListener('click', () => {
+      cartStore.clearCart();
+      clearModal.style.display = 'none';
     });
   }
 

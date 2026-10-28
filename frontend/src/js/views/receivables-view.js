@@ -95,7 +95,7 @@ export const receivablesView = {
               <select id="receivablesStatusFilter" class="input-control">
                 <option value="DEBT_ONLY">⚠️ Con Deuda Pendiente</option>
                 <option value="ALL">Todos los Pedidos</option>
-                <option value="PARTIAL">🟡 Con Anticipo (50%)</option>
+                <option value="PARTIAL">🟡 Con Anticipo</option>
                 <option value="PENDING">🔴 Sin Abonos (0%)</option>
                 <option value="PAID">🟢 Pagados 100%</option>
               </select>
@@ -248,16 +248,13 @@ export const receivablesView = {
                   <label class="form-label" for="paymentMethod" style="font-weight: 700;">Método de Pago:</label>
                   <select id="paymentMethod" class="input-control" style="min-height: 44px;">
                     <option value="TRANSFER">🏦 Transferencia Bancaria</option>
-                    <option value="CASH">💵 Efectivo en Taller</option>
-                    <option value="CARD">💳 Tarjeta Débito/Crédito (POS)</option>
-                    <option value="DEPOSIT">📄 Boleta de Depósito</option>
-                    <option value="CHEQUE">📑 Cheque</option>
+                    <option value="CASH">💵 Efectivo contra entrega</option>
                   </select>
                 </div>
               </div>
 
               <div class="input-row">
-                <div class="form-group">
+                <div class="form-group" id="paymentReferenceGroup">
                   <label class="form-label" for="paymentReference" style="font-weight: 700;">No. Boleta / Referencia Bancaria:</label>
                   <input type="text" id="paymentReference" class="input-control" placeholder="Ej: BI-981244 o Boleta 55102" style="min-height: 44px;">
                 </div>
@@ -436,6 +433,32 @@ export const receivablesView = {
     if (btnCloseView) btnCloseView.addEventListener('click', () => toggleModal(viewModal, false));
     if (btnCloseViewFooter) btnCloseViewFooter.addEventListener('click', () => toggleModal(viewModal, false));
 
+        const paymentMethodSelect = document.getElementById('paymentMethod');
+    const paymentReferenceGroup = document.getElementById('paymentReferenceGroup');
+    const paymentReferenceInput = document.getElementById('paymentReference');
+
+    function syncPaymentMethodFields() {
+      if (!paymentMethodSelect) return;
+      const isCash = paymentMethodSelect.value === 'CASH';
+      if (paymentReferenceGroup) {
+        paymentReferenceGroup.style.display = isCash ? 'none' : 'block';
+      }
+      if (paymentReferenceInput) {
+        paymentReferenceInput.disabled = isCash;
+        if (isCash) paymentReferenceInput.value = '';
+      }
+    }
+
+    if (paymentMethodSelect) {
+      paymentMethodSelect.addEventListener('change', syncPaymentMethodFields);
+    }
+
+    if (btnOpenRecord) {
+      btnOpenRecord.addEventListener('click', () => {
+        syncPaymentMethodFields();
+      });
+    }
+
     if (formRecord) {
       formRecord.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -457,6 +480,7 @@ export const receivablesView = {
           });
 
           formRecord.reset();
+          syncPaymentMethodFields();
           toggleModal(recordModal, false);
         } catch (err) {
           alert(err.message || 'Error al registrar el abono.');
@@ -593,6 +617,11 @@ export const receivablesView = {
         const aging = item.agingStatus;
         const pMeta = PAYMENT_STATUS_LABELS[item.paymentStatus] || { label: item.paymentStatus, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' };
         const hasDebt = item.hasDebt;
+        let statusLabel = pMeta.label;
+        if (item.paymentStatus === 'PARTIAL' || (item.totalPaidQ > 0 && item.hasDebt)) {
+          const pct = item.grandTotalQ > 0 ? Math.round((item.totalPaidQ / item.grandTotalQ) * 100) : 50;
+          statusLabel = `Anticipo ${pct}%`;
+        }
 
         return `
           <tr class="receivables-row">
@@ -635,7 +664,7 @@ export const receivablesView = {
             <td class="col-order-status">
               <span class="mobile-td-label">Estado:</span>
               <span class="badge" style="background: ${pMeta.bg}; color: ${pMeta.color}; border-color: ${pMeta.color}; font-size: 0.72rem; white-space: nowrap;">
-                ${pMeta.label}
+                ${statusLabel}
               </span>
             </td>
             <td class="col-order-actions">
@@ -668,6 +697,11 @@ export const receivablesView = {
           const aging = item.agingStatus;
           const pMeta = PAYMENT_STATUS_LABELS[item.paymentStatus] || { label: item.paymentStatus, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' };
           const hasDebt = item.hasDebt;
+          let statusLabel = pMeta.label;
+          if (item.paymentStatus === 'PARTIAL' || (item.totalPaidQ > 0 && item.hasDebt)) {
+            const pct = item.grandTotalQ > 0 ? Math.round((item.totalPaidQ / item.grandTotalQ) * 100) : 50;
+            statusLabel = `Anticipo ${pct}%`;
+          }
 
           return `
             <div class="dispatch-card receivable-card" data-receivable-card="${item.orderId}" style="border-top: 4px solid ${hasDebt ? aging.color : '#10b981'};">
@@ -687,7 +721,7 @@ export const receivablesView = {
 
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                   <span class="badge" style="background: ${pMeta.bg}; color: ${pMeta.color}; border-color: ${pMeta.color}; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.65rem;">
-                    ${pMeta.label}
+                    ${statusLabel}
                   </span>
                 </div>
               </div>
@@ -774,6 +808,7 @@ export const receivablesView = {
           btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-order-id');
             populateOrderSelect(id);
+            syncPaymentMethodFields();
             toggleModal(recordModal, true);
           });
         });

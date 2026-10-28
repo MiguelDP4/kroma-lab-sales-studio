@@ -188,6 +188,7 @@ export const accountView = {
                     Confirmar Nueva Contraseña:
                   </label>
                   <input type="password" id="accountConfirmPasswordInput" class="input-control" minlength="6" style="min-height: 44px;" placeholder="Repite tu nueva contraseña" autocomplete="new-password">
+                  <span id="accountConfirmPasswordError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
                 </div>
               </div>
             </div>

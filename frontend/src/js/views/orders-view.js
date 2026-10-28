@@ -1047,6 +1047,40 @@ export const ordersView = {
     // Render de Tabla de Pedidos
     function renderOrdersTable() {
       if (!tableBody) return;
+      const cardsContainer = document.getElementById('ordersCardsContainer');
+
+      if (ordersStore.isLoading) {
+        if (emptyState) emptyState.style.display = 'none';
+        const skeletonCols = isStaff ? 6 : 5;
+        tableBody.innerHTML = `
+          <tr class="order-skeleton-row">
+            <td colspan="${skeletonCols}" style="padding: 2rem 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="height: 18px; width: 45%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
+                <div style="height: 14px; width: 75%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
+              </div>
+            </td>
+          </tr>
+          <tr class="order-skeleton-row">
+            <td colspan="${skeletonCols}" style="padding: 2rem 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="height: 18px; width: 35%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
+                <div style="height: 14px; width: 65%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
+              </div>
+            </td>
+          </tr>
+        `;
+        if (cardsContainer) {
+          cardsContainer.innerHTML = `
+            <div class="dispatch-card" style="padding: 1.5rem; opacity: 0.6;">
+              <div style="height: 18px; width: 50%; background: rgba(255,255,255,0.08); border-radius: 4px; margin-bottom: 0.75rem;"></div>
+              <div style="height: 14px; width: 80%; background: rgba(255,255,255,0.08); border-radius: 4px;"></div>
+            </div>
+          `;
+        }
+        return;
+      }
+
       const allOrders = ordersStore.getOrders();
       const q = (searchInput?.value || '').toLowerCase().trim();
       const prodFilter = filterProd?.value || 'ALL';
@@ -1065,7 +1099,7 @@ export const ordersView = {
         return matchesQuery && matchesProd && matchesPay;
       });
 
-      const cardsContainer = document.getElementById('ordersCardsContainer');
+      
 
       if (filtered.length === 0) {
         tableBody.innerHTML = '';
@@ -1586,6 +1620,44 @@ export const ordersView = {
         btn.addEventListener('click', () => {
           const id = btn.dataset.orderId;
           showWorkshopSheetModal(id);
+        });
+      });
+
+      // Agregar a Cola de Producción
+      document.querySelectorAll('.btn-add-to-production').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.orderId;
+          const order = ordersStore.getOrderById(id);
+          if (!order) return;
+
+          ordersStore.updateProductionStatus(id, ORDER_STATUS.IN_AUDLEY_QUEUE);
+
+          const existingProd = productionStore?.getState()?.orders?.find(o => o.id === order.id || o.id === order.code);
+          if (!existingProd && productionStore?.addOrder) {
+            productionStore.addOrder({
+              id: order.code || order.id,
+              clientName: order.customer.name,
+              contactPhone: order.customer.phone,
+              title: order.items?.[0]?.title || `Orden ${order.code || order.id}`,
+              widthCm: order.metrics?.widthCm || order.items?.[0]?.widthCm || 5,
+              heightCm: order.metrics?.heightCm || order.items?.[0]?.heightCm || 5,
+              qty: order.metrics?.totalStickers || order.items?.[0]?.qty || 50,
+              meters: order.metrics?.totalBillableMeters || 1.0,
+              includeCutting: order.metrics?.hasCutting,
+              finishType: 'Barniz con Relieve 3D',
+              fileUrl: order.items?.[0]?.fileUrl || null,
+              fileName: order.items?.[0]?.fileName || null,
+              canvasSnapshot: order.items?.[0]?.canvasSnapshot || order.canvasSnapshot || null,
+              canvasSnapshotUrl: order.items?.[0]?.canvasSnapshotUrl || null,
+              notes: order.workshopNotes || '',
+            });
+          } else if (existingProd && productionStore?.setOrderStatus) {
+            productionStore.setOrderStatus(existingProd.id, ORDER_STATUS.IN_AUDLEY_QUEUE);
+          }
+
+          renderOrdersTable();
+          renderOrdersMetrics();
         });
       });
     }

@@ -75,9 +75,23 @@ export async function listQuotes(req: AuthenticatedRequest, res: Response, next:
       ];
     }
 
-    // Si es cliente autenticado, filtrar por sus cotizaciones
+    // Si es cliente autenticado, filtrar por sus cotizaciones (por email o customerId)
     if (req.user?.role === 'CUSTOMER') {
-      where.leadEmail = req.user.email;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { customerId: true, email: true },
+      });
+      const orConditions: any[] = [{ leadEmail: req.user.email }];
+      if (dbUser?.customerId) {
+        const customer = await prisma.customer.findUnique({
+          where: { id: dbUser.customerId },
+          select: { email: true },
+        });
+        if (customer?.email && customer.email !== req.user.email) {
+          orConditions.push({ leadEmail: customer.email });
+        }
+      }
+      where.OR = orConditions;
     }
 
     const quotes = await prisma.quote.findMany({

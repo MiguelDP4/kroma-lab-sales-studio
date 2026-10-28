@@ -76,23 +76,23 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 5: Gestión de Pedidos (`/pedidos`)
-- [ ] **Responsividad e Interfaz:**
+- [X] **Responsividad e Interfaz:**
   - En pantalla de escritorio (> 1200px): verificar la tabla tabular con todas sus columnas.
   - En pantalla móvil o tablet ($\le$ 1200px): verificar que la tabla se transforme en **Dispatch Cards** independientes, sin desbordamiento horizontal.
-- [ ] **Numeración y Acciones:**
+- [X] **Numeración y Acciones:**
   - Confirmar que la columna o etiqueta de orden muestre el número en formato de 10 dígitos.
   - Pulsar **"Ver detalle"** y verificar el modal con el desglose de ítems, medidas y comprobantes.
-- [ ] **Impresión Unificada de Comprobante / Ticket:**
+- [X] **Impresión Unificada de Comprobante / Ticket:**
   - Pulsar el botón de imprimir comprobante térmico / remisión y verificar que abra la vista previa de impresión en formato limpio.
 
 ---
 
 ## Módulo 6: Cola de Producción & Taller (`/produccion`)
-- [ ] **Visualización Operativa (Audley UV DTF):**
+- [X] **Visualización Operativa (Audley UV DTF):**
   - Entrar como Admin o cambiar de rol para comprobar que un Cliente regular no tenga acceso a esta vista.
   - Verificar órdenes en estado `PENDING_REVIEW` o `READY_FOR_PRINT`.
   - Descargar o inspeccionar el archivo gráfico original de impresión.
-- [ ] **Transición de Estados de Taller:**
+- [X] **Transición de Estados de Taller:**
   - Avanzar pedido de "En Cola" a "Imprimiendo" y luego a "Terminado / Listo para Despacho".
 
 ---
@@ -108,11 +108,11 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 8: Cuentas por Cobrar y Cobranza (`/cobranza`)
-- [ ] **Diseño y Clasificación de Antigüedad:**
+- [X] **Diseño y Clasificación de Antigüedad:**
   - Verificar el diseño en tarjetas cuando la pantalla es $\le$ 1200px.
   - Confirmar las etiquetas de antigüedad: `CURRENT` (Al día), `WARNING` (Próximo a vencer) y `OVERDUE` (Vencido).
   - Verificar los botones de acción apilados verticalmente con tamaño táctil ($\ge$ 44px).
-- [ ] **Gestión de Abonos:**
+- [X] **Gestión de Abonos:**
   - Registrar un abono parcial en Quetzales a una orden con saldo pendiente.
   - Comprobar que el saldo de la orden disminuya de inmediato.
   - Probar la opción de anular un abono erróneo y verificar que el saldo se restituya íntegramente.
@@ -120,10 +120,10 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 9: Inventario UV DTF y Kardex (`/inventario`)
-- [ ] **Monitoreo de Insumos:**
+- [X] **Monitoreo de Insumos:**
   - Revisar niveles de Film A, Film B, Tintas CMYK, Tinta Blanca, Barniz y Flush.
   - Confirmar que los insumos con stock bajo muestren indicador de alerta amarilla/roja.
-- [ ] **Movimientos de Kardex:**
+- [X] **Movimientos de Kardex:**
   - Registrar una entrada por compra / reabastecimiento con costo unitario en Quetzales.
   - Registrar un ajuste de inventario por consumo de taller o calibración.
   - Verificar que el historial del Kardex registre fecha, tipo de movimiento y saldo actualizado.
@@ -131,7 +131,7 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 10: Cartera de Clientes B2B (`/clientes`)
-- [ ] **Vista 360° de Clientes:**
+- [X] **Vista 360° de Clientes:**
   - Probar la transformación de tabla a tarjetas en pantallas menores a 1200px.
   - Crear un nuevo cliente B2B y validar campos requeridos.
   - Ver el perfil de un cliente y validar métricas de pedidos acumulados y saldo pendiente de cobro.
@@ -149,15 +149,15 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 12: Gestión de Usuarios (`/usuarios`)
-- [ ] **Panel de Administración (Sólo Admin):**
+- [X] **Panel de Administración (Sólo Admin):**
   - Listar los usuarios registrados en el sistema.
   - Crear un colaborador con rol `EMPLOYEE` (Operador de Taller) y comprobar que sus credenciales funcionen y restrinjan vistas financieras.
 
 ---
 
 ## Módulo 13: Experiencia Móvil Global y Ergonomía
-- [ ] **Menú Lateral (Sidebar Drawer):**
+- [X] **Menú Lateral (Sidebar Drawer):**
   - En celular o reduciendo la ventana a menos de 768px, abrir el menú hamburguesa ☰.
   - Verificar que el fondo se bloquee, que los enlaces correspondan al rol actual y que se cierre al hacer clic fuera o presionar la tecla Escape.
-- [ ] **Tema Claro / Oscuro:**
+- [X] **Tema Claro / Oscuro:**
   - Probar el botón de tema (sol / luna) en cada una de las páginas; asegurar que ningún texto quede ilegible o con bajo contraste.

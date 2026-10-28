@@ -250,7 +250,11 @@ export function openSaveQuoteModal(quoteData = null) {
   const notesInput = document.getElementById('saveQuoteNotes');
 
   if (projectInput) {
-    projectInput.value = `Stickers ${currentQuoteData.widthCm}×${currentQuoteData.heightCm} cm (${currentQuoteData.qty} pcs)`;
+    if (currentQuoteData.items && currentQuoteData.items.length > 1) {
+      projectInput.value = `Proyecto ${currentQuoteData.items.length} diseños (${currentQuoteData.qty} piezas)`;
+    } else {
+      projectInput.value = `Stickers ${currentQuoteData.widthCm}×${currentQuoteData.heightCm} cm (${currentQuoteData.qty} pcs)`;
+    }
   }
   if (nameInput) nameInput.value = user?.name || '';
   if (companyInput) companyInput.value = user?.company || '';

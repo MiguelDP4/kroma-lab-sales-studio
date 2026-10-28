@@ -2502,6 +2502,12 @@
 }
 
 @media (max-width: 640px) {
+  .app-sidebar {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-right: none;
+  }
+
   .dispatch-cards-grid {
     grid-template-columns: 1fr;
     gap: 1rem;

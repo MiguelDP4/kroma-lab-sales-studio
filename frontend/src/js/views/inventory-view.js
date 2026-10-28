@@ -10,6 +10,7 @@ import {
   STOCK_STATUS,
   STOCK_STATUS_META,
   MOVEMENT_TYPES,
+  PRODUCTION_SUPPLIES_CATALOG,
 } from '../modules/inventory-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
 
@@ -166,11 +167,11 @@ export const inventoryView = {
               <div class="input-row">
                 <div class="form-group">
                   <label class="form-label" for="restockSupplier" style="font-weight: 700;">Proveedor:</label>
-                  <input type="text" id="restockSupplier" class="input-control" placeholder="Ej: Audley Guatemala" style="min-height: 44px;">
+                  <input type="text" id="restockSupplier" class="input-control" placeholder="" style="min-height: 44px;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="restockInvoice" style="font-weight: 700;">No. Factura / Recibo:</label>
-                  <input type="text" id="restockInvoice" class="input-control" placeholder="Ej: FAC-1029" style="min-height: 44px;">
+                  <input type="text" id="restockInvoice" class="input-control" placeholder="" style="min-height: 44px;">
                 </div>
               </div>
 
@@ -239,6 +240,27 @@ export const inventoryView = {
             </form>
           </div>
         </div>
+
+        <!-- MODAL 3: CONFIRMACIÓN DE ELIMINACIÓN DE INSUMO (Modelo Consistente) -->
+        <div id="deleteInventoryModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
+          <div class="modal-card" style="width: min(440px, 94vw);">
+            <div class="modal-header">
+              <h2 style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0;">Eliminar Insumo</h2>
+              <button type="button" class="btn-close-modal" id="btnCloseDeleteInventoryModal" aria-label="Cerrar modal">✕</button>
+            </div>
+
+            <input type="hidden" id="deleteInventoryItemId" value="">
+
+            <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+              ¿Estás seguro de que deseas eliminar permanentemente el insumo <strong id="deleteInventoryItemName" style="color: var(--text-primary);">-</strong> del inventario? Esta acción no se puede deshacer.
+            </p>
+
+            <div class="modal-actions-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+              <button type="button" class="btn btn-secondary" id="btnCancelDeleteInventoryModal" style="min-height: 44px;">Cancelar</button>
+              <button type="button" class="btn btn-primary" id="btnConfirmDeleteInventory" style="background: #ef4444; border-color: #ef4444; min-height: 44px;">Eliminar Permanentemente</button>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   },
@@ -273,19 +295,30 @@ export const inventoryView = {
       }
     }
 
-    // Poblar selector de insumos en modal de reabastecimiento
+    // Poblar selector de insumos en modal de reabastecimiento (con catálogo oficial y existentes)
     function populateRestockSelect() {
       if (!restockItemSelect) return;
+      const catalog = PRODUCTION_SUPPLIES_CATALOG || [];
       const items = inventoryStore.getItems();
-      restockItemSelect.innerHTML = items.map(it => `
-        <option value="${it.id}">${it.name} (${it.currentStock.toFixed(1)} ${it.unit} disponibles)</option>
-      `).join('');
+      const optionsMap = new Map();
+      catalog.forEach(c => {
+        const current = items.find(i => i.id === c.id);
+        const stockText = current ? ` (${current.currentStock.toFixed(1)} ${current.unit} actuales)` : ' (Nuevo registro)';
+        optionsMap.set(c.id, `<option value="${c.id}">${c.name}${stockText}</option>`);
+      });
+      items.forEach(it => {
+        if (!optionsMap.has(it.id)) {
+          optionsMap.set(it.id, `<option value="${it.id}">${it.name} (${it.currentStock.toFixed(1)} ${it.unit} disponibles)</option>`);
+        }
+      });
+      restockItemSelect.innerHTML = Array.from(optionsMap.values()).join('');
       updateRestockUnitLabel();
     }
 
     function updateRestockUnitLabel() {
       if (!restockUnitLabel || !restockItemSelect) return;
-      const it = inventoryStore.getItemById(restockItemSelect.value);
+      const id = restockItemSelect.value;
+      const it = inventoryStore.getItemById(id) || (PRODUCTION_SUPPLIES_CATALOG || []).find(c => c.id === id);
       if (it) {
         restockUnitLabel.textContent = `Unidad de medida: ${it.unit} (Presentación común: ${it.packageSize} ${it.unit})`;
       }
@@ -507,6 +540,9 @@ export const inventoryView = {
                 <span>✏️</span>
                 <span>Ajuste</span>
               </button>
+              <button type="button" class="btn btn-secondary btn-delete-inventory-item" data-item-id="${item.id}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); min-height: 44px; min-width: 44px; padding: 0.4rem; display: flex; align-items: center; justify-content: center;" title="Eliminar Insumo">
+                <span>🗑️</span>
+              </button>
             </div>
           </div>
         `;
@@ -534,6 +570,18 @@ export const inventoryView = {
           document.getElementById('adjustCurrentStock').textContent = `${it.currentStock.toFixed(1)} ${it.unit}`;
           document.getElementById('adjustNewStock').value = it.currentStock;
           toggleModal(adjustModal, true);
+        });
+      });
+
+      // Eliminar insumo con modal consistente
+      grid.querySelectorAll('.btn-delete-inventory-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-item-id');
+          const it = inventoryStore.getItemById(id);
+          if (!it) return;
+          if (deleteInventoryItemId) deleteInventoryItemId.value = id;
+          if (deleteInventoryItemName) deleteInventoryItemName.textContent = it.name;
+          toggleModal(deleteInventoryModal, true);
         });
       });
     }

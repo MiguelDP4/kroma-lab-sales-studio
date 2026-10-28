@@ -92,12 +92,20 @@ export async function listOrders(req: AuthenticatedRequest, res: Response, next:
 
     const where: any = {};
 
-    // Si es cliente, solo ve sus propias órdenes
+    // Si es cliente, solo ve sus propias órdenes buscando por customerId o email
     if (req.user && req.user.role === 'CUSTOMER') {
-      where.OR = [
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { customerId: true, email: true },
+      });
+      const orConditions: any[] = [
         { customerEmail: req.user.email },
         { customerPhone: { contains: req.user.email } },
       ];
+      if (dbUser?.customerId) {
+        orConditions.push({ customerId: dbUser.customerId });
+      }
+      where.OR = orConditions;
     }
 
     if (status && typeof status === 'string') {

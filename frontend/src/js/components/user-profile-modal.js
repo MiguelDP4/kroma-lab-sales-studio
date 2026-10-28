@@ -8,6 +8,7 @@
 
 import { store } from '../store.js';
 import { usersStore } from '../modules/users-store.js';
+import { ordersStore } from '../modules/orders-store.js';
 import { apiClient } from '../modules/api-client.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
@@ -768,6 +769,9 @@ export async function registerWithRealAccount(userData) {
 
 export async function handleLogout() {
   store.clearUser();
+  if (ordersStore && typeof ordersStore.clearOrdersCache === 'function') {
+    ordersStore.clearOrdersCache();
+  }
   if (typeof apiClient !== 'undefined' && apiClient.clearToken) {
     apiClient.clearToken();
   }
