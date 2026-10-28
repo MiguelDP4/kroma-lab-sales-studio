@@ -120,11 +120,11 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     expect(modal.style.display).toBe('none');
   });
 
-  it('cierra el modal al pulsar el backdrop fuera de la tarjeta', () => {
+  it('no cierra el modal al pulsar el backdrop fuera de la tarjeta (Task 5)', () => {
     openSaveQuoteModal();
     const modal = document.getElementById('saveQuoteModal');
     modal.click();
-    expect(modal.style.display).toBe('none');
+    expect(modal.style.display).toBe('block');
   });
 
   it('valida que el nombre de proyecto sea obligatorio', async () => {

@@ -335,7 +335,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
     });
 
-    it('cierra el modal al hacer clic en btnCloseCheckout o en el backdrop', () => {
+    it('cierra el modal al hacer clic en btnCloseCheckout y no al hacer clic en el backdrop (Task 5)', () => {
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
 
@@ -346,7 +346,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       openCheckoutModal(totals);
       const backdrop = document.getElementById('checkoutBackdrop');
       backdrop.click();
-      expect(document.getElementById('checkoutModal')).toBeNull();
+      expect(document.getElementById('checkoutModal')).not.toBeNull();
     });
 
     it('permite autocompletar campos de checkout al seleccionar un cliente B2B y desvincularlo (Modo Staff)', () => {

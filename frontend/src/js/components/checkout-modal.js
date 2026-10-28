@@ -350,7 +350,7 @@ export function openCheckoutModal(cartTotals) {
     });
   }
 
-  if (backdrop) backdrop.addEventListener('click', closeCheckoutModal);
+  // Modal backdrop click disabled per QA specs (Task 5)
   if (btnClose) btnClose.addEventListener('click', closeCheckoutModal);
 
   if (form) {

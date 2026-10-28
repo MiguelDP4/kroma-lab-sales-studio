@@ -146,11 +146,7 @@ function attachModalEventListeners() {
   if (btnCancel) btnCancel.addEventListener('click', closeSaveQuoteModal);
 
   const modal = document.getElementById('saveQuoteModal');
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeSaveQuoteModal();
-    });
-  }
+  // Modal backdrop click disabled per QA specs (Task 5)
 
   if (typeof document !== 'undefined') {
     document.addEventListener('keydown', (e) => {
