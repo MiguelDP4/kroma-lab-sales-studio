@@ -13,7 +13,33 @@ describe('Auth API (/api/auth)', () => {
 
   beforeAll(async () => {
     await seedDatabase();
+    it('permite a ADMIN actualizar rol y estado de un colaborador en /api/auth/users/:id', async () => {
+    const createRes = await request(app)
+      .post('/api/auth/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Empleado Prueba',
+        email: `empleado_${Date.now()}@test.gt`,
+        password: 'Password123!',
+        role: 'EMPLOYEE',
+      });
+
+    const newUserId = createRes.body.user.id;
+
+    const patchRes = await request(app)
+      .patch(`/api/auth/users/${newUserId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        role: 'ADMIN',
+        department: 'Impresión UV',
+      });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.success).toBe(true);
+    expect(patchRes.body.user.role).toBe('ADMIN');
+    expect(patchRes.body.user.department).toBe('Impresión UV');
   });
+});
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: { contains: '@pruebas.gt' } } });

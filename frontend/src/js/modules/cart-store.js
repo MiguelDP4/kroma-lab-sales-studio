@@ -1,9 +1,11 @@
 /**
  * Almacén Reactivo de Carrito de Compras (CartStore)
  * Gestiona ítems en el carrito, persistencia en localStorage y notificación a componentes.
+ * Utiliza la estructura canónica y homogénea de OrderItem compartida con Pedidos y Cotizaciones.
  */
 
 import { calculateCartTotals } from './cart-engine.js';
+import { mapOrderItem } from './order-item.js';
 
 class CartStore {
   constructor() {
@@ -17,7 +19,9 @@ class CartStore {
         const data = localStorage.getItem('kromalab_cart');
         if (data) {
           const parsed = JSON.parse(data);
-          return Array.isArray(parsed) ? parsed : [];
+          if (Array.isArray(parsed)) {
+            return parsed.map(it => mapOrderItem(it));
+          }
         }
       }
     } catch (_) {}
@@ -41,34 +45,7 @@ class CartStore {
   }
 
   addItem(item) {
-    const fileUrl = item.fileUrl || item.fileInfo?.fileUrl || null;
-    const fileName = item.fileName || item.fileInfo?.name || null;
-    const fileInfo = item.fileInfo || (fileUrl || fileName ? {
-      name: fileName || 'Diseño UV DTF',
-      fileUrl: fileUrl,
-      size: item.fileSizeBytes || item.fileInfo?.size || 0,
-    } : null);
-
-    const newItem = {
-      id: item.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      title: item.title || `Sticker ${item.widthCm}x${item.heightCm}cm`,
-      widthCm: parseFloat(item.widthCm) || 5,
-      heightCm: parseFloat(item.heightCm) || 5,
-      qty: parseInt(item.qty, 10) || 50,
-      includeCutting: Boolean(item.includeCutting),
-      fileInfo,
-      fileUrl,
-      fileName,
-      previewUrl: item.previewUrl || fileUrl || null,
-      canvasSnapshot: item.canvasSnapshot || null,
-      canvasSnapshotUrl: item.canvasSnapshotUrl || (item.canvasSnapshot && !item.canvasSnapshot.startsWith('data:') ? item.canvasSnapshot : null),
-      rotationDeg: Number(item.rotationDeg) || 0,
-      actualLinearMeters: parseFloat(item.actualLinearMeters) || 0,
-      stickersPerRow: item.stickersPerRow || 1,
-      rows: item.rows || 1,
-      createdAt: item.createdAt || new Date().toISOString(),
-    };
-
+    const newItem = mapOrderItem(item);
     this.items.push(newItem);
     this.saveCartToStorage();
     this.notify();
@@ -95,6 +72,12 @@ class CartStore {
     const item = this.items.find(i => i.id === itemId);
     if (item) {
       item.fileInfo = fileInfo;
+      if (fileInfo?.fileUrl) {
+        item.fileUrl = fileInfo.fileUrl;
+      }
+      if (fileInfo?.name) {
+        item.fileName = fileInfo.name;
+      }
       if (previewUrl) {
         item.previewUrl = previewUrl;
       }

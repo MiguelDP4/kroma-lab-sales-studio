@@ -9,6 +9,7 @@ import {
   createUser,
   resetPassword,
   deleteUser,
+  updateUser,
   verifyEmail,
   resendVerification,
   changePassword,
@@ -32,5 +33,7 @@ router.get('/users', authenticate, requireRole('ADMIN'), listUsers);
 router.post('/users', authenticate, requireRole('ADMIN'), createUser);
 router.put('/users/:id/reset-password', authenticate, requireRole('ADMIN'), resetPassword);
 router.delete('/users/:id', authenticate, requireRole('ADMIN'), deleteUser);
+router.patch('/users/:id', authenticate, requireRole('ADMIN'), updateUser);
+router.put('/users/:id', authenticate, requireRole('ADMIN'), updateUser);
 
 export default router;

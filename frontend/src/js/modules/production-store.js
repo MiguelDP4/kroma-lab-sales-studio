@@ -1,9 +1,11 @@
+import { apiClient } from './api-client.js';
 /**
  * Almacén reactivo de producción y tablero Kanban para la impresora industrial Audley.
  * Gestiona el ciclo de vida de las órdenes de taller y el monitor de consumo de bobina PET.
  */
 
 import { ORDER_STATUS } from '../../shared/business-config.js';
+import { ordersStore } from './orders-store.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -85,6 +87,28 @@ const INITIAL_ORDERS = [
     notes: 'Listo para recolección en taller.',
   },
 ];
+
+
+function mapOrderToProduction(order) {
+  const firstItem = order.items?.[0] || {};
+  return {
+    id: order.id,
+    backendId: order.backendId,
+    clientName: order.customer?.company || order.customer?.name || 'Cliente General',
+    contactPhone: order.customer?.phone || '+502 5555-0000',
+    title: firstItem.title || `Stickers (${firstItem.widthCm || 5} × ${firstItem.heightCm || 5} cm)`,
+    widthCm: parseFloat(firstItem.widthCm) || 5,
+    heightCm: parseFloat(firstItem.heightCm) || 5,
+    qty: order.items?.reduce((s, it) => s + (it.qty || 0), 0) || firstItem.qty || 50,
+    meters: parseFloat(order.metrics?.totalBillableMeters) || 1.0,
+    includeCutting: Boolean(order.metrics?.hasCutting || firstItem.includeCutting),
+    finishType: firstItem.finishType || 'Barniz con Relieve 3D',
+    status: order.productionStatus || ORDER_STATUS.IN_AUDLEY_QUEUE,
+    createdAt: order.createdAt || new Date().toISOString(),
+    notes: order.workshopNotes || '',
+    rawOrder: order,
+  };
+}
 
 class ProductionStore {
   constructor() {

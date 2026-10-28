@@ -454,6 +454,68 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response, next:
   }
 }
 
+const adminUpdateUserSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  role: z.enum(['ADMIN', 'EMPLOYEE', 'CUSTOMER']).optional(),
+  isVerified: z.boolean().optional(),
+  department: z.string().optional(),
+  company: z.string().optional(),
+  taxId: z.string().optional(),
+  address: z.string().optional(),
+});
+
+export async function updateUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const data = adminUpdateUserSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+      return;
+    }
+
+    if (user.role === 'ADMIN' && ((data.role && data.role !== 'ADMIN') || data.isVerified === false)) {
+      const activeAdmins = await prisma.user.count({
+        where: { role: 'ADMIN', isVerified: true },
+      });
+      if (activeAdmins <= 1) {
+        res.status(400).json({ success: false, message: 'No es posible desactivar o quitar permisos al único Administrador Activo del sistema.' });
+        return;
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        company: true,
+        taxId: true,
+        address: true,
+        department: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Usuario actualizado exitosamente.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /**
  * Verifica la identidad del usuario mediante el token recibido por correo electrónico.
  */
@@ -572,6 +634,8 @@ export async function changeEmail(req: AuthenticatedRequest, res: Response, next
   }
 }
 
+const recentVerifiedTokens = new Map<string, { userId: string; email: string; timestamp: number }>();
+
 export async function verifyEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const rawToken = req.query.token || req.body?.token;
@@ -610,6 +674,36 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
         pendingAction = JSON.parse(user.refreshToken);
       }
     } catch (_) {}
+
+    if (user.isVerified && !pendingAction) {
+      const authToken = signToken({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+      });
+
+      res.cookie('token', authToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      res.json({
+        success: true,
+        message: '¡Tu correo electrónico ha sido verificado con éxito! Bienvenido a Kroma Lab.',
+        token: authToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          company: user.company,
+        },
+      });
+      return;
+    }
 
     let customSuccessMsg = '¡Tu correo electrónico ha sido verificado con éxito! Bienvenido a Kroma Lab.';
 

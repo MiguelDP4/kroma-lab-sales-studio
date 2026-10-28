@@ -4,6 +4,7 @@
  */
 
 import { productionStore, KANBAN_STAGES } from '../modules/production-store.js';
+import { dispatchStore } from '../modules/dispatch-store.js';
 import { ORDER_STATUS } from '../../shared/business-config.js';
 
 export const productionView = {
@@ -301,7 +302,7 @@ export const productionView = {
         const heightCm = parseFloat(document.getElementById('inputOrderHeight')?.value) || 5;
         const qty = parseInt(document.getElementById('inputOrderQty')?.value, 10) || 100;
         const meters = parseFloat(document.getElementById('inputOrderMeters')?.value) || 1.5;
-        const finishType = document.getElementById('selectFinishType')?.value || 'Barniz con Relieve 3D';
+        const finishType = 'Barniz con Relieve 3D';
         const includeCutting = Boolean(document.getElementById('checkCutting')?.checked);
         const notes = document.getElementById('inputOrderNotes')?.value || '';
 
@@ -408,7 +409,7 @@ export const productionView = {
                     <span class="kanban-badge ${order.includeCutting ? 'badge-cut' : 'badge-roll'}">
                       ${order.includeCutting ? '✂️ Con corte' : '📜 En rollo'}
                     </span>
-                    <span class="kanban-badge badge-varnish">${order.finishType || 'Barniz 3D'}</span>
+                    
                   </div>
 
                   <div class="kanban-card-actions">
@@ -416,9 +417,9 @@ export const productionView = {
                       ${stageIndex > 0 ? `
                         <button class="btn-kanban-nav btn-regress" data-order-id="${order.id}" title="Regresar a etapa previa">◀</button>
                       ` : ''}
-                      <button class="btn-kanban-nav btn-detail" data-order-id="${order.id}" title="Ver ficha técnica">🔍 Ficha</button>
+                      <button class="btn-kanban-nav btn-detail" data-order-id="${order.id}" title="Ver ficha técnica">🔍</button>
                       ${stageIndex === KANBAN_STAGES.length - 1 ? `
-                        <a href="/despacho" data-link class="btn-kanban-nav" title="Emitir Guía de Despacho" style="text-decoration: none; display: inline-flex; align-items: center;">🚚 Guía</a>
+                        <button type="button" class="btn-kanban-nav btn-emit-dispatch" data-order-id="${order.id}" title="Emitir Guía de Despacho" style="display: inline-flex; align-items: center;">🚚</button>
                       ` : ''}
                     </div>
 

@@ -111,7 +111,7 @@ export const accountView = {
                   Correo Electrónico: <span style="color: #ef4444;">*</span>
                 </label>
                 <input type="email" id="accountEmailInput" class="input-control" value="${user.email || ''}" data-original-email="${user.email || ''}" required style="min-height: 44px;" placeholder="correo@ejemplo.gt">
-                <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">Para cambiarlo, requerirá tu contraseña actual y verificación en el nuevo correo.</span>
+                <span id="accountEmailNotice" style="display: none; font-size: 0.78rem; color: #ef4444; margin-top: 0.25rem; font-weight: 600;">Para cambiar tu correo electrónico debes ingresar tu contraseña actual.</span>
               </div>
             </div>
 
@@ -188,7 +188,7 @@ export const accountView = {
                     Confirmar Nueva Contraseña:
                   </label>
                   <input type="password" id="accountConfirmPasswordInput" class="input-control" minlength="6" style="min-height: 44px;" placeholder="Repite tu nueva contraseña" autocomplete="new-password">
-                  <span id="accountConfirmPasswordError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
+                  <span id="accountConfirmPasswordError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem; font-weight: 600;">Las contraseñas no coinciden.</span>
                 </div>
               </div>
             </div>

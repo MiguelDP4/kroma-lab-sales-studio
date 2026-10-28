@@ -2,12 +2,14 @@
  * Componente Modal para Guardar Cotizaciones UV DTF (SaveQuoteModal)
  * Diseño Mobile-First para clientes y taller. Permite registrar un proyecto con su nombre,
  * datos de contacto y especificaciones de tiraje para seguimiento o conversión a orden.
+ * Garantiza subida persistente de imágenes y montajes a Cloudflare R2 / Neon (OrderItems).
  */
 
 import { store } from '../store.js';
 import { quotesStore } from '../modules/quotes-store.js';
 import { uploadFileToStorage, uploadCanvasSnapshotToStorage, readFileAsDataURL } from '../modules/file-uploader.js';
 import { generateCanvasSnapshot } from '../modules/roll-simulator.js';
+import { mapOrderItem } from '../modules/order-item.js';
 
 let modalInitialized = false;
 let currentQuoteData = null;
@@ -56,19 +58,9 @@ export function initSaveQuoteModal() {
           <div id="saveQuoteCuttingSummary" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
             Entrega: Rollo continuo sin corte
           </div>
-          <div id="saveQuoteSnapshotWrap" style="display: none; margin-top: 0.65rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; align-items: center; gap: 0.75rem;">
-            <img id="saveQuoteSnapshotImg" src="" alt="Montaje en bobina" style="width: 100px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
-            <span style="font-size: 0.78rem; color: var(--text-secondary);">
-              📐 <strong>Disposición técnica en bobina registrada</strong>
-            </span>
-          </div>
-          <div id="saveQuoteArtWrap" style="display: none; margin-top: 0.65rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; align-items: center; gap: 0.75rem;">
-            <img id="saveQuoteArtImg" src="" alt="Arte del cliente" style="width: 44px; height: 44px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
-            <div style="font-size: 0.82rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              🖼️ <strong id="saveQuoteArtName">archivo.png</strong>
-              <div id="saveQuoteArtSize" style="font-size: 0.75rem; color: var(--text-muted);"></div>
-            </div>
-          </div>
+
+          <!-- Galería de Ítems de Orden (OrderItems) -->
+          <div id="saveQuoteItemsGallery" style="margin-top: 0.75rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.65rem;"></div>
         </div>
 
         <!-- Feedback de Error / Éxito -->
@@ -140,55 +132,60 @@ export function initSaveQuoteModal() {
 
 function attachModalEventListeners() {
   const btnClose = document.getElementById('btnCloseSaveQuoteModal');
-  if (btnClose) btnClose.addEventListener('click', closeSaveQuoteModal);
-
   const btnCancel = document.getElementById('btnCancelSaveQuote');
-  if (btnCancel) btnCancel.addEventListener('click', closeSaveQuoteModal);
+  const form = document.getElementById('formSaveQuote');
 
-  const modal = document.getElementById('saveQuoteModal');
-  // Modal backdrop click disabled per QA specs (Task 5)
-
-  if (typeof document !== 'undefined') {
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const m = document.getElementById('saveQuoteModal');
-        if (m && m.style.display !== 'none') {
-          closeSaveQuoteModal();
-        }
-      }
-    });
+  if (btnClose) {
+    btnClose.addEventListener('click', closeSaveQuoteModal);
+  }
+  if (btnCancel) {
+    btnCancel.addEventListener('click', closeSaveQuoteModal);
   }
 
-  const form = document.getElementById('formSaveQuote');
+  // Cerrar únicamente con la tecla Escape (no con clic fuera del backdrop para evitar pérdida accidental de datos)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('saveQuoteModal');
+      if (modal && modal.style.display === 'block') {
+        closeSaveQuoteModal();
+      }
+    }
+  });
+
   if (form) {
-    form.addEventListener('submit', handleSaveQuoteSubmit);
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleSaveQuoteSubmit();
+    });
   }
 }
 
 export function openSaveQuoteModal(quoteData = null) {
-  if (!modalInitialized) {
+  if (!modalInitialized || !document.getElementById('saveQuoteModal')) {
     initSaveQuoteModal();
   }
 
+  currentQuoteData = quoteData || getCurrentQuoterSpecs();
   const modal = document.getElementById('saveQuoteModal');
   if (!modal) return;
 
-  currentQuoteData = quoteData || getCurrentQuoterSpecs();
-
-  // Actualizar resumen visual
+  // Actualizar resumen en el modal
   const specsEl = document.getElementById('saveQuoteSpecsSummary');
   const totalEl = document.getElementById('saveQuoteTotalSummary');
   const cuttingEl = document.getElementById('saveQuoteCuttingSummary');
 
-  const lm = Number(currentQuoteData.linearMeters ?? currentQuoteData.billableMeters ?? 1.0);
-  const total = Number(currentQuoteData.totalPriceQ ?? 140.0);
-  const cutPrice = Number(currentQuoteData.cuttingPriceQ ?? currentQuoteData.cuttingTotalQ ?? 0.0);
+  const width = currentQuoteData.widthCm || 5;
+  const height = currentQuoteData.heightCm || 5;
+  const qty = currentQuoteData.qty || 50;
+  const meters = (currentQuoteData.linearMeters !== undefined) ? currentQuoteData.linearMeters : 1.0;
+  const total = currentQuoteData.totalPriceQ || 140.0;
+  const cutPrice = currentQuoteData.cuttingPriceQ || 0.0;
 
   if (specsEl) {
     if (currentQuoteData.items && currentQuoteData.items.length > 1) {
-      specsEl.textContent = `${currentQuoteData.items.length} diseños • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
+      specsEl.textContent = `Combo ${currentQuoteData.items.length} Diseños • ${qty} piezas • ${Number(meters).toFixed(2)} m`;
     } else {
-      specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
+      specsEl.textContent = `${width} × ${height} cm • ${qty} piezas • ${Number(meters).toFixed(2)} m`;
     }
   }
   if (totalEl) {
@@ -238,6 +235,54 @@ export function openSaveQuoteModal(quoteData = null) {
     } else {
       artWrap.style.display = 'none';
     }
+  }
+
+  // Render de galería completa de todos los diseños y montajes técnicos (OrderItems)
+  const galleryEl = document.getElementById('saveQuoteItemsGallery');
+  const allItems = (currentQuoteData.items && currentQuoteData.items.length > 0)
+    ? currentQuoteData.items
+    : [currentQuoteData];
+
+  if (galleryEl) {
+    galleryEl.innerHTML = allItems.map((it, idx) => {
+      const itArtUrl = it.previewUrl || it.fileUrl || null;
+      const itFileName = it.fileName || it.fileInfo?.name || (it.rawFile ? it.rawFile.name : null);
+      const snapshot = it.canvasSnapshot || it.canvasSnapshotUrl || null;
+      const sizeBytes = it.fileSizeBytes || it.fileInfo?.size || (it.rawFile ? it.rawFile.size : null);
+      const sizeFormatted = sizeBytes ? `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB` : '';
+
+      return `
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.25rem;">
+            <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-primary);">
+              🎨 ${it.title || ('Diseño #' + (idx + 1))}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--text-secondary); font-weight: 600;">
+              ${it.widthCm} × ${it.heightCm} cm • ${it.qty} pcs ${it.includeCutting ? '• ✂️ Corte' : ''}
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 140px;">
+              ${itArtUrl ? `
+                <img src="${itArtUrl}" alt="Arte" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+              ` : `
+                <div style="width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">📁</div>
+              `}
+              <div style="font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <span style="color: var(--text-primary); font-weight: 600;">${itFileName || 'Diseño adjunto'}</span>
+                ${sizeFormatted ? `<div style="color: var(--text-muted); font-size: 0.72rem;">${sizeFormatted}</div>` : ''}
+              </div>
+            </div>
+            ${snapshot ? `
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <img src="${snapshot}" alt="Montaje" style="width: 80px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+                <span style="font-size: 0.72rem; color: var(--text-muted);">📐 Bobina 28cm</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   // Pre-llenar datos de usuario logeado si está autenticado
@@ -290,46 +335,85 @@ export function getCurrentQuoterSpecs() {
   const qty = Number(qInput?.value) || 50;
   const withCutting = Boolean(cutInput?.checked);
 
-  // Intentar leer desglose calculado en DOM o calcular
-  const totalText = document.getElementById('resTotalPrice')?.textContent || 'Q140.00';
-  const totalPriceQ = parseFloat(totalText.replace(/[^0-9.]/g, '')) || 140.0;
+  const priceEl = document.getElementById('resTotalPrice');
+  const rateEl = document.getElementById('resTierRate');
+  const metersEl = document.getElementById('resBillableMeters');
+  const cutCostEl = document.getElementById('resCuttingCost');
 
-  const metersText = document.getElementById('resBillableMeters')?.textContent || '1.00';
-  const linearMeters = parseFloat(metersText.replace(/[^0-9.]/g, '')) || 1.0;
+  let totalPriceQ = 140.0;
+  if (priceEl) {
+    const rawText = priceEl.textContent.replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(rawText);
+    if (!isNaN(parsed) && parsed > 0) totalPriceQ = parsed;
+  }
 
-  const stickersPerRow = parseInt(document.getElementById('resStickersPerRow')?.textContent || '1', 10) || 1;
-  const rows = parseInt(document.getElementById('resRows')?.textContent || '1', 10) || 1;
+  let unitRateQ = 140.0;
+  if (rateEl) {
+    const rawRate = rateEl.textContent.replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(rawRate);
+    if (!isNaN(parsed) && parsed > 0) unitRateQ = parsed;
+  }
 
-  const rollCanvas = typeof document !== 'undefined' ? document.getElementById('rollCanvas') : null;
-  const canvasSnapshot = rollCanvas ? generateCanvasSnapshot(rollCanvas, { widthCm, heightCm, qty, linearMeters, stickersPerRow, rows }) : null;
+  let linearMeters = 1.0;
+  if (metersEl) {
+    const rawMeters = metersEl.textContent.replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(rawMeters);
+    if (!isNaN(parsed) && parsed > 0) linearMeters = parsed;
+  }
+
+  let cuttingPriceQ = 0.0;
+  if (withCutting && cutCostEl) {
+    const rawCut = cutCostEl.textContent.replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(rawCut);
+    if (!isNaN(parsed) && parsed > 0) cuttingPriceQ = parsed;
+  }
+
+  const materialPriceQ = Math.max(0, totalPriceQ - cuttingPriceQ);
+
+  const rollCanvas = document.getElementById('rollCanvas');
+  let canvasSnapshot = null;
+  if (rollCanvas) {
+    canvasSnapshot = generateCanvasSnapshot(rollCanvas, {
+      widthCm,
+      heightCm,
+      qty,
+      includeCutting: withCutting,
+      stickersPerRow: Math.max(1, Math.floor(28.0 / widthCm)),
+      rows: Math.ceil(qty / Math.max(1, Math.floor(28.0 / widthCm))),
+    });
+  }
 
   return {
     widthCm,
     heightCm,
     qty,
     linearMeters,
-    stickersPerRow,
-    rows,
+    stickersPerRow: Math.max(1, Math.floor(28.0 / widthCm)),
+    rows: Math.ceil(qty / Math.max(1, Math.floor(28.0 / widthCm))),
     withCutting,
-    unitRateQ: 140.0,
-    materialPriceQ: linearMeters * 140.0,
-    cuttingPriceQ: withCutting ? Math.max(qty * 0.35, 25.0) : 0,
+    unitRateQ,
+    materialPriceQ,
+    cuttingPriceQ,
     totalPriceQ,
-    finishType: 'GLOSSY_VARNISH',
     canvasSnapshot,
-    rotationDeg: 0,
+    finishType: 'GLOSSY_VARNISH',
   };
 }
 
-export async function handleSaveQuoteSubmit(e) {
-  if (e && e.preventDefault) e.preventDefault();
+export async function handleSaveQuoteSubmit() {
+  const projectInput = document.getElementById('saveQuoteProjectName');
+  const nameInput = document.getElementById('saveQuoteLeadName');
+  const companyInput = document.getElementById('saveQuoteCompanyName');
+  const phoneInput = document.getElementById('saveQuoteLeadPhone');
+  const emailInput = document.getElementById('saveQuoteLeadEmail');
+  const notesInput = document.getElementById('saveQuoteNotes');
 
-  const projectName = document.getElementById('saveQuoteProjectName')?.value?.trim();
-  const leadName = document.getElementById('saveQuoteLeadName')?.value?.trim();
-  const leadPhone = document.getElementById('saveQuoteLeadPhone')?.value?.trim();
-  const leadEmail = document.getElementById('saveQuoteLeadEmail')?.value?.trim();
-  const companyName = document.getElementById('saveQuoteCompanyName')?.value?.trim();
-  const notes = document.getElementById('saveQuoteNotes')?.value?.trim();
+  const projectName = projectInput?.value?.trim();
+  const leadName = nameInput?.value?.trim();
+  const companyName = companyInput?.value?.trim() || null;
+  const leadPhone = phoneInput?.value?.trim();
+  const leadEmail = emailInput?.value?.trim() || null;
+  const notes = notesInput?.value?.trim() || '';
 
   if (!projectName) {
     showSaveQuoteFeedback('Por favor asigna un nombre o referencia al proyecto.', 'error');
@@ -347,68 +431,121 @@ export async function handleSaveQuoteSubmit(e) {
   const specs = currentQuoteData || getCurrentQuoterSpecs();
   const submitBtn = document.getElementById('btnSubmitSaveQuote');
 
-  // Estrategia 1 (Lazy Upload): Si el usuario adjuntó un archivo y no se ha subido aún, subir ahora a R2
-  if (specs.rawFile && !specs.fileUrl) {
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>⏳ Subiendo a R2...</span>`;
-    }
-    showSaveQuoteFeedback('☁️ Subiendo archivo a Cloudflare R2...', 'info');
-
-    try {
-      const uploadRes = await uploadFileToStorage(specs.rawFile, {
-        context: 'quotes',
-      });
-      specs.fileUrl = uploadRes.fileUrl;
-      specs.fileKey = uploadRes.fileKey;
-      specs.provider = uploadRes.provider;
-    } catch (uploadErr) {
-      console.warn('[Storage] Error al subir archivo a R2 desde modal de cotización:', uploadErr);
-      specs.provider = 'local';
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>💾 Guardar Cotización</span>`;
-      }
-    }
+  // Subir archivos y snapshots de ítems a Cloudflare R2 para almacenamiento permanente
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span>⏳ Subiendo a R2...</span>`;
   }
 
-  // Fallback seguro: si no hay fileUrl remoto pero sí previewUrl o rawFile en memoria, asegurar URL
-  if (!specs.fileUrl) {
-    if (specs.previewUrl) {
-      specs.fileUrl = specs.previewUrl;
-    } else if (specs.rawFile && typeof FileReader !== 'undefined') {
+  try {
+    // 1. Subida para cada OrderItem si existen en combo
+    if (specs.items && Array.isArray(specs.items) && specs.items.length > 0) {
+      for (const it of specs.items) {
+        if (it.rawFile && !it.fileUrl) {
+          try {
+            const uploadRes = await uploadFileToStorage(it.rawFile, { context: 'quotes' });
+            it.fileUrl = uploadRes.fileUrl;
+            it.fileKey = uploadRes.fileKey;
+            it.fileName = uploadRes.fileName || it.rawFile.name;
+            it.fileSizeBytes = uploadRes.fileSizeBytes || it.rawFile.size;
+            it.provider = uploadRes.provider;
+          } catch (uploadErr) {
+            console.warn('[Storage] Error al subir archivo de ítem a R2:', uploadErr);
+          }
+        }
+        if (it.canvasSnapshot && it.canvasSnapshot.startsWith('data:') && !it.canvasSnapshotUrl) {
+          try {
+            const snapUrl = await uploadCanvasSnapshotToStorage(
+              it.canvasSnapshot,
+              `esquema_${it.widthCm}x${it.heightCm}cm.png`,
+              { context: 'quotes' }
+            );
+            if (snapUrl) it.canvasSnapshotUrl = snapUrl;
+          } catch (snapErr) {
+            console.warn('[Storage] Error al subir snapshot canvas de ítem:', snapErr);
+          }
+        }
+      }
+    }
+
+    // 2. Subida para archivo general de la cotización
+    if (specs.rawFile && !specs.fileUrl) {
+      showSaveQuoteFeedback('☁️ Subiendo archivo a Cloudflare R2...', 'info');
       try {
-        specs.fileUrl = await readFileAsDataURL(specs.rawFile);
-      } catch (_) {}
-    }
-  }
-
-  if (!specs.previewUrl && specs.fileUrl) {
-    specs.previewUrl = specs.fileUrl;
-  }
-  if (!specs.fileName && specs.rawFile) {
-    specs.fileName = specs.rawFile.name;
-  }
-  if (!specs.fileSizeBytes && specs.rawFile) {
-    specs.fileSizeBytes = specs.rawFile.size;
-  }
-
-  // Si la instantánea del canvas es un base64 y no se ha subido aún, subir ahora a R2
-  if (specs.canvasSnapshot && specs.canvasSnapshot.startsWith('data:') && !specs.canvasSnapshotUrl) {
-    try {
-      const snapUrl = await uploadCanvasSnapshotToStorage(
-        specs.canvasSnapshot,
-        `esquema_${specs.widthCm}x${specs.heightCm}cm.png`,
-        { context: 'quotes' }
-      );
-      if (snapUrl) {
-        specs.canvasSnapshotUrl = snapUrl;
+        const uploadRes = await uploadFileToStorage(specs.rawFile, { context: 'quotes' });
+        specs.fileUrl = uploadRes.fileUrl;
+        specs.fileKey = uploadRes.fileKey;
+        specs.fileName = uploadRes.fileName || specs.rawFile.name;
+        specs.fileSizeBytes = uploadRes.fileSizeBytes || specs.rawFile.size;
+        specs.provider = uploadRes.provider;
+      } catch (uploadErr) {
+        console.warn('[Storage] Error al subir archivo a R2 desde modal de cotización:', uploadErr);
+        specs.provider = 'local';
       }
-    } catch (snapErr) {
-      console.warn('[Storage] Error al subir canvas snapshot en modal cotización:', snapErr);
+    }
+
+    // Fallback seguro de lectura local solo si falló la subida remota
+    if (!specs.fileUrl) {
+      if (specs.previewUrl) {
+        specs.fileUrl = specs.previewUrl;
+      } else if (specs.rawFile && typeof FileReader !== 'undefined') {
+        try {
+          specs.fileUrl = await readFileAsDataURL(specs.rawFile);
+        } catch (_) {}
+      }
+    }
+
+    if (!specs.previewUrl && specs.fileUrl) {
+      specs.previewUrl = specs.fileUrl;
+    }
+    if (!specs.fileName && specs.rawFile) {
+      specs.fileName = specs.rawFile.name;
+    }
+    if (!specs.fileSizeBytes && specs.rawFile) {
+      specs.fileSizeBytes = specs.rawFile.size;
+    }
+
+    // Subida de snapshot general de canvas
+    if (specs.canvasSnapshot && specs.canvasSnapshot.startsWith('data:') && !specs.canvasSnapshotUrl) {
+      try {
+        const snapUrl = await uploadCanvasSnapshotToStorage(
+          specs.canvasSnapshot,
+          `esquema_${specs.widthCm}x${specs.heightCm}cm.png`,
+          { context: 'quotes' }
+        );
+        if (snapUrl) specs.canvasSnapshotUrl = snapUrl;
+      } catch (snapErr) {
+        console.warn('[Storage] Error al subir canvas snapshot en modal cotización:', snapErr);
+      }
+    }
+
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span>💾 Guardar Cotización</span>`;
     }
   }
+
+  // Normalizar ítems usando mapOrderItem
+  const finalItems = (specs.items && Array.isArray(specs.items) && specs.items.length > 0)
+    ? specs.items.map(it => mapOrderItem(it))
+    : [mapOrderItem({
+        title: projectName,
+        widthCm: specs.widthCm,
+        heightCm: specs.heightCm,
+        qty: specs.qty,
+        linearMeters: specs.linearMeters,
+        includeCutting: specs.withCutting,
+        stickersPerRow: specs.stickersPerRow,
+        rows: specs.rows,
+        fileUrl: specs.fileUrl || null,
+        fileName: specs.fileName || null,
+        fileSizeBytes: specs.fileSizeBytes || null,
+        previewUrl: specs.previewUrl || specs.fileUrl || null,
+        canvasSnapshot: specs.canvasSnapshot || null,
+        canvasSnapshotUrl: specs.canvasSnapshotUrl || null,
+        rotationDeg: specs.rotationDeg || 0,
+      })];
 
   const newQuote = quotesStore.createQuote({
     projectName,
@@ -417,7 +554,7 @@ export async function handleSaveQuoteSubmit(e) {
     leadEmail,
     companyName,
     notes,
-    items: specs.items || [],
+    items: finalItems,
     ...specs,
     canvasSnapshot: specs.canvasSnapshot || null,
     canvasSnapshotUrl: specs.canvasSnapshotUrl || null,

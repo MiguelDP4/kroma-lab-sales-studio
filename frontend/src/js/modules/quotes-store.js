@@ -7,6 +7,7 @@
 
 import { apiClient } from './api-client.js';
 import { ordersStore } from './orders-store.js';
+import { mapOrderItem, cleanOrderItemForApi } from './order-item.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -198,15 +199,20 @@ class QuotesStore {
       canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshotUrl) || null,
       rotationDeg: q.rotationDeg !== undefined && q.rotationDeg !== null ? Number(q.rotationDeg) : ((this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.rotationDeg) || 0),
       items: (() => {
+        if (Array.isArray(q.items) && q.items.length > 0) {
+          return q.items.map(it => mapOrderItem(it));
+        }
         const local = this.quotes?.find(l => l.id === q.id || l.backendId === q.id || l.code === q.code);
-        if (local?.items && Array.isArray(local.items) && local.items.length > 0) return local.items;
+        if (local?.items && Array.isArray(local.items) && local.items.length > 0) {
+          return local.items.map(it => mapOrderItem(it));
+        }
         if (q.notes && q.notes.includes('<!-- ITEMS_JSON:')) {
           try {
             const match = q.notes.match(/<!-- ITEMS_JSON:\s*(\[.*?\])\s*-->/s);
-            if (match && match[1]) return JSON.parse(match[1]);
+            if (match && match[1]) return JSON.parse(match[1]).map(it => mapOrderItem(it));
           } catch (_) {}
         }
-        return [{
+        return [mapOrderItem({
           id: `item_${q.id || '0'}`,
           title: q.projectName || `Cotización ${q.widthCm}x${q.heightCm} cm`,
           widthCm: Number(q.widthCm),
@@ -222,7 +228,7 @@ class QuotesStore {
           canvasSnapshot: q.canvasSnapshot || local?.canvasSnapshot || null,
           canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || local?.canvasSnapshotUrl || null,
           rotationDeg: q.rotationDeg || local?.rotationDeg || 0,
-        }];
+        })];
       })(),
       createdAt: q.createdAt,
       updatedAt: q.updatedAt || q.createdAt,
@@ -282,27 +288,13 @@ class QuotesStore {
 
     let quoteItems = [];
     if (Array.isArray(data?.items) && data.items.length > 0) {
-      quoteItems = data.items.map((it, idx) => ({
+      quoteItems = data.items.map((it, idx) => mapOrderItem({
+        ...it,
         id: it.id || `item_${Date.now()}_${idx}`,
         title: it.title || `Diseño #${idx + 1}`,
-        widthCm: parseFloat(it.widthCm) || 5,
-        heightCm: parseFloat(it.heightCm) || 5,
-        qty: parseInt(it.qty, 10) || 50,
-        includeCutting: Boolean(it.includeCutting),
-        actualLinearMeters: parseFloat(it.actualLinearMeters) || 0,
-        stickersPerRow: it.stickersPerRow || 1,
-        rows: it.rows || 1,
-        fileInfo: it.fileInfo || null,
-        fileUrl: it.fileUrl || it.fileInfo?.fileUrl || null,
-        fileName: it.fileName || it.fileInfo?.name || null,
-        fileSizeBytes: it.fileSizeBytes || it.fileInfo?.size || null,
-        previewUrl: it.previewUrl || it.fileUrl || null,
-        canvasSnapshot: it.canvasSnapshot || null,
-        canvasSnapshotUrl: it.canvasSnapshotUrl || null,
-        rotationDeg: Number(it.rotationDeg) || 0,
       }));
     } else {
-      quoteItems = [{
+      quoteItems = [mapOrderItem({
         id: `item_${Date.now()}_0`,
         title: projectName,
         widthCm,
@@ -320,7 +312,7 @@ class QuotesStore {
         canvasSnapshot,
         canvasSnapshotUrl,
         rotationDeg,
-      }];
+      })];
     }
 
     const count = this.quotes.length + 1;
@@ -373,10 +365,8 @@ class QuotesStore {
 
     // Sincronizar creación con Backend API si está disponible
     if (typeof apiClient !== 'undefined' && apiClient.quotes) {
-      let backendNotes = notes;
-      if (quoteItems.length > 1) {
-        backendNotes = `${notes ? notes + ' | ' : ''}<!-- ITEMS_JSON: ${JSON.stringify(quoteItems)} -->`;
-      }
+      const cleanItems = quoteItems.map(it => cleanOrderItemForApi(it));
+
       apiClient.quotes.create({
         projectName,
         leadName,
@@ -395,15 +385,18 @@ class QuotesStore {
         totalPriceQ,
         withCutting,
         finishType,
-        notes: backendNotes,
         source,
         fileUrl,
         fileName,
         fileSizeBytes,
+        items: cleanItems,
       }).then(res => {
         if (res && res.quote) {
           newQuote.backendId = res.quote.id;
           if (res.quote.code) newQuote.code = res.quote.code;
+          if (Array.isArray(res.quote.items) && res.quote.items.length > 0) {
+            newQuote.items = res.quote.items.map(it => mapOrderItem(it));
+          }
           this.saveToStorage();
           this.notify();
         }

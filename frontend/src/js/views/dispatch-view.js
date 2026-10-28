@@ -345,9 +345,30 @@ export const dispatchView = {
           </form>
         </div>
       </div>
-    `;
-  },
+    <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE REMISIÓN -->
+    <div id="deleteDispatchModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="width: min(440px, 94vw);">
+        <div class="modal-header">
+          <h2 style="font-size: 1.2rem; font-weight: 800; color: #ef4444;">Eliminar Remisión</h2>
+          <button type="button" class="btn-close-modal" id="btnCloseDeleteDispatchModal" aria-label="Cerrar modal">✕</button>
+        </div>
 
+        <input type="hidden" id="deleteDispatchId" value="">
+
+        <div id="deleteDispatchError" style="display: none; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #fca5a5; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+        <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+          ¿Estás seguro de que deseas eliminar permanentemente la remisión <strong id="deleteDispatchFolio" style="color: var(--text-primary);">-</strong>? Esta acción no se puede deshacer.
+        </p>
+
+        <div class="modal-actions-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" id="btnCancelDeleteDispatchModal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmDeleteDispatch" style="background: #ef4444; border-color: #ef4444;">Eliminar Permanentemente</button>
+        </div>
+      </div>
+    </div>
+  `;
+},
   onMount: () => {
     dispatchStore.syncWithApi().catch(() => {});
     // Referencias al DOM

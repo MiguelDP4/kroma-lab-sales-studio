@@ -4,6 +4,7 @@ import {
   getDispatchNoteById,
   createDispatchNote,
   updateDispatchStatus,
+  deleteDispatchNote,
 } from '../controllers/dispatch.controller';
 import { authenticate, requireRole } from '../middlewares/auth';
 
@@ -15,5 +16,6 @@ router.get('/', listDispatchNotes);
 router.get('/:id', getDispatchNoteById);
 router.post('/', createDispatchNote);
 router.put('/:id/status', updateDispatchStatus);
+router.delete('/:id', deleteDispatchNote);
 
 export default router;

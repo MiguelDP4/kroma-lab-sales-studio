@@ -6,6 +6,7 @@
 import { ORDER_STATUS } from '../../shared/business-config.js';
 import { inventoryStore } from './inventory-store.js';
 import { apiClient } from './api-client.js';
+import { mapOrderItem } from './order-item.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -300,6 +301,9 @@ class OrdersStore {
         email: o.customerEmail || '',
       },
       items: (() => {
+        if (Array.isArray(o.items) && o.items.length > 0) {
+          return o.items.map(it => mapOrderItem(it));
+        }
         const local = this.orders?.find(l => l.id === (o.code || o.id) || l.backendId === o.id || l.id === o.id);
         if (local?.items && Array.isArray(local.items) && local.items.length > 0) return local.items;
         if (o.notes && o.notes.includes('<!-- ITEMS_JSON:')) {

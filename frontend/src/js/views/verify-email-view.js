@@ -1,3 +1,5 @@
+let activeVerifyingToken = null;
+let verifiedTokensSet = new Set();
 /**
  * Vista de Verificación de Correo Electrónico (VerifyEmailView) — Kroma Lab Sales Studio
  * Procesa la activación de cuenta cuando el usuario pulsa el enlace enviado por correo electrónico.
@@ -116,23 +118,49 @@ export const verifyEmailView = {
     // Inicialmente sólo cargando
     showState('loading');
 
-    // Obtener token de la query string
+    // Obtener token de query string o de hash routing
     let token = '';
     if (typeof window !== 'undefined' && window.location) {
       const params = new URLSearchParams(window.location.search);
       token = params.get('token') || '';
+      if (!token && window.location.hash) {
+        const hashQIndex = window.location.hash.indexOf('?');
+        if (hashQIndex !== -1) {
+          const hashParams = new URLSearchParams(window.location.hash.slice(hashQIndex));
+          token = hashParams.get('token') || '';
+        }
+      }
     }
 
     if (!token) {
+      if (store.state.user?.isVerified) {
+        showState('success');
+        const successMsgEl = root.querySelector('#verifySuccessMsg');
+        if (successMsgEl) successMsgEl.textContent = 'Tu cuenta ya está verificada y activa.';
+        return () => {};
+      }
       showState('error');
       if (errorMsg) errorMsg.textContent = 'No se proporcionó ningún token de verificación en el enlace.';
       return () => {};
     }
 
+    if (verifiedTokensSet.has(token)) {
+      showState('success');
+      return () => {};
+    }
+
+    if (activeVerifyingToken === token) {
+      return () => {};
+    }
+
+    activeVerifyingToken = token;
+
     // Procesar validación con backend
     (async () => {
       try {
         const res = await apiClient.auth.verifyEmail(token);
+        activeVerifyingToken = null;
+        verifiedTokensSet.add(token);
         if (res && res.success) {
           showState('success');
           if (res.message) {
@@ -147,6 +175,13 @@ export const verifyEmailView = {
           throw new Error(res?.message || 'Error al validar el enlace.');
         }
       } catch (err) {
+        activeVerifyingToken = null;
+        if (store.state.user?.isVerified) {
+          showState('success');
+          const successMsgEl = root.querySelector('#verifySuccessMsg');
+          if (successMsgEl) successMsgEl.textContent = 'Tu cuenta ya se encuentra verificada y activa.';
+          return;
+        }
         showState('error');
         if (errorMsg) {
           errorMsg.textContent = err.message || 'El enlace de confirmación no es válido o ha expirado.';

@@ -1049,37 +1049,7 @@ export const ordersView = {
       if (!tableBody) return;
       const cardsContainer = document.getElementById('ordersCardsContainer');
 
-      if (ordersStore.isLoading) {
-        if (emptyState) emptyState.style.display = 'none';
-        const skeletonCols = isStaff ? 6 : 5;
-        tableBody.innerHTML = `
-          <tr class="order-skeleton-row">
-            <td colspan="${skeletonCols}" style="padding: 2rem 1rem;">
-              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="height: 18px; width: 45%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
-                <div style="height: 14px; width: 75%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
-              </div>
-            </td>
-          </tr>
-          <tr class="order-skeleton-row">
-            <td colspan="${skeletonCols}" style="padding: 2rem 1rem;">
-              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="height: 18px; width: 35%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
-                <div style="height: 14px; width: 65%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px;"></div>
-              </div>
-            </td>
-          </tr>
-        `;
-        if (cardsContainer) {
-          cardsContainer.innerHTML = `
-            <div class="dispatch-card" style="padding: 1.5rem; opacity: 0.6;">
-              <div style="height: 18px; width: 50%; background: rgba(255,255,255,0.08); border-radius: 4px; margin-bottom: 0.75rem;"></div>
-              <div style="height: 14px; width: 80%; background: rgba(255,255,255,0.08); border-radius: 4px;"></div>
-            </div>
-          `;
-        }
-        return;
-      }
+      // Skeleton removed per QA spec
 
       const allOrders = ordersStore.getOrders();
       const q = (searchInput?.value || '').toLowerCase().trim();

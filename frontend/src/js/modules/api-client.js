@@ -215,6 +215,12 @@ export class ApiClient {
         method: 'DELETE',
       });
     },
+    updateUser: async (userId, data) => {
+      return this._request(`/auth/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
   };
 
   // --- Pedidos y Órdenes ---
@@ -391,6 +397,35 @@ export class ApiClient {
     },
     delete: async (id) => {
       return this._request(`/quotes/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  // --- Carrito de Compras B2B ---
+  cart = {
+    getCart: async () => {
+      return this._request('/cart');
+    },
+    addItem: async (item) => {
+      return this._request('/cart/items', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+    },
+    syncCart: async (items) => {
+      return this._request('/cart/sync', {
+        method: 'PUT',
+        body: JSON.stringify({ items }),
+      });
+    },
+    removeItem: async (itemId) => {
+      return this._request(`/cart/items/${itemId}`, {
+        method: 'DELETE',
+      });
+    },
+    clearCart: async () => {
+      return this._request('/cart', {
         method: 'DELETE',
       });
     },

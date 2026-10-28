@@ -5,7 +5,27 @@ import { AuthenticatedRequest } from '../middlewares/auth';
 import { generateNextPaymentCode } from './receivables.controller';
 import { emailService } from '../services/email.service';
 
+export const orderItemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional().default('Stickers UV DTF'),
+  widthCm: z.number().positive(),
+  heightCm: z.number().positive(),
+  qty: z.number().int().positive(),
+  rotationDeg: z.number().int().optional().default(0),
+  rows: z.number().int().positive().optional().default(1),
+  stickersPerRow: z.number().int().positive().optional().default(1),
+  includeCutting: z.boolean().optional().default(false),
+  fileUrl: z.string().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  fileInfo: z.any().optional(),
+  previewUrl: z.string().nullable().optional(),
+  canvasSnapshot: z.string().nullable().optional(),
+  canvasSnapshotUrl: z.string().nullable().optional(),
+  actualLinearMeters: z.number().optional().default(0.0),
+});
+
 const createOrderSchema = z.object({
+  items: z.array(orderItemSchema).optional(),
   customerId: z.string().nullable().optional(),
   customerName: z.string().min(2, 'El nombre del cliente es requerido'),
   customerPhone: z.string().min(8, 'El número de teléfono es requerido'),
@@ -129,6 +149,7 @@ export async function listOrders(req: AuthenticatedRequest, res: Response, next:
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        items: true,
         customer: { select: { id: true, companyName: true, tier: true } },
         dispatchNotes: { select: { id: true, folio: true, status: true } },
         payments: { select: { id: true, paymentCode: true, amountPaidQ: true } },
@@ -148,6 +169,7 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response, nex
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
+        items: true,
         customer: true,
         dispatchNotes: true,
         payments: true,
@@ -180,12 +202,49 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
 
     const code = await generateNextOrderCode();
 
-    const { canvasSnapshot, rotationDeg, ...orderData } = data;
+    const { canvasSnapshot, rotationDeg, items, ...orderData } = data;
 
     const order = await prisma.order.create({
       data: {
         code,
         ...orderData,
+        items: items && items.length > 0 ? {
+          create: items.map(it => ({
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
+            widthCm: it.widthCm,
+            heightCm: it.heightCm,
+            qty: it.qty,
+            rotationDeg: it.rotationDeg || 0,
+            rows: it.rows || 1,
+            stickersPerRow: it.stickersPerRow || 1,
+            includeCutting: it.includeCutting || false,
+            fileUrl: it.fileUrl || null,
+            fileName: it.fileName || null,
+            fileInfo: it.fileInfo || null,
+            canvasSnapshotUrl: it.canvasSnapshotUrl || null,
+            actualLinearMeters: it.actualLinearMeters || 0.0,
+          }))
+        } : {
+          create: [{
+            title: `Stickers ${orderData.widthCm} × ${orderData.heightCm} cm`,
+            widthCm: orderData.widthCm,
+            heightCm: orderData.heightCm,
+            qty: orderData.qty,
+            rotationDeg: rotationDeg || 0,
+            rows: orderData.rows || 1,
+            stickersPerRow: orderData.stickersPerRow || 1,
+            includeCutting: orderData.withCutting || false,
+            fileUrl: orderData.fileUrl || null,
+            fileName: orderData.fileName || null,
+            actualLinearMeters: orderData.linearMeters || 0.0,
+          }]
+        },
+      },
+      include: {
+        items: true,
+        customer: true,
+        dispatchNotes: true,
+        payments: true,
       },
     });
 
@@ -204,8 +263,19 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
     const { id } = req.params;
     const { status } = updateStatusSchema.parse(req.body);
 
+    const existing = await prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { code: id }]
+      }
+    });
+
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Orden no encontrada.' });
+      return;
+    }
+
     const updated = await prisma.order.update({
-      where: { id },
+      where: { id: existing.id },
       data: { status },
     });
 
