@@ -5,24 +5,24 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 1: Autenticación, Sesión y Perfil de Usuario
-- [ ] **Registro de Cliente B2B:**
+- [X] **Registro de Cliente B2B:**
   - Registrar una cuenta con nombre, teléfono (8 dígitos, ej. `55551234`), correo y contraseña.
   - Verificar validación de números con menos de 8 dígitos y formatos de correo inválidos.
   - Validar recepción del correo real de verificación vía Google SMTP.
-- [ ] **Verificación de Correo (`/verificar-correo?token=...`):**
+- [X] **Verificación de Correo (`/verificar-correo?token=...`):**
   - Hacer clic en el enlace recibido en el correo y verificar que la cuenta pase a estado verificado.
   - Comprobar que tokens inválidos o expirados muestren el mensaje de error con botón de reenvío.
-- [ ] **Inicio de Sesión:**
+- [X] **Inicio de Sesión:**
   - Iniciar sesión con credenciales válidas.
   - Probar checkbox **"Recordarme"** (mantener sesión tras cerrar y reabrir el navegador).
   - Probar con contraseña incorrecta y verificar mensaje de error amigable.
-- [ ] **Visibilidad de Barra Superior (TopBar) y Dropdown:**
+- [X] **Visibilidad de Barra Superior (TopBar) y Dropdown:**
   - Con sesión iniciada: verificar que **desaparezcan** las opciones "Iniciar Sesión" y "Crear Cuenta".
   - Abrir el dropdown del chip de usuario (esquina superior derecha) y verificar que muestre:
     - Nombre del usuario, correo y badge de rol (**👑 Admin**, **🛠️ Taller** o **🏢 Cliente**).
     - Enlace a "Configuración de la Cuenta".
     - Botón rojo "Cerrar Sesión".
-- [ ] **Página Mi Cuenta (`/mi-cuenta`):**
+- [X] **Página Mi Cuenta (`/mi-cuenta`):**
   - Actualizar nombre, teléfono o empresa y presionar "Guardar Cambios". Verificar que guarde sin refrescar la página completa.
   - Probar cambio de contraseña (actual vs. nueva).
   - Pulsar "Cerrar Sesión" desde `/mi-cuenta` y verificar que limpie el token y redirija al inicio.
@@ -30,22 +30,21 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 2: Cotizador Interactivo UV DTF (`/` o `/cotizador`)
-- [ ] **Dimensiones y Validación de Bobina Industrial:**
+- [x] **Dimensiones y Validación de Bobina Industrial:**
   - Probar stickers de `5x5 cm`, `10x10 cm` y verificar el cálculo de stickers por fila (ancho útil 28 cm).
   - Intentar ingresar un ancho mayor a `28 cm` y confirmar que el sistema restrinja o alerte el límite físico de la Audley.
-- [ ] **Dropzone y Carga de Archivos:**
+- [x] **Dropzone y Carga de Archivos:**
   - Arrastrar/seleccionar archivos en formatos soportados (`.png`, `.tiff`, `.pdf`, `.ai`, `.svg`).
   - Probar un archivo mayor a 50 MB y validar la advertencia de tamaño.
   - Activar **"Mantener proporción"**: verificar que al cambiar el ancho, el alto se recalcule automáticamente según la relación de aspecto de la imagen.
   - Probar el botón **"Rotar 90°"**: comprobar que la imagen y el cálculo de piezas por metro se reorienten en el canvas.
   - Eliminar el archivo con el botón de papelera y comprobar que los campos vuelvan al estado por defecto.
-- [ ] **Simulador de Bobina (Canvas):**
+- [X] **Simulador de Bobina (Canvas):**
   - Verificar que el dibujo en canvas muestre la cuadrícula, los stickers posicionados y el aprovechamiento visual del rollo.
   - Cambiar entre **Modo Oscuro** y **Modo Claro**; verificar que el fondo del canvas y las guías adapten su contraste.
-- [ ] **Opciones Adicionales de Tiraje:**
+- [X] **Opciones Adicionales de Tiraje:**
   - Alternar opción de corte con plotter (+Q15/metro lineal) y verificar que sume al total en Quetzales.
-  - Seleccionar tipo de acabado (Barniz Brillante vs. Mate).
-- [ ] **Acciones del Cotizador:**
+- [X] **Acciones del Cotizador:**
   - **"Cotizar por WhatsApp":** verificar que abra enlace con texto formateado (medidas, metros, precio en Q).
   - **"Guardar Cotización":** abrir modal, llenar datos de proyecto y presionar guardar. Confirmar redirección automática a cotizaciones guardadas.
   - **"Agregar al Carrito":** verificar que abra el Drawer lateral y suba el archivo (Lazy Upload a R2 o Local).
@@ -53,24 +52,24 @@ Este documento contiene la lista exhaustiva de casos de prueba manuales para aud
 ---
 
 ## Módulo 3: Cotizaciones Guardadas (`/cotizaciones`)
-- [ ] **Listado y Visualización:**
+- [X] **Listado y Visualización:**
   - Verificar que aparezca la cotización recién guardada con su código correlativo (`COT-2026-XXX`), miniatura y especificaciones.
   - Confirmar que los KPIs superiores (Total, Pendientes, Convertidas, Tasa de Conversión) reflejen los números correctos.
-- [ ] **Filtros y Búsqueda:**
+- [X] **Filtros y Búsqueda:**
   - Filtrar por pestañas: *Todas*, *Pendientes* y *Convertidas*.
   - Usar la barra de búsqueda por nombre de proyecto, cliente o teléfono.
-- [ ] **Conversión en 1 Clic:**
+- [X] **Conversión en 1 Clic:**
   - Pulsar el botón **"Convertir a Orden"** en una cotización guardada.
   - Verificar que la cotización cambie a estado *Convertida* y se cree automáticamente una nueva orden en el sistema.
 
 ---
 
 ## Módulo 4: Carrito de Compras y Checkout
-- [ ] **Drawer del Carrito:**
+- [X] **Drawer del Carrito:**
   - Agregar múltiples diseños con distintas medidas y cantidades.
   - Modificar cantidades o eliminar un ítem desde el drawer.
   - Verificar la suma de metros lineales totales y el cálculo de tarifa según escala de volumen.
-- [ ] **Modal de Checkout:**
+- [X] **Modal de Checkout:**
   - Ingresar datos de entrega y facturación (Nombre, Teléfono, Dirección, NIT / CF).
   - Completar el pedido y verificar que genere el número de orden de 10 dígitos (ej. `0000000001`).
 

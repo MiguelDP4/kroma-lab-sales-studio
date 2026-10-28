@@ -32,7 +32,10 @@ a {
   text-decoration: none;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
@@ -156,4 +159,5 @@ button, input, select, textarea {
   background: rgba(28, 114, 147, 0.15);
   color: var(--cerulean);
   border: 1px solid var(--border-color);
+  text-align: center;
 }

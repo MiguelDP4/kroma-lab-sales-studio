@@ -56,7 +56,7 @@ export const verifyEmailView = {
 
           <!-- Estado 3: Error / Token Inválido o Expirado -->
           <div id="verifyStateError" style="display: none;">
-            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 2.25rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 2.25rem; align-items: center; justify-content: center; margin: 1.5rem auto 1.5rem;">
               ⚠️
             </div>
             <h1 style="font-size: clamp(1.4rem, 3.5vw, 1.85rem); font-weight: 800; margin: 0 0 0.75rem; color: var(--text-primary);">
