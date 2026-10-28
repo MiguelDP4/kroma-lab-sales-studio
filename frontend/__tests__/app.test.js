@@ -289,7 +289,7 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('minimumNotice').style.display).toBe('block');
     });
 
-    it('agrega el diseño al carrito y abre el drawer al hacer clic en btnAddToCart', () => {
+    it('agrega el diseño al carrito y muestra toast en la esquina inferior derecha sin abrir el drawer (Task 16)', () => {
       setActivePreviewImg(null);
       initApp();
 
@@ -299,7 +299,55 @@ describe('App — Inicialización y DOM', () => {
       btnAddToCart.click();
 
       const drawer = document.getElementById('cartDrawer');
-      expect(drawer.classList.contains('open')).toBe(true);
+      expect(drawer.classList.contains('open')).toBe(false);
+
+      const toast = document.getElementById('quoterToastNotification');
+      expect(toast).not.toBeNull();
+      expect(toast.textContent).toContain('Cotización agregada al carrito');
+    });
+
+    it('regresa automáticamente a 28 cuando el usuario escribe un ancho mayor a 28cm (Task 9)', () => {
+      setActivePreviewImg(null);
+      initApp();
+
+      const widthInput = document.getElementById('stickerWidth');
+      widthInput.value = '35';
+      widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(widthInput.value).toBe('28');
+
+      widthInput.value = '42.5';
+      widthInput.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(widthInput.value).toBe('28');
+    });
+
+    it('muestra aviso de optimización de fila cuando la última fila no se aprovecha completamente (Task 17)', () => {
+      setActivePreviewImg(null);
+      initApp();
+
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+      const qtyInput = document.getElementById('stickerQty');
+
+      // Ancho 6cm -> en bobina de 28cm caben 4 stickers por fila (6 + 0.2 gap) * 4 = 24.8 <= 28
+      widthInput.value = '6';
+      heightInput.value = '6';
+      qtyInput.value = '21'; // 21 stickers en 4 por fila = 5 filas llenas (20) + 1 sticker en fila 6
+
+      qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      const notice = document.getElementById('rowOptimizationNotice');
+      expect(notice).not.toBeNull();
+      expect(notice.style.display).toBe('block');
+      expect(notice.textContent).toContain('Aprovechamiento de bobina');
+      expect(notice.textContent).toContain('24 copias por el mismo precio');
+
+      // Al pulsar el botón del aviso, actualiza la cantidad a 24
+      const btnApply = document.getElementById('btnApplyOptimalQty');
+      expect(btnApply).not.toBeNull();
+      btnApply.click();
+
+      expect(qtyInput.value).toBe('24');
     });
 
     it('gestiona la selección y remoción de archivos en el dropzone con Estrategia 1 (Lazy Upload)', async () => {
@@ -391,11 +439,11 @@ describe('App — Inicialización y DOM', () => {
       const btnAddToCart = document.getElementById('btnAddToCart');
       btnAddToCart.click();
       await vi.waitFor(() => {
-        expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(true);
+        expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
       }, { timeout: 5000 });
 
-      expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
-      expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(true);
+      expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(false);
+      expect(document.getElementById('quoterToastNotification')).not.toBeNull();
     });
 
     it('muestra badge local cuando provider retornado es local', async () => {
@@ -611,7 +659,8 @@ describe('App — Inicialización y DOM', () => {
       await new Promise(r => setTimeout(r, 100));
 
       const drawer = document.getElementById('cartDrawer');
-      expect(drawer.classList.contains('open')).toBe(true);
+      expect(drawer.classList.contains('open')).toBe(false);
+      expect(document.getElementById('quoterToastNotification')).not.toBeNull();
     });
 
     it('pasa rawFile y parámetros de archivo a openSaveQuoteModal al presionar btnSaveQuote', async () => {

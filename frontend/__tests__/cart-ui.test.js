@@ -154,13 +154,14 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(document.getElementById('cartDrawer').classList.contains('open')).toBe(false);
     });
 
-    it('navega al cotizador desde el estado vacío al hacer clic en btnEmptyGoQuoter', () => {
+    it('navega al cotizador desde el estado vacío al hacer clic en btnEmptyGoQuoter (Task 19)', () => {
+      window.router = { navigate: vi.fn() };
       initCartDrawer();
       openCartDrawer();
       const btnGo = document.getElementById('btnEmptyGoQuoter');
       btnGo.click();
       expect(document.getElementById('cartDrawer').classList.contains('open')).toBe(false);
-      expect(window.location.hash).toBe('#cotizador');
+      expect(window.router.navigate).toHaveBeenCalledWith('/');
     });
 
     it('abre el modal de checkout al hacer clic en btnCartCheckout', () => {

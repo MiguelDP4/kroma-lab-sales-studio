@@ -208,7 +208,13 @@ function attachCartEventListeners(items, totals) {
   if (btnEmptyGoQuoter) {
     btnEmptyGoQuoter.addEventListener('click', () => {
       closeCartDrawer();
-      window.location.hash = '#cotizador';
+      if (typeof window !== 'undefined') {
+        if (window.router && typeof window.router.navigate === 'function') {
+          window.router.navigate('/');
+        } else {
+          window.location.href = '/';
+        }
+      }
     });
   }
 

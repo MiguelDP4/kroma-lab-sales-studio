@@ -683,6 +683,11 @@ export function initQuoter() {
   }
 
   widthInput.addEventListener('input', () => {
+    let wVal = parseFloat(widthInput.value);
+    // Task 9: Si el usuario escribe ancho > 28, regresar automáticamente a 28
+    if (!isNaN(wVal) && wVal > 28) {
+      widthInput.value = '28';
+    }
     if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
       const w = parseFloat(widthInput.value);
       if (!isNaN(w) && w > 0) {
@@ -690,6 +695,14 @@ export function initQuoter() {
       }
     }
     handleCalculate();
+  });
+
+  widthInput.addEventListener('change', () => {
+    let wVal = parseFloat(widthInput.value);
+    if (!isNaN(wVal) && wVal > 28) {
+      widthInput.value = '28';
+      handleCalculate();
+    }
   });
 
   heightInput.addEventListener('input', () => {
@@ -1051,7 +1064,7 @@ export function initQuoter() {
       });
 
       clearDropzoneFile();
-      openCartDrawer();
+      showQuoterToast('Cotización agregada al carrito');
     });
   }
 
@@ -1106,6 +1119,28 @@ export function initQuoter() {
 /**
  * Actualiza el DOM con los resultados numéricos de la cotización
  */
+
+/**
+ * Toast flotante de notificación en la esquina inferior derecha (Task 16).
+ */
+export function showQuoterToast(msg = 'Cotización agregada al carrito') {
+  if (typeof document === 'undefined') return;
+  let toast = document.getElementById('quoterToastNotification');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'quoterToastNotification';
+    toast.className = 'quoter-toast-notification';
+    if (document.body) document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span style="color: #10b981; font-size: 1.1rem;">✅</span> <span>${msg}</span>`;
+  toast.classList.add('is-visible');
+
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast?.classList.remove('is-visible');
+  }, 3500);
+}
+
 export function renderQuoteResults(quote) {
   const setEl = (id, text) => {
     const el = document.getElementById(id);
@@ -1120,6 +1155,36 @@ export function renderQuoteResults(quote) {
   setEl('resTotalPrice', `Q${quote.totalPriceQ.toFixed(2)}`);
   setEl('canvasStats', `${quote.stickersPerRow} por fila (${(quote.stickersPerRow * quote.widthCm).toFixed(1)} cm)`);
   setEl('resUnitHint', `Costo aprox: Q${quote.unitPriceQ.toFixed(2)} por sticker ${quote.includeCutting ? '(impreso y cortado)' : ''}`);
+
+  // Task 17: Notificación de fila no aprovechada completamente
+  const rowOptNotice = document.getElementById('rowOptimizationNotice');
+  const qtyInputEl = document.getElementById('stickerQty');
+  if (rowOptNotice) {
+    if (quote.isRowIncomplete && quote.unusedInLastRow > 0) {
+      const remainder = quote.qty % quote.stickersPerRow;
+      const inLastRow = remainder === 0 ? quote.stickersPerRow : remainder;
+      rowOptNotice.style.display = 'block';
+      rowOptNotice.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.6rem;">
+          <span style="font-size: 1.25rem; line-height: 1;">💡</span>
+          <div style="flex: 1; font-size: 0.88rem; line-height: 1.45;">
+            <strong>Aprovechamiento de bobina:</strong> En la última fila caben <strong>${quote.stickersPerRow} stickers</strong> y solo estás usando <strong>${inLastRow}</strong> (${quote.unusedInLastRow} espacio${quote.unusedInLastRow > 1 ? 's' : ''} libre${quote.unusedInLastRow > 1 ? 's' : ''}).<br>
+            El material de impresión ya cubre esa fila. Puedes pedir <button type="button" id="btnApplyOptimalQty" style="background: none; border: none; color: var(--cerulean); font-weight: 800; text-decoration: underline; cursor: pointer; padding: 0 2px; font-size: inherit;">${quote.optimalQty} copias por el mismo precio</button>.
+          </div>
+        </div>
+      `;
+      const btnApply = document.getElementById('btnApplyOptimalQty');
+      if (btnApply && qtyInputEl) {
+        btnApply.addEventListener('click', () => {
+          qtyInputEl.value = String(quote.optimalQty);
+          qtyInputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      }
+    } else {
+      rowOptNotice.style.display = 'none';
+      rowOptNotice.innerHTML = '';
+    }
+  }
 
   // Detalle de corte
   const resCuttingCost = document.getElementById('resCuttingCost');

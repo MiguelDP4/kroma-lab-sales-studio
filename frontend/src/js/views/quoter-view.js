@@ -203,6 +203,9 @@ export const quoterView = {
               </div>
             </div>
 
+            <!-- Notificación de fila no aprovechada al 100% (Task 17) -->
+            <div id="rowOptimizationNotice" class="minimum-notice" style="display: none; background: rgba(28, 114, 147, 0.08); border: 1px solid var(--border-color); border-left: 4px solid var(--cerulean); padding: 0.85rem 1rem; border-radius: var(--radius-md); margin: 0.85rem 0;"></div>
+
             <!-- Aviso de aprovechamiento de metro mínimo -->
             <div id="minimumNotice" class="minimum-notice" style="display: none;"></div>
 
