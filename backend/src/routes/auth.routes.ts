@@ -11,6 +11,8 @@ import {
   deleteUser,
   verifyEmail,
   resendVerification,
+  changePassword,
+  changeEmail,
 } from '../controllers/auth.controller';
 import { authenticate, requireRole } from '../middlewares/auth';
 
@@ -24,6 +26,8 @@ router.post('/resend-verification', resendVerification);
 router.post('/logout', logout);
 router.get('/me', authenticate, getMe);
 router.put('/profile', authenticate, updateProfile);
+router.post('/change-password', authenticate, changePassword);
+router.post('/change-email', authenticate, changeEmail);
 router.get('/users', authenticate, requireRole('ADMIN'), listUsers);
 router.post('/users', authenticate, requireRole('ADMIN'), createUser);
 router.put('/users/:id/reset-password', authenticate, requireRole('ADMIN'), resetPassword);

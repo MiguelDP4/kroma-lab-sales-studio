@@ -171,6 +171,101 @@ Villa Nueva, Guatemala
       return true;
     }
   }
+
+  /**
+   * Envía un correo con el enlace para confirmar el cambio de contraseña (Task 7).
+   */
+  async sendPasswordChangeVerificationEmail(email: string, name: string, token: string): Promise<boolean> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const cleanFrontendUrl = frontendUrl.replace(/\/+$/, '');
+    const verificationUrl = `${cleanFrontendUrl}/verificar-correo?token=${encodeURIComponent(token)}&action=password`;
+    const sender = process.env.SMTP_FROM || `"Kroma Lab Seguridad" <${process.env.SMTP_USER || 'no-reply@kromalab.gt'}>`;
+    const subject = 'Confirma tu cambio de contraseña — Kroma Lab Sales Studio';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head><meta charset="UTF-8"><title>${subject}</title></head>
+      <body style="font-family: sans-serif; background: #f8fafc; padding: 20px;">
+        <div style="max-width: 580px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #1c7293; margin-top: 0;">🔒 Confirmación de Cambio de Contraseña</h2>
+          <p>Hola, <strong>${name}</strong>.</p>
+          <p>Hemos recibido una solicitud para actualizar la contraseña de tu cuenta en Kroma Lab Sales Studio.</p>
+          <p>Para activar tu nueva contraseña, por favor haz clic en el siguiente botón:</p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${verificationUrl}" style="background: #1c7293; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              ✅ Confirmar Nueva Contraseña
+            </a>
+          </div>
+          <p style="font-size: 13px; color: #64748b;">Si no solicitaste este cambio, por favor contáctanos de inmediato.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `Hola ${name},\n\nPara confirmar el cambio de contraseña de tu cuenta en Kroma Lab, abre este enlace:\n${verificationUrl}\n\nSi no realizaste esta solicitud, ignora este mensaje.`;
+
+    if (this.isConfigured && this.transporter) {
+      try {
+        await this.transporter.sendMail({ from: sender, to: email, subject, text: textContent, html: htmlContent });
+        return true;
+      } catch (e) {
+        console.error('[EmailService] Error enviando correo de cambio de contraseña:', e);
+        return false;
+      }
+    } else {
+      console.log(`[EmailService MOCK/DEV] Enlace de confirmación de contraseña para ${email}: ${verificationUrl}`);
+      return true;
+    }
+  }
+
+  /**
+   * Envía un correo con el enlace para confirmar el cambio de correo electrónico (Task 8).
+   */
+  async sendEmailChangeVerificationEmail(newEmail: string, name: string, token: string): Promise<boolean> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const cleanFrontendUrl = frontendUrl.replace(/\/+$/, '');
+    const verificationUrl = `${cleanFrontendUrl}/verificar-correo?token=${encodeURIComponent(token)}&action=email`;
+    const sender = process.env.SMTP_FROM || `"Kroma Lab Seguridad" <${process.env.SMTP_USER || 'no-reply@kromalab.gt'}>`;
+    const subject = 'Confirma tu nueva dirección de correo — Kroma Lab Sales Studio';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head><meta charset="UTF-8"><title>${subject}</title></head>
+      <body style="font-family: sans-serif; background: #f8fafc; padding: 20px;">
+        <div style="max-width: 580px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #1c7293; margin-top: 0;">✉️ Confirmación de Nuevo Correo Electrónico</h2>
+          <p>Hola, <strong>${name}</strong>.</p>
+          <p>Has solicitado asociar esta dirección de correo electrónico a tu cuenta de Kroma Lab Sales Studio.</p>
+          <p>Para confirmar y activar tu nuevo correo, pulsa el botón a continuación:</p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${verificationUrl}" style="background: #1c7293; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              ✅ Confirmar Nuevo Correo
+            </a>
+          </div>
+          <p style="font-size: 13px; color: #64748b;">Este enlace es válido por 24 horas.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `Hola ${name},\n\nPara confirmar tu nueva dirección de correo en Kroma Lab, abre este enlace:\n${verificationUrl}`;
+
+    if (this.isConfigured && this.transporter) {
+      try {
+        await this.transporter.sendMail({ from: sender, to: newEmail, subject, text: textContent, html: htmlContent });
+        return true;
+      } catch (e) {
+        console.error('[EmailService] Error enviando correo de cambio de email:', e);
+        return false;
+      }
+    } else {
+      console.log(`[EmailService MOCK/DEV] Enlace de confirmación de email para ${newEmail}: ${verificationUrl}`);
+      return true;
+    }
+  }
+
 }
 
 export const emailService = new EmailService();

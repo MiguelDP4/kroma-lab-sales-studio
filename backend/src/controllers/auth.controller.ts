@@ -457,6 +457,121 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response, next:
 /**
  * Verifica la identidad del usuario mediante el token recibido por correo electrónico.
  */
+
+/**
+ * Solicita cambiar la contraseña de la cuenta tras validar la contraseña actual.
+ * Envía un correo electrónico de verificación antes de aplicar el cambio (Task 7).
+ */
+export async function changePassword(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'No autenticado.' });
+      return;
+    }
+    const { currentPassword, newPassword } = z.object({
+      currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
+      newPassword: z.string().min(6, 'La nueva contraseña debe tener al menos 6 caracteres'),
+    }).parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      res.status(400).json({ success: false, message: 'La contraseña actual no es correcta.' });
+      return;
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationToken,
+        verificationTokenExpires,
+        refreshToken: JSON.stringify({ type: 'CHANGE_PASSWORD', newPassword: hashedNewPassword }),
+      },
+    });
+
+    await emailService.sendPasswordChangeVerificationEmail(user.email, user.name, verificationToken);
+
+    res.json({
+      success: true,
+      message: `Hemos enviado un correo de verificación a ${user.email}. Por favor confirma el enlace para activar tu nueva contraseña.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Solicita cambiar el correo electrónico tras validar la contraseña actual.
+ * Envía un correo electrónico de verificación al nuevo correo antes de aplicar el cambio (Task 8).
+ */
+export async function changeEmail(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'No autenticado.' });
+      return;
+    }
+    const { currentPassword, newEmail } = z.object({
+      currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
+      newEmail: z.string().email('Correo electrónico inválido'),
+    }).parse(req.body);
+
+    const cleanNewEmail = newEmail.toLowerCase().trim();
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+      return;
+    }
+
+    if (user.email.toLowerCase().trim() === cleanNewEmail) {
+      res.status(400).json({ success: false, message: 'El nuevo correo debe ser diferente al actual.' });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      res.status(400).json({ success: false, message: 'La contraseña actual no es correcta.' });
+      return;
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: cleanNewEmail } });
+    if (existing) {
+      res.status(409).json({ success: false, message: 'Ya existe otra cuenta registrada con este correo electrónico.' });
+      return;
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationToken,
+        verificationTokenExpires,
+        refreshToken: JSON.stringify({ type: 'CHANGE_EMAIL', newEmail: cleanNewEmail }),
+      },
+    });
+
+    await emailService.sendEmailChangeVerificationEmail(cleanNewEmail, user.name, verificationToken);
+
+    res.json({
+      success: true,
+      message: `Hemos enviado un correo de verificación a ${cleanNewEmail}. Confirma el enlace para completar el cambio de correo.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function verifyEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const rawToken = req.query.token || req.body?.token;
@@ -489,13 +604,33 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
       return;
     }
 
+    let pendingAction: { type?: string; newPassword?: string; newEmail?: string } | null = null;
+    try {
+      if (user.refreshToken && user.refreshToken.startsWith('{')) {
+        pendingAction = JSON.parse(user.refreshToken);
+      }
+    } catch (_) {}
+
+    let customSuccessMsg = '¡Tu correo electrónico ha sido verificado con éxito! Bienvenido a Kroma Lab.';
+
+    const updateData: any = {
+      isVerified: true,
+      verificationToken: null,
+      verificationTokenExpires: null,
+      refreshToken: null,
+    };
+
+    if (pendingAction?.type === 'CHANGE_PASSWORD' && pendingAction.newPassword) {
+      updateData.password = pendingAction.newPassword;
+      customSuccessMsg = '¡Tu contraseña ha sido actualizada y confirmada exitosamente!';
+    } else if (pendingAction?.type === 'CHANGE_EMAIL' && pendingAction.newEmail) {
+      updateData.email = pendingAction.newEmail;
+      customSuccessMsg = `¡Tu dirección de correo electrónico ha sido cambiada a ${pendingAction.newEmail} exitosamente!`;
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: {
-        isVerified: true,
-        verificationToken: null,
-        verificationTokenExpires: null,
-      },
+      data: updateData,
     });
 
     const authToken = signToken({
@@ -514,7 +649,7 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
 
     res.json({
       success: true,
-      message: '¡Tu correo electrónico ha sido verificado con éxito! Bienvenido a Kroma Lab.',
+      message: customSuccessMsg,
       token: authToken,
       user: {
         id: updatedUser.id,

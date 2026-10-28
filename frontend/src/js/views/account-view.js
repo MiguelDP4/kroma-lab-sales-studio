@@ -108,10 +108,10 @@ export const accountView = {
 
               <div class="form-group">
                 <label class="form-label" for="accountEmailInput" style="font-weight: 700;">
-                  Correo Electrónico:
+                  Correo Electrónico: <span style="color: #ef4444;">*</span>
                 </label>
-                <input type="email" id="accountEmailInput" class="input-control" value="${user.email || ''}" disabled style="min-height: 44px; opacity: 0.75; cursor: not-allowed;" title="El correo es tu identificador único de cuenta">
-                <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">Identificador de cuenta</span>
+                <input type="email" id="accountEmailInput" class="input-control" value="${user.email || ''}" data-original-email="${user.email || ''}" required style="min-height: 44px;" placeholder="correo@ejemplo.gt">
+                <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">Para cambiarlo, requerirá tu contraseña actual y verificación en el nuevo correo.</span>
               </div>
             </div>
 
@@ -155,6 +155,41 @@ export const accountView = {
               </label>
               <textarea id="accountAddressInput" class="input-control" rows="3" style="min-height: 80px;" placeholder="Zona, Colonia, Municipio (ej. San José el Placer, Villa Nueva / Zona 10 Ciudad de Guatemala)...">${user.address || ''}</textarea>
               <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">Utilizada para generar tus guías y remisiones de entrega UV DTF</span>
+            </div>
+
+            <!-- Sección de Seguridad y Contraseña (Tasks 7 & 8) -->
+            <div style="background: rgba(28, 114, 147, 0.04); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+              <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                <span>🔒</span>
+                <span>Seguridad y Contraseña</span>
+              </h3>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; margin: 0 0 1rem;">
+                Si deseas cambiar tu contraseña o tu correo electrónico, ingresa tu contraseña actual para autorizar la operación.
+              </p>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" for="accountCurrentPasswordInput" style="font-weight: 700;">
+                  Contraseña Actual:
+                </label>
+                <input type="password" id="accountCurrentPasswordInput" class="input-control" style="min-height: 44px;" placeholder="Tu contraseña actual" autocomplete="current-password">
+                <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">Obligatoria para cambiar correo o asignar una nueva contraseña</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                <div class="form-group">
+                  <label class="form-label" for="accountNewPasswordInput" style="font-weight: 700;">
+                    Nueva Contraseña:
+                  </label>
+                  <input type="password" id="accountNewPasswordInput" class="input-control" minlength="6" style="min-height: 44px;" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="accountConfirmPasswordInput" style="font-weight: 700;">
+                    Confirmar Nueva Contraseña:
+                  </label>
+                  <input type="password" id="accountConfirmPasswordInput" class="input-control" minlength="6" style="min-height: 44px;" placeholder="Repite tu nueva contraseña" autocomplete="new-password">
+                </div>
+              </div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem; flex-wrap: wrap;">
@@ -218,22 +253,37 @@ export const accountView = {
         e.preventDefault();
 
         const nameInput = root.querySelector('#accountNameInput');
+        const emailInput = root.querySelector('#accountEmailInput');
         const phoneInput = root.querySelector('#accountPhoneInput');
         const companyInput = root.querySelector('#accountCompanyInput');
         const nitInput = root.querySelector('#accountNitInput');
         const deptInput = root.querySelector('#accountDeptInput');
         const addressInput = root.querySelector('#accountAddressInput');
+        const currentPwInput = root.querySelector('#accountCurrentPasswordInput');
+        const newPwInput = root.querySelector('#accountNewPasswordInput');
+        const confirmPwInput = root.querySelector('#accountConfirmPasswordInput');
 
         const name = nameInput?.value?.trim() || '';
+        const email = emailInput?.value?.trim().toLowerCase() || '';
+        const originalEmail = emailInput?.dataset?.originalEmail?.trim().toLowerCase() || store.state.user?.email?.toLowerCase() || '';
         const phone = phoneInput?.value?.trim() || '';
         const company = companyInput?.value?.trim() || '';
         const taxId = nitInput?.value?.trim() || '';
         const department = deptInput?.value?.trim() || '';
         const address = addressInput?.value?.trim() || '';
+        const currentPassword = currentPwInput?.value || '';
+        const newPassword = newPwInput?.value || '';
+        const confirmPassword = confirmPwInput?.value || '';
 
         if (!name || name.length < 2) {
           showFeedback('El nombre debe tener al menos 2 caracteres.', 'error');
           if (nameInput) nameInput.focus();
+          return;
+        }
+
+        if (!email || !email.includes('@') || !email.includes('.')) {
+          showFeedback('Ingresa un correo electrónico válido.', 'error');
+          if (emailInput) emailInput.focus();
           return;
         }
 
@@ -243,12 +293,62 @@ export const accountView = {
           return;
         }
 
+        // Validación de cambio de correo (Task 8)
+        const isEmailChanged = Boolean(email && originalEmail && email !== originalEmail);
+        if (isEmailChanged && !currentPassword) {
+          showFeedback('Para cambiar tu correo electrónico debes ingresar tu contraseña actual.', 'error');
+          if (currentPwInput) currentPwInput.focus();
+          return;
+        }
+
+        // Validación de cambio de contraseña (Task 7)
+        const isPasswordChangeRequested = Boolean(newPassword || confirmPassword);
+        if (isPasswordChangeRequested) {
+          if (!currentPassword) {
+            showFeedback('Para cambiar tu contraseña debes ingresar tu contraseña actual.', 'error');
+            if (currentPwInput) currentPwInput.focus();
+            return;
+          }
+          if (newPassword.length < 6) {
+            showFeedback('La nueva contraseña debe tener al menos 6 caracteres.', 'error');
+            if (newPwInput) newPwInput.focus();
+            return;
+          }
+          if (newPassword !== confirmPassword) {
+            showFeedback('Las contraseñas no coinciden.', 'error');
+            if (confirmPwInput) confirmPwInput.focus();
+            return;
+          }
+        }
+
         try {
           if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Guardando...';
           }
 
+          let feedbackMsgs = [];
+
+          // 1. Ejecutar cambio de correo con verificación si se solicitó (Task 8)
+          if (isEmailChanged && typeof apiClient !== 'undefined' && apiClient.auth?.changeEmail) {
+            const emailRes = await apiClient.auth.changeEmail(currentPassword, email);
+            if (emailRes && emailRes.message) {
+              feedbackMsgs.push(emailRes.message);
+            }
+          }
+
+          // 2. Ejecutar cambio de contraseña con verificación si se solicitó (Task 7)
+          if (isPasswordChangeRequested && typeof apiClient !== 'undefined' && apiClient.auth?.changePassword) {
+            const pwRes = await apiClient.auth.changePassword(currentPassword, newPassword);
+            if (pwRes && pwRes.message) {
+              feedbackMsgs.push(pwRes.message);
+            }
+            if (currentPwInput) currentPwInput.value = '';
+            if (newPwInput) newPwInput.value = '';
+            if (confirmPwInput) confirmPwInput.value = '';
+          }
+
+          // 3. Actualizar datos de perfil generales
           const payload = {
             name,
             phone,
@@ -268,7 +368,6 @@ export const accountView = {
           }
 
           if (!updatedUser) {
-            // Actualización local si el backend no responde
             updatedUser = {
               ...(store.state.user || {}),
               name,
@@ -281,11 +380,14 @@ export const accountView = {
             };
           }
 
-          // Mantener persistencia activa
           const isRemembered = typeof localStorage !== 'undefined' && localStorage.getItem('kromalab_remember_me') === 'true';
           store.setUser(updatedUser, store.state.token, store.state.permissions, isRemembered);
 
-          showFeedback('✅ Tus datos han sido actualizados exitosamente.', 'success');
+          if (feedbackMsgs.length > 0) {
+            showFeedback(feedbackMsgs.join(' | ') + ' ✅ Datos de perfil guardados.', 'success');
+          } else {
+            showFeedback('✅ Tus datos han sido actualizados exitosamente.', 'success');
+          }
         } catch (err) {
           showFeedback(err.message || 'Error al actualizar tus datos.', 'error');
         } finally {
