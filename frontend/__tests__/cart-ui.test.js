@@ -10,6 +10,7 @@ import { openCheckoutModal, closeCheckoutModal } from '../src/js/components/chec
 import { cartStore } from '../src/js/modules/cart-store.js';
 import { clientsStore } from '../src/js/modules/clients-store.js';
 import { ordersStore } from '../src/js/modules/orders-store.js';
+import { quotesStore } from '../src/js/modules/quotes-store.js';
 import { store } from '../src/js/store.js';
 import * as fileUploader from '../src/js/modules/file-uploader.js';
 
@@ -239,7 +240,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
   describe('Checkout Modal', () => {
     beforeEach(() => {
       ordersStore.resetToInitial();
-      store.clearUser();
+      store.setUser({ role: 'CUSTOMER', name: 'Carlos Rivera', phone: '55554444', email: 'carlos@rivera.gt', nit: '7890123-4' }, 'token-customer');
     });
 
     it('abre el modal de checkout y envía el formulario de confirmación con datos de usuario', () => {
@@ -321,7 +322,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
     });
 
     it('inicializa el modal de checkout con datos prellenados si el usuario ha iniciado sesión', () => {
-      store.setUser({ name: 'Empresa Test', phone: '99887766', nit: '98765-4' }, 'token');
+      store.setUser({ role: 'CUSTOMER', name: 'Empresa Test', phone: '99887766', nit: '98765-4' }, 'token');
 
       const totals = cartStore.getTotals();
       openCheckoutModal(totals);
@@ -678,6 +679,107 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(latest.customer.email).toBe('migueldp4@gmail.com');
       expect(document.getElementById('checkoutForm').textContent).toContain('¡Tu pedido ha sido enviado exitosamente!');
       expect(document.getElementById('checkoutForm').textContent).toContain('Tu pedido será revisado y confirmado por nuestro equipo a la brevedad.');
+    });
+    it('elimina el placeholder del campo de notas y muestra botón de WhatsApp para VISITOR (Task 15)', () => {
+      store.clearUser();
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const notesInput = document.getElementById('custNotes');
+      expect(notesInput.placeholder).toBe('');
+
+      // En modo VISITOR, no hay botón de submit directo sino botón de WhatsApp
+      expect(document.getElementById('btnSubmitCheckout')).toBeNull();
+      const btnWa = document.getElementById('btnVisitorWhatsApp');
+      expect(btnWa).not.toBeNull();
+      expect(btnWa.getAttribute('href')).toContain('api.whatsapp.com');
+
+      // Si se dispara submit en el formulario como VISITOR, abre WhatsApp y no crea orden
+      window.open = vi.fn();
+      const initialOrdersCount = ordersStore.getOrders().length;
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('api.whatsapp.com'), '_blank');
+      expect(ordersStore.getOrders().length).toBe(initialOrdersCount);
+    });
+
+    it('guarda todos los ítems del carrito en la cotización como modelo unificado (Task 18)', () => {
+      cartStore.clearCart();
+      cartStore.addItem({
+        title: 'Diseño A',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 100,
+        includeCutting: true,
+      });
+      cartStore.addItem({
+        title: 'Diseño B',
+        widthCm: 10,
+        heightCm: 10,
+        qty: 50,
+        includeCutting: false,
+      });
+
+      renderCartDrawer(cartStore.getItems(), cartStore.getTotals());
+      const btnSave = document.getElementById('btnCartSaveQuote');
+      expect(btnSave).not.toBeNull();
+      btnSave.click();
+
+      const modal = document.getElementById('saveQuoteModal');
+      expect(modal).not.toBeNull();
+
+      // Rellenar y guardar
+      document.getElementById('saveQuoteProjectName').value = 'Proyecto Multidiseño';
+      document.getElementById('saveQuoteLeadName').value = 'Carlos Test';
+      document.getElementById('saveQuoteLeadPhone').value = '12345678';
+
+      const saveForm = document.getElementById('formSaveQuote');
+      saveForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const quotes = quotesStore.getQuotes();
+      const saved = quotes.find(q => q.projectName === 'Proyecto Multidiseño');
+      expect(saved).toBeDefined();
+      expect(saved.items.length).toBe(2);
+      expect(saved.items[0].title).toBe('Diseño A');
+      expect(saved.items[1].title).toBe('Diseño B');
+    });
+
+    it('agrega todos los ítems del carrito al pedido en checkout (Task 20)', () => {
+      store.setUser({
+        role: 'CUSTOMER',
+        name: 'Cliente Registrado',
+        phone: '12345678',
+        email: 'cliente@test.com',
+      }, 'token');
+
+      cartStore.clearCart();
+      cartStore.addItem({
+        title: 'Logo 1',
+        widthCm: 6,
+        heightCm: 6,
+        qty: 60,
+      });
+      cartStore.addItem({
+        title: 'Logo 2',
+        widthCm: 8,
+        heightCm: 8,
+        qty: 40,
+      });
+
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      const submitBtn = document.getElementById('btnSubmitCheckout');
+      expect(submitBtn).not.toBeNull();
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const latestOrder = ordersStore.getOrders()[0];
+      expect(latestOrder.items.length).toBe(2);
+      expect(latestOrder.items[0].title).toBe('Logo 1');
+      expect(latestOrder.items[1].title).toBe('Logo 2');
     });
   });
 });

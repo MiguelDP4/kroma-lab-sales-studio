@@ -22,6 +22,7 @@ export function openCheckoutModal(cartTotals) {
 
   const user = store.state.user || {};
   const isStaff = user.role === 'ADMIN' || user.role === 'EMPLOYEE';
+  const isVisitor = !user.role || user.role === 'VISITOR' || !store.state.token;
   const clients = clientsStore.getClients();
 
   // Detección inicial de cliente registrado o perfil activo
@@ -106,7 +107,7 @@ export function openCheckoutModal(cartTotals) {
 
         <div class="form-group">
           <label class="form-label" for="custNotes">Instrucciones o Notas Especiales</label>
-          <input type="text" id="custNotes" class="input-control" placeholder="Ej. Relieve pronunciado, barniz brillante, etc." value="${initialClient ? (initialClient.notes || '') : ''}">
+          <input type="text" id="custNotes" class="input-control" placeholder="" value="${initialClient ? (initialClient.notes || '') : ''}">
         </div>
 
         ${isStaff ? `
@@ -172,10 +173,19 @@ export function openCheckoutModal(cartTotals) {
         </div>
 
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary" id="btnSubmitCheckout" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-            <span>Enviar Pedido para Confirmación</span>
-            <span>🚀</span>
-          </button>
+          ${isVisitor ? `
+            <a href="https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(formatWhatsAppCartOrder(cartTotals))}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" id="btnVisitorWhatsApp" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; font-weight: 700;">
+              <span>💬 Consultar y Enviar Pedido por WhatsApp</span>
+            </a>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem; margin-bottom: 0;">
+              Los pedidos directos en línea requieren una cuenta registrada. Para enviar tu pedido directamente, por favor inicia sesión o crea tu cuenta.
+            </p>
+          ` : `
+            <button type="submit" class="btn btn-primary" id="btnSubmitCheckout" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>Enviar Pedido para Confirmación</span>
+              <span>🚀</span>
+            </button>
+          `}
         </div>
       </form>
     </div>
@@ -361,6 +371,13 @@ export function openCheckoutModal(cartTotals) {
       const nitVal = nitInput?.value?.trim() || 'CF';
       const addressVal = addressInput?.value?.trim() || '';
       const notesVal = notesInput?.value?.trim() || '';
+
+      if (isVisitor) {
+        const text = formatWhatsAppCartOrder(cartTotals, { name: nameVal, phone: phoneVal, address: addressVal, notes: notesVal });
+        const waUrl = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
+        window.open(waUrl, '_blank');
+        return;
+      }
       const shouldSync = Boolean(document.getElementById('checkSaveToClients')?.checked);
 
       let linkedClientId = selectedClientId;

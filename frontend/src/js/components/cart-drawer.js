@@ -297,6 +297,7 @@ function attachCartEventListeners(items, totals) {
       closeCartDrawer();
       const firstItem = items[0] || {};
       openSaveQuoteModal({
+        items,
         widthCm: firstItem.widthCm || 5,
         heightCm: firstItem.heightCm || 5,
         qty: totals.totalStickers || firstItem.qty || 50,

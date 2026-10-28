@@ -185,7 +185,11 @@ export function openSaveQuoteModal(quoteData = null) {
   const cutPrice = Number(currentQuoteData.cuttingPriceQ ?? currentQuoteData.cuttingTotalQ ?? 0.0);
 
   if (specsEl) {
-    specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
+    if (currentQuoteData.items && currentQuoteData.items.length > 1) {
+      specsEl.textContent = `${currentQuoteData.items.length} diseños • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
+    } else {
+      specsEl.textContent = `${currentQuoteData.widthCm} × ${currentQuoteData.heightCm} cm • ${currentQuoteData.qty} piezas • ${lm.toFixed(2)} m`;
+    }
   }
   if (totalEl) {
     totalEl.textContent = `Q${total.toFixed(2)}`;
@@ -409,6 +413,7 @@ export async function handleSaveQuoteSubmit(e) {
     leadEmail,
     companyName,
     notes,
+    items: specs.items || [],
     ...specs,
     canvasSnapshot: specs.canvasSnapshot || null,
     canvasSnapshotUrl: specs.canvasSnapshotUrl || null,

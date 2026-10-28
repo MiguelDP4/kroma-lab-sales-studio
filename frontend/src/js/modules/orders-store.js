@@ -298,30 +298,40 @@ class OrdersStore {
         address: o.customerAddress || 'Ciudad de Guatemala',
         email: o.customerEmail || '',
       },
-      items: [
-        {
-          title: firstItemTitle,
-          widthCm: Number(o.widthCm),
-          heightCm: Number(o.heightCm),
-          qty: o.qty,
-          actualLinearMeters: Number(o.linearMeters),
-          stickersPerRow: o.stickersPerRow || 1,
-          rows: o.rows || 1,
-          includeCutting: Boolean(o.withCutting),
-          cuttingRateUnit: o.withCutting ? 0.08 : 0,
-          finishType: o.finishType || 'Barniz con Relieve 3D',
-          fileInfo: {
-            name: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.name) || 'diseño.png',
-            fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.fileUrl) || null,
-            sizeFormatted: (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.sizeFormatted) || '300 DPI',
+      items: (() => {
+        const local = this.orders?.find(l => l.id === (o.code || o.id) || l.backendId === o.id || l.id === o.id);
+        if (local?.items && Array.isArray(local.items) && local.items.length > 0) return local.items;
+        if (o.notes && o.notes.includes('<!-- ITEMS_JSON:')) {
+          try {
+            const match = o.notes.match(/<!-- ITEMS_JSON:\s*(\[.*?\])\s*-->/s);
+            if (match && match[1]) return JSON.parse(match[1]);
+          } catch (_) {}
+        }
+        return [
+          {
+            title: firstItemTitle,
+            widthCm: Number(o.widthCm),
+            heightCm: Number(o.heightCm),
+            qty: o.qty,
+            actualLinearMeters: Number(o.linearMeters),
+            stickersPerRow: o.stickersPerRow || 1,
+            rows: o.rows || 1,
+            includeCutting: Boolean(o.withCutting),
+            cuttingRateUnit: o.withCutting ? 0.08 : 0,
+            finishType: o.finishType || 'Barniz con Relieve 3D',
+            fileInfo: {
+              name: o.fileName || local?.items?.[0]?.fileInfo?.name || 'diseño.png',
+              fileUrl: o.fileUrl || local?.items?.[0]?.fileInfo?.fileUrl || null,
+              sizeFormatted: local?.items?.[0]?.fileInfo?.sizeFormatted || '300 DPI',
+            },
+            fileUrl: o.fileUrl || local?.items?.[0]?.fileUrl || null,
+            fileName: o.fileName || local?.items?.[0]?.fileName || null,
+            canvasSnapshot: o.canvasSnapshot || local?.items?.[0]?.canvasSnapshot || null,
+            canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || local?.items?.[0]?.canvasSnapshotUrl || null,
+            rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : (local?.items?.[0]?.rotationDeg || 0),
           },
-          fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
-          fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
-          canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || null,
-          canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || null,
-          rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
-        },
-      ],
+        ];
+      })(),
       metrics: {
         totalBillableMeters: Number(o.linearMeters),
         tierRate: Number(o.unitRateQ || 105.0),
@@ -472,7 +482,9 @@ class OrdersStore {
         rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
         paymentReceiptUrl: newOrder.paymentReceiptUrl,
         paymentReceiptFileName: newOrder.paymentReceiptFileName,
-        notes: newOrder.workshopNotes,
+        notes: (newOrder.items && newOrder.items.length > 1)
+          ? `${newOrder.workshopNotes ? newOrder.workshopNotes + ' | ' : ''}<!-- ITEMS_JSON: ${JSON.stringify(newOrder.items)} -->`
+          : newOrder.workshopNotes,
       }).then(res => {
         if (res && res.order) {
           newOrder.backendId = res.order.id;

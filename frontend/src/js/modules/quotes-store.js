@@ -197,6 +197,33 @@ class QuotesStore {
       canvasSnapshot: q.canvasSnapshot || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshot) || null,
       canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshotUrl) || null,
       rotationDeg: q.rotationDeg !== undefined && q.rotationDeg !== null ? Number(q.rotationDeg) : ((this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.rotationDeg) || 0),
+      items: (() => {
+        const local = this.quotes?.find(l => l.id === q.id || l.backendId === q.id || l.code === q.code);
+        if (local?.items && Array.isArray(local.items) && local.items.length > 0) return local.items;
+        if (q.notes && q.notes.includes('<!-- ITEMS_JSON:')) {
+          try {
+            const match = q.notes.match(/<!-- ITEMS_JSON:\s*(\[.*?\])\s*-->/s);
+            if (match && match[1]) return JSON.parse(match[1]);
+          } catch (_) {}
+        }
+        return [{
+          id: `item_${q.id || '0'}`,
+          title: q.projectName || `Cotización ${q.widthCm}x${q.heightCm} cm`,
+          widthCm: Number(q.widthCm),
+          heightCm: Number(q.heightCm),
+          qty: Number(q.qty),
+          actualLinearMeters: Number(q.linearMeters),
+          stickersPerRow: Number(q.stickersPerRow || 1),
+          rows: Number(q.rows || 1),
+          includeCutting: Boolean(q.withCutting),
+          fileUrl: q.fileUrl || local?.fileUrl || null,
+          fileName: q.fileName || local?.fileName || null,
+          previewUrl: q.fileUrl || local?.previewUrl || null,
+          canvasSnapshot: q.canvasSnapshot || local?.canvasSnapshot || null,
+          canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || local?.canvasSnapshotUrl || null,
+          rotationDeg: q.rotationDeg || local?.rotationDeg || 0,
+        }];
+      })(),
       createdAt: q.createdAt,
       updatedAt: q.updatedAt || q.createdAt,
     };
@@ -250,7 +277,51 @@ class QuotesStore {
     const fileSizeBytes = data?.fileSizeBytes ? Number(data.fileSizeBytes) : null;
     const provider = data?.provider || (fileUrl ? 'cloudflare-r2' : (fileKey ? 'cloudflare-r2' : null));
     const canvasSnapshot = data?.canvasSnapshot || null;
+    const canvasSnapshotUrl = data?.canvasSnapshotUrl || (canvasSnapshot && !canvasSnapshot.startsWith('data:') ? canvasSnapshot : null) || null;
     const rotationDeg = Number(data?.rotationDeg) || 0;
+
+    let quoteItems = [];
+    if (Array.isArray(data?.items) && data.items.length > 0) {
+      quoteItems = data.items.map((it, idx) => ({
+        id: it.id || `item_${Date.now()}_${idx}`,
+        title: it.title || `Diseño #${idx + 1}`,
+        widthCm: parseFloat(it.widthCm) || 5,
+        heightCm: parseFloat(it.heightCm) || 5,
+        qty: parseInt(it.qty, 10) || 50,
+        includeCutting: Boolean(it.includeCutting),
+        actualLinearMeters: parseFloat(it.actualLinearMeters) || 0,
+        stickersPerRow: it.stickersPerRow || 1,
+        rows: it.rows || 1,
+        fileInfo: it.fileInfo || null,
+        fileUrl: it.fileUrl || it.fileInfo?.fileUrl || null,
+        fileName: it.fileName || it.fileInfo?.name || null,
+        fileSizeBytes: it.fileSizeBytes || it.fileInfo?.size || null,
+        previewUrl: it.previewUrl || it.fileUrl || null,
+        canvasSnapshot: it.canvasSnapshot || null,
+        canvasSnapshotUrl: it.canvasSnapshotUrl || null,
+        rotationDeg: Number(it.rotationDeg) || 0,
+      }));
+    } else {
+      quoteItems = [{
+        id: `item_${Date.now()}_0`,
+        title: projectName,
+        widthCm,
+        heightCm,
+        qty,
+        includeCutting: withCutting,
+        actualLinearMeters: linearMeters,
+        stickersPerRow,
+        rows,
+        fileInfo: fileUrl || fileName ? { name: fileName || 'diseño.png', fileUrl, size: fileSizeBytes || 0 } : null,
+        fileUrl,
+        fileName,
+        fileSizeBytes,
+        previewUrl: data?.previewUrl || fileUrl || null,
+        canvasSnapshot,
+        canvasSnapshotUrl,
+        rotationDeg,
+      }];
+    }
 
     const count = this.quotes.length + 1;
     const code = `COT-2026-${String(count).padStart(3, '0')}`;
@@ -289,8 +360,9 @@ class QuotesStore {
       previewUrl: data?.previewUrl || fileUrl || null,
       provider,
       canvasSnapshot,
-      canvasSnapshotUrl: data?.canvasSnapshotUrl || (canvasSnapshot && !canvasSnapshot.startsWith('data:') ? canvasSnapshot : null) || null,
+      canvasSnapshotUrl,
       rotationDeg,
+      items: quoteItems,
       createdAt: now,
       updatedAt: now,
     };
@@ -301,6 +373,10 @@ class QuotesStore {
 
     // Sincronizar creación con Backend API si está disponible
     if (typeof apiClient !== 'undefined' && apiClient.quotes) {
+      let backendNotes = notes;
+      if (quoteItems.length > 1) {
+        backendNotes = `${notes ? notes + ' | ' : ''}<!-- ITEMS_JSON: ${JSON.stringify(quoteItems)} -->`;
+      }
       apiClient.quotes.create({
         projectName,
         leadName,
@@ -319,7 +395,7 @@ class QuotesStore {
         totalPriceQ,
         withCutting,
         finishType,
-        notes,
+        notes: backendNotes,
         source,
         fileUrl,
         fileName,
@@ -449,7 +525,7 @@ class QuotesStore {
         canvasSnapshot: quote.canvasSnapshot || null,
         rotationDeg: quote.rotationDeg || 0,
       },
-      items: [{
+      items: (quote.items && quote.items.length > 0) ? quote.items : [{
         title: quote.projectName,
         widthCm: quote.widthCm,
         heightCm: quote.heightCm,
