@@ -265,6 +265,56 @@ describe('Receivables View — Interfaz de Cuentas por Cobrar y Saldos B2B', () 
     );
   });
 
+  it('limita los métodos de pago a Transferencia y Efectivo, y oculta/bloquea la boleta al seleccionar Efectivo', () => {
+    const quickPayBtn = document.querySelector('.btn-quick-pay[data-order-id="KL-00041"]');
+    quickPayBtn.click();
+
+    const methodSelect = document.getElementById('paymentMethod');
+    const refGroup = document.getElementById('paymentReferenceGroup');
+    const refInput = document.getElementById('paymentReference');
+
+    // Verifica que solo existan TRANSFER y CASH
+    const options = Array.from(methodSelect.options).map(o => o.value);
+    expect(options).toEqual(['TRANSFER', 'CASH']);
+
+    // Por defecto TRANSFER: visible y habilitado
+    expect(refGroup.style.display).not.toBe('none');
+    expect(refInput.disabled).toBe(false);
+
+    // Cambiar a CASH: se oculta y bloquea
+    methodSelect.value = 'CASH';
+    methodSelect.dispatchEvent(new Event('change'));
+
+    expect(refGroup.style.display).toBe('none');
+    expect(refInput.disabled).toBe(true);
+    expect(refInput.value).toBe('');
+
+    // Cambiar de nuevo a TRANSFER: se muestra y habilita
+    methodSelect.value = 'TRANSFER';
+    methodSelect.dispatchEvent(new Event('change'));
+
+    expect(refGroup.style.display).toBe('block');
+    expect(refInput.disabled).toBe(false);
+  });
+
+  it('calcula y muestra el porcentaje dinámico exacto de anticipo en vez de 50% fijo', () => {
+    // KL-00041: Total Q393, Pagado Q200 -> 200/393 = 50.89% -> redondeado 51%
+    const tableBody = document.getElementById('receivablesTableBody');
+    expect(tableBody.textContent).toContain('Anticipo 51%');
+
+    // Registremos otro pago para cambiar el porcentaje
+    receivablesStore.recordPayment({
+      orderId: 'KL-00041',
+      amountQ: 50,
+      method: 'CASH',
+      reference: '',
+      notes: 'Abono en efectivo',
+    });
+
+    // Ahora pagado Q250 / Q393 = 63.61% -> redondeado 64%
+    expect(tableBody.textContent).toContain('Anticipo 64%');
+  });
+
   it('exporta la cartera a CSV al pulsar el botón de exportación', () => {
     vi.useFakeTimers();
     const btnExport = document.getElementById('btnExportReceivablesCSV');
@@ -466,5 +516,51 @@ describe('Receivables View — Interfaz de Cuentas por Cobrar y Saldos B2B', () 
     viewBtn.click();
     const content = document.getElementById('viewModalContent');
     expect(content.textContent).toContain('CRYPTO_SPECIAL');
+  });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de cuentas por cobrar en receivablesCardsContainer', () => {
+      const cardsContainer = document.getElementById('receivablesCardsContainer');
+      expect(cardsContainer).not.toBeNull();
+
+      const cards = cardsContainer.querySelectorAll('.receivable-card');
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-view-payments')).not.toBeNull();
+    });
+
+    it('renderiza tarjetas de historial de pagos en paymentsCardsContainer', () => {
+      const cardsContainer = document.getElementById('paymentsCardsContainer');
+      expect(cardsContainer).not.toBeNull();
+
+      const cards = cardsContainer.querySelectorAll('.payment-card');
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-delete-payment')).not.toBeNull();
+    });
+
+    it('permite abrir detalle de pagos y abonar desde las tarjetas de cobranza', () => {
+      const card = document.querySelector('.receivable-card[data-receivable-card="KL-00041"]');
+      expect(card).not.toBeNull();
+
+      // Abrir detalle desde tarjeta
+      const btnView = card.querySelector('.btn-view-payments');
+      btnView.click();
+      const viewModal = document.getElementById('viewPaymentsModal');
+      expect(viewModal.style.display).toBe('block');
+      document.getElementById('btnCloseViewModal').click();
+
+      // Abrir modal de abono desde tarjeta
+      const btnPay = card.querySelector('.btn-quick-pay');
+      btnPay.click();
+      const recordModal = document.getElementById('recordPaymentModal');
+      expect(recordModal.style.display).toBe('block');
+      expect(document.getElementById('paymentOrderId').value).toBe('KL-00041');
+      document.getElementById('btnClosePaymentModal').click();
+    });
   });
 });

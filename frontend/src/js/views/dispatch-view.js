@@ -10,11 +10,15 @@ import {
   DELIVERY_METHODS,
   DISPATCH_STATUS,
   PACKAGE_TYPES,
-  QUALITY_CHECKLIST_LABELS,
 } from '../modules/dispatch-store.js';
 import { ordersStore } from '../modules/orders-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
-import { printDocument } from '../modules/print-helper.js';
+import {
+  printDocument,
+  KROMA_PRINT_PALETTE,
+  renderKromaDocumentHeader,
+  renderKromaReceiptItemsAndSummary,
+} from '../modules/print-helper.js';
 
 export const dispatchView = {
   path: '/despacho',
@@ -340,9 +344,30 @@ export const dispatchView = {
           </form>
         </div>
       </div>
-    `;
-  },
+    <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE REMISIÓN -->
+    <div id="deleteDispatchModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="width: min(440px, 94vw);">
+        <div class="modal-header">
+          <h2 style="font-size: 1.2rem; font-weight: 800; color: #ef4444;">Eliminar Remisión</h2>
+          <button type="button" class="btn-close-modal" id="btnCloseDeleteDispatchModal" aria-label="Cerrar modal">✕</button>
+        </div>
 
+        <input type="hidden" id="deleteDispatchId" value="">
+
+        <div id="deleteDispatchError" style="display: none; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #fca5a5; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+        <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+          ¿Estás seguro de que deseas eliminar permanentemente la remisión <strong id="deleteDispatchFolio" style="color: var(--text-primary);">-</strong>? Esta acción no se puede deshacer.
+        </p>
+
+        <div class="modal-actions-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" id="btnCancelDeleteDispatchModal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmDeleteDispatch" style="background: #ef4444; border-color: #ef4444;">Eliminar Permanentemente</button>
+        </div>
+      </div>
+    </div>
+  `;
+},
   onMount: () => {
     dispatchStore.syncWithApi().catch(() => {});
     // Referencias al DOM
@@ -478,26 +503,26 @@ export const dispatchView = {
         const orderId = document.getElementById('selectDispatchOrder')?.value;
         if (!orderId) return;
 
-        const clientName = document.getElementById('inputDispatchClientName')?.value;
-        const clientPhone = document.getElementById('inputDispatchClientPhone')?.value;
-        const deliveryAddress = document.getElementById('inputDispatchAddress')?.value;
-        const deliveryMethod = document.getElementById('selectDeliveryMethod')?.value;
-        const courierName = document.getElementById('inputCourierName')?.value;
-        const trackingNumber = document.getElementById('inputTrackingNumber')?.value;
-        const packageType = document.getElementById('selectPackageType')?.value;
+        const clientName = document.getElementById('inputDispatchClientName').value;
+        const clientPhone = document.getElementById('inputDispatchClientPhone').value;
+        const deliveryAddress = document.getElementById('inputDispatchAddress').value;
+        const deliveryMethod = document.getElementById('selectDeliveryMethod').value;
+        const courierName = document.getElementById('inputCourierName').value;
+        const trackingNumber = document.getElementById('inputTrackingNumber').value;
+        const packageType = document.getElementById('selectPackageType').value;
         const packagesCount = parseInt(document.getElementById('inputPackagesCount')?.value, 10) || 1;
         const shippingCostQ = parseFloat(document.getElementById('inputShippingCost')?.value) || 0;
-        const shippingPaidBy = document.getElementById('selectShippingPaidBy')?.value;
+        const shippingPaidBy = document.getElementById('selectShippingPaidBy').value;
         const dispatchedBy = document.getElementById('inputDispatchedBy')?.value || 'Operador Taller';
         const pendingBalanceQ = parseFloat(document.getElementById('inputPendingBalance')?.value) || 0;
         const notes = document.getElementById('inputDispatchNotes')?.value || '';
 
         const qualityChecklist = {
-          curadoAdherencia: Boolean(document.getElementById('checkQACurado')?.checked),
-          capasBarniz: Boolean(document.getElementById('checkQABarniz')?.checked),
-          formatoAcabado: Boolean(document.getElementById('checkQAAcabado')?.checked),
-          conteoMedidas: Boolean(document.getElementById('checkQAMedidas')?.checked),
-          empaqueProtector: Boolean(document.getElementById('checkQAEmpaque')?.checked),
+          curadoAdherencia: Boolean(document.getElementById('checkQACurado').checked),
+          capasBarniz: Boolean(document.getElementById('checkQABarniz').checked),
+          formatoAcabado: Boolean(document.getElementById('checkQAAcabado').checked),
+          conteoMedidas: Boolean(document.getElementById('checkQAMedidas').checked),
+          empaqueProtector: Boolean(document.getElementById('checkQAEmpaque').checked),
         };
 
         const newNote = dispatchStore.createDispatchNote({
@@ -562,13 +587,13 @@ export const dispatchView = {
       const idDocInput = document.getElementById('inputStatusReceiverIdDoc');
       const notesInput = document.getElementById('inputStatusNotes');
 
-      if (noteIdInput) noteIdInput.value = note.id;
-      if (titleEl) titleEl.textContent = `Actualizar ${note.id} (#${note.orderId})`;
-      if (courierInput) courierInput.value = note.courierName || '';
-      if (trackingInput) trackingInput.value = note.trackingNumber || '';
-      if (receiverInput) receiverInput.value = note.receivedBy || note.clientName || '';
-      if (idDocInput) idDocInput.value = note.receiverIdDoc || '';
-      if (notesInput) notesInput.value = note.notes || '';
+      noteIdInput.value = note.id;
+      titleEl.textContent = `Actualizar ${note.id} (#${note.orderId})`;
+      courierInput.value = note.courierName || '';
+      trackingInput.value = note.trackingNumber || '';
+      receiverInput.value = note.receivedBy || note.clientName;
+      idDocInput.value = note.receiverIdDoc || '';
+      notesInput.value = note.notes || '';
 
       // Sugerir siguiente estado lógico
       if (statusSelect) {
@@ -587,8 +612,8 @@ export const dispatchView = {
 
     function updateStatusFieldsVisibility() {
       const val = selectNewStatus?.value;
-      if (inTransitGroup) inTransitGroup.style.display = val === 'IN_TRANSIT' ? 'block' : 'none';
-      if (deliveredGroup) deliveredGroup.style.display = val === 'DELIVERED' ? 'block' : 'none';
+      inTransitGroup.style.display = val === 'IN_TRANSIT' ? 'block' : 'none';
+      deliveredGroup.style.display = val === 'DELIVERED' ? 'block' : 'none';
     }
 
     if (selectNewStatus) {
@@ -606,11 +631,11 @@ export const dispatchView = {
         if (!noteId || !newStatus) return;
 
         const extraData = {
-          courierName: document.getElementById('inputStatusCourierName')?.value,
-          trackingNumber: document.getElementById('inputStatusTracking')?.value,
-          receivedBy: document.getElementById('inputStatusReceivedBy')?.value,
-          receiverIdDoc: document.getElementById('inputStatusReceiverIdDoc')?.value,
-          notes: document.getElementById('inputStatusNotes')?.value,
+          courierName: document.getElementById('inputStatusCourierName').value,
+          trackingNumber: document.getElementById('inputStatusTracking').value,
+          receivedBy: document.getElementById('inputStatusReceivedBy').value,
+          receiverIdDoc: document.getElementById('inputStatusReceiverIdDoc').value,
+          notes: document.getElementById('inputStatusNotes').value,
         };
 
         dispatchStore.updateDispatchStatus(noteId, newStatus, extraData);
@@ -891,9 +916,10 @@ export function renderDispatchCardsHtml(notes) {
 export const renderTableRowsHtml = renderDispatchCardsHtml;
 
 /**
- * Renderizado de la Hoja de Despacho Oficial (Documento imprimible)
+ * Renderizado de la Hoja de Despacho Oficial (Documento imprimible con formato unificado de Recibo Kroma Lab)
  */
 export function renderDispatchSheetHtml(note, order) {
+  const P = KROMA_PRINT_PALETTE;
   const method = DELIVERY_METHODS[note.deliveryMethod] || DELIVERY_METHODS.MOTO_LOCAL;
   const pack = PACKAGE_TYPES[note.packageType] || PACKAGE_TYPES.RIGID_TUBE;
   const isPaid = note.pendingBalanceQ <= 0;
@@ -911,156 +937,118 @@ export function renderDispatchSheetHtml(note, order) {
     },
   ];
 
+  const totalMeters = Number(note.totalOrderMeters);
+  const grandTotalQ = Number(note.totalOrderAmountQ);
+  const tierRate = Number(
+    order?.metrics?.tierRate || (totalMeters > 0 ? grandTotalQ / totalMeters : 30.0)
+  );
+  const totalPieces = items.reduce((acc, it) => acc + Number(it.qty), 0);
+  const formattedDate = new Date(note.dispatchedAt).toLocaleDateString('es-GT', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const headerHtml = renderKromaDocumentHeader({
+    title: 'REMISIÓN DE DESPACHO — SERVICIO DE IMPRESIÓN UV DTF',
+    subtitle: 'KROMA LAB UV DTF — IMPRESIÓN INDUSTRIAL UV DTF',
+    folioBadge: `${note.id}   |   Ref. Pedido #${note.orderId}`,
+    logoIdPrefix: 'kroma-dispatch-logo',
+    metaRows: [
+      {
+        label: 'Proveedor:',
+        value: 'Kroma Lab — Miguel Dubois',
+        highlight: true,
+      },
+      {
+        label: 'Cliente:',
+        value: `${note.clientName}   |   Tel: ${note.clientPhone}   |   NIT: ${order?.customer?.nit || 'CF'}`,
+        highlight: true,
+      },
+      {
+        label: 'Fecha:',
+        value: `${formattedDate}   |   Remisión: ${note.id}   |   Ref. Pedido: #${note.orderId}`,
+        highlight: false,
+      },
+      {
+        label: 'Modalidad:',
+        value: `${method.icon} ${method.label} — Courier: ${note.courierName || '—'}${note.trackingNumber ? ` (Guía: ${note.trackingNumber})` : ''} — Empaque: ${note.packagesCount} ${note.packagesCount === 1 ? 'bulto' : 'bultos'} (${pack.label})`,
+        highlight: false,
+      },
+      {
+        label: 'Tarifa acordada:',
+        value: `Q${tierRate.toFixed(2)} por metro lineal   |   Dirección: 📍 ${note.deliveryAddress}   |   Flete: Q${note.shippingCostQ.toFixed(2)} (${note.shippingPaidBy})`,
+        highlight: true,
+      },
+    ],
+  });
+
+  const formattedItems = items.map((it) => {
+    const qtyNum = Number(it.qty);
+    const mNum = Number(it.actualLinearMeters);
+    const lineSub = mNum > 0 ? mNum * tierRate : grandTotalQ / Math.max(1, items.length);
+    const unitRef = lineSub / qtyNum;
+
+    return {
+      qty: `${qtyNum} pcs`,
+      descriptionHtml: `
+        <strong>${it.title}</strong>
+        <div style="font-size: 0.76rem; color: ${P.TEXT_MUTED}; margin-top: 2px;">
+          ${it.finishType || 'Barniz con Relieve 3D'} ${it.includeCutting ? '(Corte Recto)' : '(En Rollo)'}
+        </div>
+      `,
+      measure: `${it.widthCm} × ${it.heightCm} cm`,
+      linearMeters: `${mNum.toFixed(2)} m`,
+      ratePerMeter: `Q${tierRate.toFixed(2)}`,
+      unitCostRef: `Q${unitRef.toFixed(2)}`,
+      subtotal: `Q${lineSub.toFixed(2)}`,
+    };
+  });
+
+  const financialConditionHtml = `
+    <div style="background: ${isPaid ? P.BG_LIGHT : '#fef2f2'}; border: 1px solid ${isPaid ? P.POWDER_BLUE : '#fecaca'}; border-left: 4px solid ${isPaid ? '#10b981' : '#dc2626'}; padding: 0.75rem 1rem; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+      <div style="font-size: 0.76rem; text-transform: uppercase; color: ${P.REGAL_NAVY}; font-weight: 800;">
+        Condición Financiera de Entrega:
+      </div>
+      <div style="font-size: 0.98rem; font-weight: 800; color: ${isPaid ? '#10b981' : '#dc2626'}; margin: 0.2rem 0;">
+        ${isPaid ? '✅ PEDIDO CANCELADO EN SU TOTALIDAD (NO COBRAR)' : `⚠️ COBRO CONTRAENTREGA: Q${note.pendingBalanceQ.toFixed(2)}`}
+      </div>
+      <div style="font-size: 0.78rem; color: ${P.TEXT_MUTED};">
+        Total Orden: Q${grandTotalQ.toFixed(2)} | Flete: Q${note.shippingCostQ.toFixed(2)}
+      </div>
+      ${!isPaid ? `
+        <div style="margin-top: 0.45rem; background: #dc2626; color: #ffffff; padding: 0.35rem 0.75rem; border-radius: 4px; font-weight: 800; font-size: 0.85rem; text-align: center;">
+          COBRAR AL RECEPTOR: Q${note.pendingBalanceQ.toFixed(2)}
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  const tableAndSummaryHtml = renderKromaReceiptItemsAndSummary({
+    items: formattedItems,
+    totals: {
+      totalQty: totalPieces.toLocaleString('es-GT'),
+      totalMeters: `${totalMeters.toFixed(2)} m`,
+      rateLabel: `Q${tierRate.toFixed(2)}`,
+      grandTotal: `Q${grandTotalQ.toFixed(2)}`,
+    },
+    summaryLines: [
+      { label: 'Total de piezas impresas:', value: `${totalPieces.toLocaleString('es-GT')} unidades` },
+      { label: 'Total de metros lineales procesados:', value: `${totalMeters.toFixed(2)} metros` },
+      { label: 'Total a pagar:', value: `Q${grandTotalQ.toFixed(2)}`, isGrand: true },
+    ],
+    leftSlotHtml: financialConditionHtml,
+  });
+
   return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; padding: 1.5rem; background: #ffffff; border-radius: 8px;">
-      <!-- Encabezado Oficial -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
-        <div style="display: flex; align-items: center; gap: 0.85rem;">
-          <svg width="48" height="48" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="45" stroke="#1c7293" stroke-width="6" fill="#065a82"/>
-            <path d="M30 35 L50 22 L70 35 L70 65 L50 78 L30 65 Z" stroke="#ffffff" stroke-width="4" fill="none"/>
-            <circle cx="50" cy="50" r="14" fill="#10b981"/>
-          </svg>
-          <div>
-            <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: 0.05em; color: #065a82; line-height: 1.1;">KROMA LAB UV DTF</div>
-            <div style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.08em;">Taller Industrial de Impresión Digital</div>
-            <div style="font-size: 0.75rem; color: #64748b;">San José el Placer, Villa Nueva, Guatemala | Tel / WhatsApp: (502) 5406-6217</div>
-          </div>
-        </div>
-
-        <div style="text-align: right;">
-          <div style="display: inline-block; background: #065a82; color: #ffffff; padding: 0.35rem 0.85rem; border-radius: 4px; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.05em;">
-            REMISIÓN DE DESPACHO
-          </div>
-          <div style="font-family: monospace; font-size: 1.45rem; font-weight: 900; color: #0284c7; margin-top: 0.25rem;">
-            ${note.id}
-          </div>
-          <div style="font-size: 0.8rem; color: #475569;">Fecha: ${new Date(note.dispatchedAt).toLocaleString('es-GT')}</div>
-          <div style="font-size: 0.8rem; color: #475569;">Ref. Pedido: <strong style="color: #0f172a;">#${note.orderId}</strong></div>
-        </div>
-      </div>
-
-      <!-- Cuadrícula de Destinatario y Logística -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem;">
-        <div>
-          <strong style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.35rem;">
-            1. Destinatario / Cliente B2B:
-          </strong>
-          <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">${note.clientName}</div>
-          <div style="font-size: 0.85rem; color: #334155; margin-top: 0.2rem;">
-            📍 <strong>Dirección de Entrega:</strong> ${note.deliveryAddress}
-          </div>
-          <div style="font-size: 0.85rem; color: #334155;">📞 <strong>Teléfono:</strong> ${note.clientPhone}</div>
-          <div style="font-size: 0.82rem; color: #64748b;">NIT: ${order?.customer?.nit || 'CF'}</div>
-        </div>
-
-        <div>
-          <strong style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.35rem;">
-            2. Información Logística & Transporte:
-          </strong>
-          <div style="font-size: 0.95rem; font-weight: 700; color: #0284c7;">
-            ${method.icon} ${method.label}
-          </div>
-          <div style="font-size: 0.85rem; color: #334155;">
-            <strong>Transporte / Courier:</strong> ${note.courierName}
-          </div>
-          ${note.trackingNumber ? `
-            <div style="font-size: 0.85rem; color: #334155;">
-              <strong>No. Guía / Rastreo:</strong> <span style="font-family: monospace; font-weight: 700;">${note.trackingNumber}</span>
-            </div>
-          ` : ''}
-          <div style="font-size: 0.85rem; color: #334155;">
-            <strong>Embalaje:</strong> ${note.packagesCount} ${note.packagesCount === 1 ? 'bulto' : 'bultos'} (${pack.label})
-          </div>
-          <div style="font-size: 0.85rem; color: #334155;">
-            <strong>Flete:</strong> Q${note.shippingCostQ.toFixed(2)} (${note.shippingPaidBy})
-          </div>
-        </div>
-      </div>
-
-      <!-- Detalle del Contenido del Despacho -->
-      <div style="margin-bottom: 1.5rem;">
-        <strong style="display: block; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; margin-bottom: 0.5rem;">
-          3. Contenido del Paquete / Diseños Impresos:
-        </strong>
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; border: 1px solid #cbd5e1;">
-          <thead>
-            <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1; text-align: left;">
-              <th style="padding: 0.6rem 0.75rem;">No.</th>
-              <th style="padding: 0.6rem 0.75rem;">Descripción del Arte</th>
-              <th style="padding: 0.6rem 0.75rem;">Medidas (cm)</th>
-              <th style="padding: 0.6rem 0.75rem;">Cantidad</th>
-              <th style="padding: 0.6rem 0.75rem;">Metros</th>
-              <th style="padding: 0.6rem 0.75rem;">Acabado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((it, idx) => `
-              <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 0.55rem 0.75rem; font-weight: 700;">${idx + 1}</td>
-                <td style="padding: 0.55rem 0.75rem;"><strong>${it.title}</strong></td>
-                <td style="padding: 0.55rem 0.75rem; font-family: monospace;">${it.widthCm} × ${it.heightCm} cm</td>
-                <td style="padding: 0.55rem 0.75rem; font-weight: 800; font-family: monospace;">${it.qty} pcs</td>
-                <td style="padding: 0.55rem 0.75rem; font-family: monospace; font-weight: 700;">${it.actualLinearMeters ? it.actualLinearMeters.toFixed(2) + 'm' : '-'}</td>
-                <td style="padding: 0.55rem 0.75rem; font-size: 0.8rem; color: #475569;">
-                  ${it.finishType || 'Barniz 3D'} ${it.includeCutting ? '(Corte Recto)' : '(En Rollo)'}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="background: #f8fafc; font-weight: 700;">
-              <td colspan="4" style="padding: 0.6rem 0.75rem; text-align: right;">Total Metraje Lineal:</td>
-              <td colspan="2" style="padding: 0.6rem 0.75rem; font-family: monospace; color: #0284c7;">
-                ${note.totalOrderMeters.toFixed(2)} metros
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <!-- Checklist Técnico de Calidad Auditado -->
-      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-          <strong style="font-size: 0.82rem; text-transform: uppercase; color: #166534;">
-            ✓ Control de Calidad Técnico en Taller (Auditoría Superada):
-          </strong>
-          <span style="font-size: 0.75rem; font-weight: 800; color: #166534; background: #dcfce7; padding: 0.2rem 0.5rem; border-radius: 3px;">
-            100% VERIFICADO
-          </span>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.35rem; font-size: 0.8rem; color: #14532d;">
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.curadoAdherencia}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.capasBarniz}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.formatoAcabado}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.conteoMedidas}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.empaqueProtector}</div>
-        </div>
-      </div>
-
-      <!-- Bloque Financiero y Aviso de Cobro -->
-      <div style="background: ${isPaid ? '#f8fafc' : '#fef2f2'}; border: 1px solid ${isPaid ? '#e2e8f0' : '#fecaca'}; border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-          <div>
-            <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 700;">Condición Financiera de Entrega:</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: ${isPaid ? '#10b981' : '#dc2626'};">
-              ${isPaid ? '✅ PEDIDO CANCELADO EN SU TOTALIDAD (NO COBRAR)' : `⚠️ COBRO CONTRAENTREGA: Q${note.pendingBalanceQ.toFixed(2)}`}
-            </div>
-            <div style="font-size: 0.8rem; color: #475569;">
-              Total Orden: Q${note.totalOrderAmountQ.toFixed(2)} | Flete: Q${note.shippingCostQ.toFixed(2)}
-            </div>
-          </div>
-          ${!isPaid ? `
-            <div style="background: #dc2626; color: #ffffff; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 800; font-size: 0.95rem; text-align: center;">
-              COBRAR AL RECEPTOR: Q${note.pendingBalanceQ.toFixed(2)}
-            </div>
-          ` : ''}
-        </div>
+    <div class="kroma-print-sheet" style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: ${P.SPACE_INDIGO}; padding: 1.5rem; background: ${P.WHITE}; border-radius: 8px;">
+      ${headerHtml}
+      ${tableAndSummaryHtml}
       </div>
 
       <!-- Términos y Garantía UV DTF -->
-      <div style="border: 1px dashed #cbd5e1; border-radius: 6px; padding: 0.75rem 1rem; font-size: 0.75rem; color: #475569; margin-bottom: 1.5rem; line-height: 1.4;">
-        <strong style="color: #0f172a;">Garantía y Condiciones de Aplicación:</strong>
+      <div style="background: ${P.BG_ELEVATED}; border: 1px solid ${P.POWDER_BLUE}; padding: 0.65rem 1rem; font-size: 0.75rem; color: ${P.TEXT_MUTED}; margin-bottom: 1.25rem; line-height: 1.4;">
+        <strong style="color: ${P.SPACE_INDIGO};">Garantía y Condiciones de Aplicación:</strong>
         <ol style="margin: 0.25rem 0 0; padding-left: 1.2rem;">
           <li>El receptor debe revisar el estado del empaque y material al momento de la entrega.</li>
           <li>Garantía de fijación y adherencia UV DTF válida aplicando sobre superficies rígidas desengrasadas con alcohol isopropílico.</li>
@@ -1069,21 +1057,19 @@ export function renderDispatchSheetHtml(note, order) {
       </div>
 
       <!-- Cajas de Firmas -->
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 2rem; padding-top: 1rem;">
-        <div style="border-top: 1px solid #64748b; text-align: center; padding-top: 0.5rem;">
-          <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a;">${note.dispatchedBy}</div>
-          <div style="font-size: 0.78rem; color: #64748b;">Despachado en Taller (Firma y Sello)</div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">Kroma Lab UV DTF</div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 1.5rem; padding-top: 0.75rem;">
+        <div style="border-top: 2px solid ${P.SPACE_INDIGO}; text-align: center; padding-top: 0.45rem;">
+          <div style="font-weight: 800; font-size: 0.88rem; color: ${P.SPACE_INDIGO};">${note.dispatchedBy}</div>
+          <div style="font-size: 0.78rem; font-weight: 700; color: ${P.REGAL_NAVY};">KROMA LAB — Despachado en Taller (Firma y Sello)</div>
         </div>
 
-        <div style="border-top: 1px solid #64748b; text-align: center; padding-top: 0.5rem;">
-          <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a;">
+        <div style="border-top: 2px solid ${P.SPACE_INDIGO}; text-align: center; padding-top: 0.45rem;">
+          <div style="font-weight: 800; font-size: 0.88rem; color: ${P.SPACE_INDIGO};">
             ${note.receivedBy || 'Firma de Recibido Conforme'}
           </div>
-          <div style="font-size: 0.78rem; color: #64748b;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: ${P.REGAL_NAVY};">
             Receptor / Transportista ${note.receiverIdDoc ? `(DPI: ${note.receiverIdDoc})` : '(Nombre, Firma y DPI)'}
           </div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">Fecha y Hora de Recepción</div>
         </div>
       </div>
     </div>

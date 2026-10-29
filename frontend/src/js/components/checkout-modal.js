@@ -21,6 +21,8 @@ export function openCheckoutModal(cartTotals) {
   }
 
   const user = store.state.user || {};
+  const isStaff = user.role === 'ADMIN' || user.role === 'EMPLOYEE';
+  const isVisitor = !user.role || user.role === 'VISITOR' || !store.state.token;
   const clients = clientsStore.getClients();
 
   // Detección inicial de cliente registrado o perfil activo
@@ -51,7 +53,8 @@ export function openCheckoutModal(cartTotals) {
       </div>
 
       <form id="checkoutForm" class="modal-body">
-        <!-- SECCIÓN DE AUTOCOMPLETADO INTELIGENTE B2B -->
+        ${isStaff ? `
+        <!-- SECCIÓN DE AUTOCOMPLETADO INTELIGENTE B2B (Solo para Staff) -->
         <div class="client-autofill-box" id="autofillBox">
           <div class="client-autofill-header">
             <label class="form-label" for="clientAutofillSelect" style="margin: 0; font-weight: 700; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
@@ -79,6 +82,7 @@ export function openCheckoutModal(cartTotals) {
             ` : ''}
           </div>
         </div>
+        ` : ''}
 
         <div class="form-group">
           <label class="form-label" for="custName">Nombre o Empresa / Marca *</label>
@@ -98,20 +102,24 @@ export function openCheckoutModal(cartTotals) {
 
         <div class="form-group">
           <label class="form-label" for="custAddress">Dirección de Entrega o Recolección *</label>
-          <textarea id="custAddress" class="input-control" rows="2" required placeholder="Zona, Municipio (ej. Zona 10, Ciudad de Guatemala) o 'Recojo en taller San José el Placer / Villa Nueva'">${initialClient ? initialClient.address : ''}</textarea>
+          <textarea id="custAddress" class="input-control" rows="2" required placeholder="Zona, Municipio (ej. Zona 10, Ciudad de Guatemala) o 'Recojo en taller San José el Placer / Villa Nueva'">${initialClient ? initialClient.address : (user.address || '')}</textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="custNotes">Instrucciones o Notas Especiales</label>
-          <input type="text" id="custNotes" class="input-control" placeholder="Ej. Relieve pronunciado, barniz brillante, etc." value="${initialClient ? (initialClient.notes || '') : ''}">
+          <input type="text" id="custNotes" class="input-control" placeholder="" value="${initialClient ? (initialClient.notes || '') : ''}">
         </div>
 
+        ${isStaff ? `
         <div class="form-group" style="margin: 0.65rem 0;">
           <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; cursor: pointer; color: var(--text-secondary);">
             <input type="checkbox" id="checkSaveToClients" checked>
             <span>💾 Guardar / Sincronizar en Cartera de Clientes B2B</span>
           </label>
         </div>
+        ` : `
+        <input type="hidden" id="checkSaveToClients" value="false">
+        `}
         <!-- INFORMACIÓN DE PAGO BANCARIO Y SUBIDA DE BOLETA -->
         <div class="checkout-bank-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px);">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
@@ -165,10 +173,19 @@ export function openCheckoutModal(cartTotals) {
         </div>
 
         <div class="modal-footer">
-          <button type="submit" class="btn btn-whatsapp" style="width: 100%;">
-            <span>Enviar Pedido Directo por WhatsApp</span>
-            <span>💬</span>
-          </button>
+          ${isVisitor ? `
+            <a href="https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(formatWhatsAppCartOrder(cartTotals))}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" id="btnVisitorWhatsApp" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; font-weight: 700;">
+              <span>💬 Consultar y Enviar Pedido por WhatsApp</span>
+            </a>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem; margin-bottom: 0;">
+              Los pedidos directos en línea requieren una cuenta registrada. Para enviar tu pedido directamente, por favor inicia sesión o crea tu cuenta.
+            </p>
+          ` : `
+            <button type="submit" class="btn btn-primary" id="btnSubmitCheckout" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>Enviar Pedido para Confirmación</span>
+              <span>🚀</span>
+            </button>
+          `}
         </div>
       </form>
     </div>
@@ -343,7 +360,7 @@ export function openCheckoutModal(cartTotals) {
     });
   }
 
-  if (backdrop) backdrop.addEventListener('click', closeCheckoutModal);
+  // Modal backdrop click disabled per QA specs (Task 5)
   if (btnClose) btnClose.addEventListener('click', closeCheckoutModal);
 
   if (form) {
@@ -354,6 +371,13 @@ export function openCheckoutModal(cartTotals) {
       const nitVal = nitInput?.value?.trim() || 'CF';
       const addressVal = addressInput?.value?.trim() || '';
       const notesVal = notesInput?.value?.trim() || '';
+
+      if (isVisitor) {
+        const text = formatWhatsAppCartOrder(cartTotals, { name: nameVal, phone: phoneVal, address: addressVal, notes: notesVal });
+        const waUrl = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
+        window.open(waUrl, '_blank');
+        return;
+      }
       const shouldSync = Boolean(document.getElementById('checkSaveToClients')?.checked);
 
       let linkedClientId = selectedClientId;
@@ -398,6 +422,7 @@ export function openCheckoutModal(cartTotals) {
         name: nameVal,
         company: companyName,
         phone: phoneVal,
+        email: user.email || '',
         nit: nitVal,
         address: addressVal,
         notes: notesVal,
@@ -444,7 +469,7 @@ export function openCheckoutModal(cartTotals) {
       cartTotals.paymentReceiptUrl = paymentReceiptUrl;
       cartTotals.paymentReceiptFileName = paymentReceiptFileName;
 
-      ordersStore.createOrder({
+      const createdOrder = ordersStore.createOrder({
         customer,
         cartTotals,
         items: cartTotals.items || [],
@@ -456,9 +481,52 @@ export function openCheckoutModal(cartTotals) {
 
       const text = formatWhatsAppCartOrder(cartTotals, customer);
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
-      
-      closeCheckoutModal();
-      window.open(url, '_blank');
+
+      // Mostrar modal de confirmación informando al usuario que su pedido será revisado por el equipo
+      const modalHeader = document.querySelector('#checkoutModal .modal-header');
+      const modalBody = document.getElementById('checkoutForm');
+      if (modalHeader) modalHeader.style.display = 'none';
+      if (modalBody) {
+        modalBody.innerHTML = `
+          <div style="text-align: center; padding: 2rem 1rem;">
+            <div style="font-size: 3.5rem; margin-bottom: 0.75rem;">🎉</div>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.85rem; padding: 0.25rem 0.75rem; margin-bottom: 0.5rem; display: inline-block;">
+              Pedido #${createdOrder?.id || ''} Recibido
+            </span>
+            <h3 style="font-size: 1.45rem; font-weight: 800; color: var(--text-primary); margin: 0.4rem 0 0.75rem;">
+              ¡Tu pedido ha sido enviado exitosamente!
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; max-width: 440px; margin: 0 auto 1.5rem; line-height: 1.5;">
+              Tu pedido será revisado y confirmado por nuestro equipo a la brevedad. Puedes consultar el avance en tiempo real desde tu panel de pedidos.
+            </p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary" id="btnGoToOrdersConfirm" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>📋 Ver mis Pedidos</span>
+              </button>
+              <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" id="btnWhatsAppConfirm" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>💬 Notificar por WhatsApp</span>
+              </a>
+              <button type="button" class="btn btn-secondary" id="btnCloseOrderConfirm" style="min-height: 44px;">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btnGoToOrdersConfirm')?.addEventListener('click', () => {
+          closeCheckoutModal();
+          if (typeof window !== 'undefined' && window.router) {
+            window.router.navigate('/pedidos');
+          } else if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', '/pedidos');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }
+        });
+
+        document.getElementById('btnCloseOrderConfirm')?.addEventListener('click', closeCheckoutModal);
+      } else {
+        closeCheckoutModal();
+      }
     });
   }
 }

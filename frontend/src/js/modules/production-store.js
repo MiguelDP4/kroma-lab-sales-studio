@@ -1,9 +1,11 @@
+import { apiClient } from './api-client.js';
 /**
  * Almacén reactivo de producción y tablero Kanban para la impresora industrial Audley.
  * Gestiona el ciclo de vida de las órdenes de taller y el monitor de consumo de bobina PET.
  */
 
 import { ORDER_STATUS } from '../../shared/business-config.js';
+import { ordersStore } from './orders-store.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -86,6 +88,28 @@ const INITIAL_ORDERS = [
   },
 ];
 
+
+function mapOrderToProduction(order) {
+  const firstItem = order.items?.[0] || {};
+  return {
+    id: order.id,
+    backendId: order.backendId,
+    clientName: order.customer?.company || order.customer?.name || 'Cliente General',
+    contactPhone: order.customer?.phone || '+502 5555-0000',
+    title: firstItem.title || `Stickers (${firstItem.widthCm || 5} × ${firstItem.heightCm || 5} cm)`,
+    widthCm: parseFloat(firstItem.widthCm) || 5,
+    heightCm: parseFloat(firstItem.heightCm) || 5,
+    qty: order.items?.reduce((s, it) => s + (it.qty || 0), 0) || firstItem.qty || 50,
+    meters: parseFloat(order.metrics?.totalBillableMeters) || 1.0,
+    includeCutting: Boolean(order.metrics?.hasCutting || firstItem.includeCutting),
+    finishType: firstItem.finishType || 'Barniz con Relieve 3D',
+    status: order.productionStatus || ORDER_STATUS.IN_AUDLEY_QUEUE,
+    createdAt: order.createdAt || new Date().toISOString(),
+    notes: order.workshopNotes || '',
+    rawOrder: order,
+  };
+}
+
 class ProductionStore {
   constructor() {
     this.listeners = new Set();
@@ -156,7 +180,7 @@ class ProductionStore {
   }
 
   /**
-   * Cambia el estado de una orden a uno específico
+   * Cambia el estado de una orden a uno específico y sincroniza con el backend (PUT /api/orders/:id/status)
    */
   setOrderStatus(orderId, newStatus) {
     const order = this.state.orders.find(o => o.id === orderId);
@@ -165,7 +189,74 @@ class ProductionStore {
     order.status = newStatus;
     order.updatedAt = new Date().toISOString();
     this._notify();
+
+    // Sincronizar con ordersStore si existe
+    let syncedInOrdersStore = false;
+    if (typeof ordersStore !== 'undefined' && ordersStore.updateProductionStatus) {
+      const orderInStore = ordersStore.getOrderById(orderId) ||
+        ordersStore.getState()?.orders?.find(o =>
+          o.id === orderId ||
+          o.code === orderId ||
+          (order.backendId && (o.backendId === order.backendId || o.id === order.backendId))
+        );
+      if (orderInStore) {
+        ordersStore.updateProductionStatus(orderInStore.id, newStatus);
+        syncedInOrdersStore = true;
+      }
+    }
+
+    // Persistir directamente vía PUT request en apiClient si no fue llamado por ordersStore
+    if (!syncedInOrdersStore && typeof apiClient !== 'undefined' && apiClient.orders?.updateStatus) {
+      const targetId = order.backendId || order.rawOrder?.backendId || order.rawOrder?.id || order.id;
+      apiClient.orders.updateStatus(targetId, newStatus).catch(err => {
+        console.warn(`[ProductionStore] Error en PUT request para orden ${targetId}:`, err);
+      });
+    }
+
     return true;
+  }
+
+  /**
+   * Sincroniza órdenes desde ordersStore al tablero Kanban
+   */
+  syncWithOrdersStore() {
+    if (typeof ordersStore === 'undefined') return;
+    const allOrders = ordersStore.getState()?.orders || [];
+    if (!allOrders.length) return;
+
+    const currentOrders = this.state.orders;
+    const orderMap = new Map(currentOrders.map(o => [o.id, o]));
+
+    allOrders.forEach(o => {
+      const prodMapped = mapOrderToProduction(o);
+      const existing = orderMap.get(o.id) || orderMap.get(o.code);
+      if (existing) {
+        existing.status = o.productionStatus || existing.status;
+        existing.backendId = o.backendId || existing.backendId;
+        existing.clientName = prodMapped.clientName;
+        existing.rawOrder = o;
+      } else if (
+        o.productionStatus === ORDER_STATUS.IN_AUDLEY_QUEUE ||
+        o.productionStatus === ORDER_STATUS.PRINTING ||
+        o.productionStatus === ORDER_STATUS.LAMINATING_CUTTING ||
+        o.productionStatus === ORDER_STATUS.READY_FOR_DELIVERY
+      ) {
+        orderMap.set(o.id, prodMapped);
+      }
+    });
+
+    this.state.orders = Array.from(orderMap.values());
+    this._notify();
+  }
+
+  /**
+   * Sincronización bajo demanda con la API del backend
+   */
+  async syncWithApi() {
+    if (typeof ordersStore !== 'undefined' && ordersStore.syncWithApi) {
+      await ordersStore.syncWithApi();
+      this.syncWithOrdersStore();
+    }
   }
 
   /**

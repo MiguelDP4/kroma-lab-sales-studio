@@ -46,7 +46,7 @@ describe('Orders Store — Almacén Reactivo de Pedidos', () => {
       workshopNotes: 'Laminado urgente',
     });
 
-    expect(newOrder.id).toMatch(/^KL-\d{5}$/);
+    expect(newOrder.id).toMatch(/^\d{10}$/);
     expect(newOrder.productionStatus).toBe(ORDER_STATUS.PENDING_REVIEW);
     expect(newOrder.paymentStatus).toBe(PAYMENT_STATUS.PENDING);
     expect(newOrder.metrics.grandTotalQ).toBe(255.0);

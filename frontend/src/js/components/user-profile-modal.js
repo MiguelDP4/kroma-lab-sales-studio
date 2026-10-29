@@ -1,13 +1,14 @@
 /**
  * Componente Modal de Autenticación, Creación de Cuentas y Configuración de Usuario (UserProfileModal)
- * Permite a cualquier usuario (Admin, Operador Taller, Cliente B2B o Visitante)
- * iniciar sesión con credenciales reales, registrar nuevas cuentas de clientes B2B,
+ * Permite a cualquier usuario (Admin, Operador Taller, Cliente o Visitante)
+ * iniciar sesión con credenciales reales, registrar nuevas cuentas de clientes,
  * gestionar sus datos de perfil (Nombre, Teléfono, Correo, Empresa, NIT y Dirección de Entrega)
  * y cerrar sesión.
  */
 
 import { store } from '../store.js';
 import { usersStore } from '../modules/users-store.js';
+import { ordersStore } from '../modules/orders-store.js';
 import { apiClient } from '../modules/api-client.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
@@ -54,7 +55,7 @@ export function initUserProfileModal() {
             🔑 Iniciar Sesión
           </button>
           <button type="button" id="tabBtnRegister" class="btn btn-secondary auth-tab-btn" style="flex: 1; min-height: 40px; font-size: 0.84rem; padding: 0.4rem 0.5rem;">
-            📝 Crear Cuenta B2B
+            📝 Crear Cuenta
           </button>
         </div>
 
@@ -181,9 +182,16 @@ export function initUserProfileModal() {
                 <input type="email" id="loginEmailInput" class="input-control" required style="min-height: 44px;" placeholder="ejemplo@kromalab.gt" autocomplete="email">
               </div>
 
-              <div class="form-group" style="margin-bottom: 1.25rem;">
+              <div class="form-group" style="margin-bottom: 1rem;">
                 <label class="form-label" for="loginPasswordInput" style="font-weight: 700;">Contraseña: <span style="color: #ef4444;">*</span></label>
                 <input type="password" id="loginPasswordInput" class="input-control" required style="min-height: 44px;" placeholder="••••••••" autocomplete="current-password">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label class="checkbox-wrapper" for="loginRememberMe" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; min-height: 44px; margin: 0; user-select: none;">
+                  <input type="checkbox" id="loginRememberMe" checked style="width: 18px; height: 18px; accent-color: var(--cerulean); cursor: pointer;">
+                  <span style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary);">Mantener sesión iniciada</span>
+                </label>
               </div>
             </div>
 
@@ -212,6 +220,10 @@ export function initUserProfileModal() {
                 <span>🔑 Iniciar Sesión</span>
               </button>
             </div>
+
+            <div style="text-align: center; margin-top: 1.25rem; font-size: 0.88rem; color: var(--text-secondary);">
+              ¿Aún no tienes una cuenta? <button type="button" id="btnSwitchToRegister" style="color: var(--cerulean); font-weight: 700; background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0.25rem; font-size: 0.88rem;">Crear cuenta</button>
+            </div>
           </form>
         </div>
 
@@ -221,13 +233,14 @@ export function initUserProfileModal() {
         <div id="authViewRegister" style="display: none;">
           <form id="formUserRegister">
             <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 1rem;">
-              Registra tu empresa o taller para cotizar de inmediato, enviar archivos para impresión DTF UV y acceder a precios de mayoreo por pliego.
+              Crea tu cuenta para cotizar de inmediato, enviar tus artes de impresión UV DTF y guardar tu historial de pedidos.
             </p>
 
             <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
               <div class="form-group">
                 <label class="form-label" for="registerNameInput" style="font-weight: 600;">Nombre del Contacto: <span style="color: #ef4444;">*</span></label>
                 <input type="text" id="registerNameInput" class="input-control" required style="min-height: 44px;" placeholder="Tu nombre y apellido">
+                <span id="registerNameError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
               </div>
               <div class="form-group">
                 <label class="form-label" for="registerCompanyInput" style="font-weight: 600;">Empresa / Marca:</label>
@@ -239,6 +252,7 @@ export function initUserProfileModal() {
               <div class="form-group">
                 <label class="form-label" for="registerPhoneInput" style="font-weight: 600;">Teléfono / WhatsApp: <span style="color: #ef4444;">*</span></label>
                 <input type="tel" id="registerPhoneInput" class="input-control" required style="min-height: 44px;" placeholder="+502 5555-0000">
+                <span id="registerPhoneError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
               </div>
               <div class="form-group">
                 <label class="form-label" for="registerNitInput" style="font-weight: 600;">NIT Facturación SAT:</label>
@@ -251,15 +265,23 @@ export function initUserProfileModal() {
               <textarea id="registerAddressInput" class="input-control" rows="2" placeholder="Dirección en Ciudad de Guatemala, Mixco, Villa Nueva o Departamentos..."></textarea>
             </div>
 
-            <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
               <div class="form-group">
                 <label class="form-label" for="registerEmailInput" style="font-weight: 600;">Correo Electrónico: <span style="color: #ef4444;">*</span></label>
                 <input type="email" id="registerEmailInput" class="input-control" required style="min-height: 44px;" placeholder="pedidos@tuempresa.gt">
+                <span id="registerEmailError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
               </div>
               <div class="form-group">
                 <label class="form-label" for="registerPasswordInput" style="font-weight: 600;">Contraseña: <span style="color: #ef4444;">*</span> <span class="tip">(Mínimo 6 caracteres)</span></label>
-                <input type="password" id="registerPasswordInput" class="input-control" required minlength="6" style="min-height: 44px;" placeholder="••••••••">
+                <input type="password" id="registerPasswordInput" class="input-control" required minlength="6" style="min-height: 44px;" placeholder="••••••••" autocomplete="new-password">
+                <span id="registerPasswordError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
               </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="form-label" for="registerPasswordConfirmInput" style="font-weight: 600;">Confirmar Contraseña: <span style="color: #ef4444;">*</span></label>
+              <input type="password" id="registerPasswordConfirmInput" class="input-control" required minlength="6" style="min-height: 44px;" placeholder="••••••••" autocomplete="new-password">
+              <span id="registerPasswordConfirmError" class="field-error-msg" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
@@ -267,6 +289,10 @@ export function initUserProfileModal() {
               <button type="submit" class="btn btn-primary" id="btnSubmitRegister" style="min-height: 44px;">
                 <span>✨ Crear Cuenta y Entrar</span>
               </button>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.25rem; font-size: 0.88rem; color: var(--text-secondary);">
+              ¿Ya tienes una cuenta registrada? <button type="button" id="btnSwitchToLogin" style="color: var(--cerulean); font-weight: 700; background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0.25rem; font-size: 0.88rem;">Iniciar sesión</button>
             </div>
           </form>
         </div>
@@ -280,10 +306,7 @@ export function initUserProfileModal() {
 }
 
 function attachModalEventListeners() {
-  const chip = document.getElementById('userProfileChip');
-  if (chip) {
-    chip.addEventListener('click', () => openUserProfileModal());
-  }
+  // Nota: userProfileChip es gestionado exclusivamente por initUserDropdown() en app.js
 
   const sidebarUser = document.getElementById('sidebarUserCard');
   if (sidebarUser) {
@@ -319,14 +342,13 @@ function attachModalEventListeners() {
   if (tabLogin) tabLogin.addEventListener('click', () => switchAuthTab('login'));
   if (tabRegister) tabRegister.addEventListener('click', () => switchAuthTab('register'));
 
-  const modal = typeof document !== 'undefined' ? document.getElementById('userProfileModal') : null;
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeUserProfileModal();
-      }
-    });
-  }
+  const btnSwitchReg = document.getElementById('btnSwitchToRegister');
+  if (btnSwitchReg) btnSwitchReg.addEventListener('click', () => switchAuthTab('register'));
+
+  const btnSwitchLog = document.getElementById('btnSwitchToLogin');
+  if (btnSwitchLog) btnSwitchLog.addEventListener('click', () => switchAuthTab('login'));
+
+  // Modal backdrop click disabled per QA specs (Task 5: solo se cierra con la X o botones explícitos)
 
   if (typeof document !== 'undefined') {
     document.addEventListener('keydown', (e) => {
@@ -361,6 +383,9 @@ function attachModalEventListeners() {
     btnLogout.addEventListener('click', handleLogout);
   }
 
+  // Validación reactiva con debounce de 500ms para formulario de registro (Task 2)
+  setupRegisterDebounceValidation();
+
   // Botones de cambio rápido de cuenta
   const switchBtns = document.querySelectorAll('.btn-switch-account');
   switchBtns.forEach((btn) => {
@@ -384,6 +409,30 @@ function attachModalEventListeners() {
 }
 
 export function switchAuthTab(tabName) {
+  const currentUser = store.state.user;
+  const currentRole = currentUser?.role || 'VISITOR';
+  const hasActiveSession = currentUser && currentRole !== 'VISITOR';
+
+  // Limpiar cualquier feedback previo (ej. credenciales inválidas) al cambiar de pestaña (Task 3)
+  const feedback = document.getElementById('profileFeedbackMsg');
+  if (feedback) {
+    feedback.style.display = 'none';
+    feedback.textContent = '';
+  }
+
+  // Limpiar mensajes de error de campo
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.field-error-msg').forEach((el) => {
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+  }
+
+  // Si ya hay sesión iniciada, las opciones de Iniciar Sesión y Crear Cuenta deben desaparecer
+  if (hasActiveSession && tabName !== 'profile') {
+    tabName = 'profile';
+  }
+
   const viewProfile = document.getElementById('authViewProfile');
   const viewLogin = document.getElementById('authViewLogin');
   const viewRegister = document.getElementById('authViewRegister');
@@ -422,7 +471,7 @@ export function switchAuthTab(tabName) {
       tabRegister.classList.add('is-active', 'btn-primary');
       tabRegister.classList.remove('btn-secondary');
     }
-    if (titleEl) titleEl.textContent = 'Registro de Cliente B2B';
+    if (titleEl) titleEl.textContent = 'Crear Cuenta';
     if (subTitleEl) subTitleEl.textContent = 'Crea tu cuenta de empresa para cotizaciones directas y compras de pliegos.';
     const nameInput = document.getElementById('registerNameInput');
     if (nameInput) setTimeout(() => nameInput.focus(), 50);
@@ -456,7 +505,7 @@ export function openUserProfileModal(preferredTab = null) {
       roleBadge.style.color = 'var(--cerulean)';
       roleBadge.style.borderColor = 'var(--cerulean)';
     } else if (role === 'CUSTOMER') {
-      roleBadge.textContent = '🏢 Cliente B2B Registrado';
+      roleBadge.textContent = '🏢 Cliente Registrado';
       roleBadge.style.color = '#10b981';
       roleBadge.style.borderColor = '#10b981';
     } else {
@@ -512,19 +561,26 @@ export function openUserProfileModal(preferredTab = null) {
     feedback.textContent = '';
   }
 
-  // Tab Profile visibilidad
+  const isVisitor = !user || role === 'VISITOR';
+  const authTabs = document.getElementById('authTabsContainer');
   const tabProfile = document.getElementById('tabBtnProfile');
-  if (tabProfile) {
-    tabProfile.style.display = (user && role !== 'VISITOR') ? 'block' : 'none';
-  }
+  const tabLogin = document.getElementById('tabBtnLogin');
+  const tabRegister = document.getElementById('tabBtnRegister');
 
-  // Si no está autenticado o explícitamente se solicita login/register, abrir pestaña correspondiente
-  if (preferredTab) {
-    switchAuthTab(preferredTab);
-  } else if (!user || role === 'VISITOR') {
+  if (!isVisitor) {
+    // Sesión iniciada: OCULTAR COMPLETAMENTE opciones de Iniciar Sesión y Crear Cuenta
+    if (authTabs) authTabs.style.display = 'none';
+    if (tabLogin) tabLogin.style.display = 'none';
+    if (tabRegister) tabRegister.style.display = 'none';
+    if (tabProfile) tabProfile.style.display = 'none';
     switchAuthTab('profile');
   } else {
-    switchAuthTab('profile');
+    // Modo Visitante (sin sesión): Mostrar Iniciar Sesión y Crear Cuenta
+    if (authTabs) authTabs.style.display = 'flex';
+    if (tabProfile) tabProfile.style.display = 'none';
+    if (tabLogin) tabLogin.style.display = 'block';
+    if (tabRegister) tabRegister.style.display = 'block';
+    switchAuthTab(preferredTab || 'login');
   }
 
   modal.style.display = 'block';
@@ -536,6 +592,32 @@ export function closeUserProfileModal() {
   if (modal) {
     modal.style.display = 'none';
   }
+
+  // Limpiar inputs de login y credenciales inválidas (Task 6)
+  const loginEmail = typeof document !== 'undefined' ? document.getElementById('loginEmailInput') : null;
+  const loginPw = typeof document !== 'undefined' ? document.getElementById('loginPasswordInput') : null;
+  if (loginEmail) loginEmail.value = '';
+  if (loginPw) loginPw.value = '';
+
+  const feedback = typeof document !== 'undefined' ? document.getElementById('profileFeedbackMsg') : null;
+  if (feedback && (feedback.textContent.includes('inválid') || feedback.textContent.includes('error') || feedback.textContent.includes('Por favor') || feedback.style.color.includes('ef4444') || feedback.style.color.includes('239'))) {
+    feedback.style.display = 'none';
+    feedback.textContent = '';
+  }
+
+  // Limpiar inputs de registro y mensajes de error
+  const registerForm = typeof document !== 'undefined' ? document.getElementById('formUserRegister') : null;
+  if (registerForm) registerForm.reset();
+
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.field-error-msg').forEach((el) => {
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+    document.querySelectorAll('.input-control').forEach((el) => {
+      el.style.borderColor = '';
+    });
+  }
 }
 
 export async function handleLoginSubmit(e) {
@@ -543,16 +625,18 @@ export async function handleLoginSubmit(e) {
 
   const emailInput = document.getElementById('loginEmailInput');
   const pwInput = document.getElementById('loginPasswordInput');
+  const rememberInput = document.getElementById('loginRememberMe');
 
   const email = emailInput?.value?.trim() || '';
   const password = pwInput?.value || '';
+  const rememberMe = rememberInput ? rememberInput.checked : true;
 
   if (!email || !password) {
     showFeedback('Por favor ingresa tu correo y contraseña.', 'error');
     return false;
   }
 
-  const user = await loginWithRealCredentials(email, password);
+  const user = await loginWithRealCredentials(email, password, rememberMe);
   return Boolean(user);
 }
 
@@ -567,6 +651,8 @@ export async function handleRegisterSubmit(e) {
   const emailInput = document.getElementById('registerEmailInput');
   const pwInput = document.getElementById('registerPasswordInput');
 
+  const confirmPwInput = document.getElementById('registerPasswordConfirmInput');
+
   const name = nameInput?.value?.trim() || '';
   const company = companyInput?.value?.trim() || '';
   const taxId = nitInput?.value?.trim() || 'CF';
@@ -574,6 +660,7 @@ export async function handleRegisterSubmit(e) {
   const address = addressInput?.value?.trim() || 'Ciudad de Guatemala';
   const email = emailInput?.value?.trim().toLowerCase() || '';
   const password = pwInput?.value || '';
+  const confirmPassword = confirmPwInput?.value || '';
 
   if (!name || name.length < 2) {
     showFeedback('El nombre debe tener al menos 2 caracteres.', 'error');
@@ -587,7 +674,20 @@ export async function handleRegisterSubmit(e) {
     return false;
   }
 
-  if (!phone || phone.length < 8) {
+  if (!phone) {
+    showFeedback('El número de teléfono es obligatorio.', 'error');
+    if (phoneInput) phoneInput.focus();
+    return false;
+  }
+
+  if (/[a-zA-Z]/.test(phone)) {
+    showFeedback('El teléfono debe contener únicamente números.', 'error');
+    if (phoneInput) phoneInput.focus();
+    return false;
+  }
+
+  const phoneDigits = phone.replace(/\D/g, '');
+  if (phoneDigits.length < 8) {
     showFeedback('Ingresa un número de teléfono válido (mínimo 8 dígitos).', 'error');
     if (phoneInput) phoneInput.focus();
     return false;
@@ -596,6 +696,12 @@ export async function handleRegisterSubmit(e) {
   if (!password || password.length < 6) {
     showFeedback('La contraseña debe tener al menos 6 caracteres.', 'error');
     if (pwInput) pwInput.focus();
+    return false;
+  }
+
+  if (password !== confirmPassword) {
+    showFeedback('Las contraseñas no coinciden.', 'error');
+    if (confirmPwInput) confirmPwInput.focus();
     return false;
   }
 
@@ -612,19 +718,17 @@ export async function handleRegisterSubmit(e) {
   return Boolean(user);
 }
 
-export async function loginWithRealCredentials(email, password) {
+export async function loginWithRealCredentials(email, password, rememberMe = true) {
   try {
     showFeedback('Autenticando credenciales en base de datos...', 'info');
     if (typeof apiClient !== 'undefined' && apiClient.auth) {
-      const res = await apiClient.auth.login(email, password);
+      const res = await apiClient.auth.login(email, password, rememberMe);
       if (res && res.success && res.user) {
         const permissions = res.user.role === 'ADMIN' ? ['ALL'] : (res.user.role === 'EMPLOYEE' ? ['WORKSHOP', 'ORDERS', 'INVENTORY', 'DISPATCH'] : ['ORDERS']);
-        store.setUser(res.user, res.token, permissions);
-        openUserProfileModal('profile');
+        store.setUser(res.user, res.token, permissions, rememberMe);
         showFeedback(`✅ Sesión real iniciada: ${res.user.name} (${res.user.role})`, 'success');
-        setTimeout(() => {
-          closeUserProfileModal();
-        }, 600);
+        // Cierre inmediato sin transmutar la interfaz a configuración de cuenta (Task 4)
+        closeUserProfileModal();
         return res.user;
       }
     }
@@ -639,14 +743,22 @@ export async function registerWithRealAccount(userData) {
     showFeedback('Creando cuenta en base de datos...', 'info');
     if (typeof apiClient !== 'undefined' && apiClient.auth) {
       const res = await apiClient.auth.register(userData);
-      if (res && res.success && res.user) {
-        store.setUser(res.user, res.token, ['ORDERS']);
-        openUserProfileModal('profile');
-        showFeedback(`✅ ¡Bienvenido! Cuenta creada exitosamente para ${res.user.name}.`, 'success');
-        setTimeout(() => {
-          closeUserProfileModal();
-        }, 600);
-        return res.user;
+      if (res && res.success) {
+        if (res.requireVerification) {
+          showFeedback(`📧 ¡Cuenta creada! Hemos enviado un correo de confirmación a ${userData.email}. Revisa tu bandeja de entrada o spam y confirma tu identidad para iniciar sesión.`, 'success');
+          setTimeout(() => {
+            switchAuthTab('login');
+          }, 4000);
+          return res.user;
+        } else if (res.user && res.token) {
+          store.setUser(res.user, res.token, ['ORDERS'], true);
+          openUserProfileModal('profile');
+          showFeedback(`✅ ¡Bienvenido! Cuenta creada exitosamente para ${res.user.name}.`, 'success');
+          setTimeout(() => {
+            closeUserProfileModal();
+          }, 600);
+          return res.user;
+        }
       }
     }
   } catch (err) {
@@ -657,6 +769,12 @@ export async function registerWithRealAccount(userData) {
 
 export async function handleLogout() {
   store.clearUser();
+  if (ordersStore && typeof ordersStore.clearOrdersCache === 'function') {
+    ordersStore.clearOrdersCache();
+  }
+  if (typeof apiClient !== 'undefined' && apiClient.clearToken) {
+    apiClient.clearToken();
+  }
   showFeedback('Sesión finalizada. Has pasado al modo Visitante.', 'info');
   setTimeout(() => {
     closeUserProfileModal();
@@ -845,3 +963,110 @@ export function showFeedback(msg, type = 'info') {
   }
 }
 
+
+let debounceTimers = {};
+
+/**
+ * Validación reactiva en tiempo real con debounce de 500ms para el formulario de crear cuenta (Task 2).
+ */
+export function setupRegisterDebounceValidation() {
+  if (typeof document === 'undefined') return;
+
+  const fields = [
+    {
+      id: 'registerPhoneInput',
+      errorId: 'registerPhoneError',
+      validate: (val) => {
+        if (!val || !val.trim()) return 'El teléfono es obligatorio.';
+        if (/[a-zA-Z]/.test(val)) {
+          return 'El teléfono debe contener únicamente números.';
+        }
+        const digits = val.replace(/\D/g, '');
+        if (digits.length < 8) {
+          return 'El teléfono debe tener al menos 8 dígitos.';
+        }
+        return null;
+      },
+    },
+    {
+      id: 'registerEmailInput',
+      errorId: 'registerEmailError',
+      validate: (val) => {
+        if (!val || !val.trim()) return 'El correo electrónico es obligatorio.';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(val.trim())) {
+          return 'Ingresa un formato de correo electrónico válido (ej. usuario@dominio.gt).';
+        }
+        return null;
+      },
+    },
+    {
+      id: 'registerPasswordInput',
+      errorId: 'registerPasswordError',
+      validate: (val) => {
+        if (!val) return 'La contraseña es obligatoria.';
+        if (val.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+        const confirmInput = document.getElementById('registerPasswordConfirmInput');
+        if (confirmInput && confirmInput.value) {
+          const confirmErr = document.getElementById('registerPasswordConfirmError');
+          if (confirmInput.value !== val) {
+            if (confirmErr) {
+              confirmErr.textContent = 'Las contraseñas no coinciden.';
+              confirmErr.style.display = 'block';
+            }
+          } else {
+            if (confirmErr) {
+              confirmErr.textContent = '';
+              confirmErr.style.display = 'none';
+            }
+          }
+        }
+        return null;
+      },
+    },
+    {
+      id: 'registerPasswordConfirmInput',
+      errorId: 'registerPasswordConfirmError',
+      validate: (val) => {
+        if (!val) return 'Por favor confirma tu contraseña.';
+        const pwInput = document.getElementById('registerPasswordInput');
+        if (val !== pwInput?.value) {
+          return 'Las contraseñas no coinciden.';
+        }
+        return null;
+      },
+    },
+    {
+      id: 'registerNameInput',
+      errorId: 'registerNameError',
+      validate: (val) => {
+        if (!val || val.trim().length < 2) {
+          return 'El nombre debe tener al menos 2 caracteres.';
+        }
+        return null;
+      },
+    },
+  ];
+
+  fields.forEach(({ id, errorId, validate }) => {
+    const input = document.getElementById(id);
+    const errEl = document.getElementById(errorId);
+    if (!input || !errEl) return;
+
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimers[id]);
+      debounceTimers[id] = setTimeout(() => {
+        const error = validate(input.value);
+        if (error) {
+          errEl.textContent = error;
+          errEl.style.display = 'block';
+          input.style.borderColor = '#ef4444';
+        } else {
+          errEl.textContent = '';
+          errEl.style.display = 'none';
+          input.style.borderColor = '';
+        }
+      }, 500);
+    });
+  });
+}

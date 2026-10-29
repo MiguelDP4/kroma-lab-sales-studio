@@ -7,6 +7,7 @@ import { cartStore } from '../modules/cart-store.js';
 import { formatWhatsAppCartOrder } from '../modules/cart-engine.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { openCheckoutModal } from './checkout-modal.js';
+import { openSaveQuoteModal } from './save-quote-modal.js';
 import { uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
 
 export function initCartDrawer() {
@@ -88,8 +89,8 @@ export function renderCartDrawer(items, totals) {
         ${totals.items.map((item) => `
           <div class="cart-item-card" data-item-id="${item.id}">
             <div class="cart-item-preview">
-              ${item.previewUrl 
-                ? `<img src="${item.previewUrl}" alt="Arte" class="cart-thumb-img">`
+              ${(item.previewUrl || item.fileUrl)
+                ? `<img src="${item.previewUrl || item.fileUrl}" alt="Arte" class="cart-thumb-img">`
                 : `<div class="cart-thumb-placeholder">📄</div>`
               }
             </div>
@@ -110,8 +111,8 @@ export function renderCartDrawer(items, totals) {
                 <span class="badge ${item.includeCutting ? 'badge-cut' : ''}">
                   ${item.includeCutting ? `✂️ Con corte (+Q${item.cuttingRawQ.toFixed(2)})` : `📜 En rollo`}
                 </span>
-                ${item.fileInfo 
-                  ? `<span class="badge badge-file" title="${item.fileInfo.name}">📁 ${item.fileInfo.name}</span>`
+                ${(item.fileInfo || item.fileName || item.fileUrl)
+                  ? `<span class="badge badge-file" title="${item.fileName || item.fileInfo?.name || 'Archivo adjunto'}">📁 ${item.fileName || item.fileInfo?.name || 'Archivo adjunto'}</span>`
                   : `<span class="badge badge-warning">⚠️ Sin archivo adjunto</span>`
                 }
               </div>
@@ -175,18 +176,40 @@ export function renderCartDrawer(items, totals) {
           </div>
 
           <div class="cart-actions">
+            <button class="btn btn-primary" id="btnCartCheckout" style="width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>Enviar Pedido para Confirmación</span>
+              <span>🚀</span>
+            </button>
+            <button class="btn btn-secondary" id="btnCartSaveQuote" style="width: 100%; border-color: var(--cerulean); color: var(--cerulean); min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              <span>💾 Guardar como Cotización</span>
+            </button>
             <button class="btn btn-whatsapp" id="btnCartWhatsApp" style="width: 100%;">
               <span>Enviar Pedido Completo por WhatsApp</span>
               <span>💬</span>
-            </button>
-            <button class="btn btn-primary" id="btnCartCheckout" style="width: 100%;">
-              <span>Confirmar Pedido y Datos de Entrega</span>
-              <span>🚀</span>
             </button>
             <button class="btn-clear-cart" id="btnClearCart">Vaciar Carrito</button>
           </div>
         </div>
       ` : ''}
+    </div>
+
+    <!-- Modal Confirmación Vaciar Carrito (Modelo Consistente) -->
+    <div id="clearCartConfirmModal" class="modal-backdrop" style="display: none; z-index: 2000;" role="dialog" aria-modal="true" aria-labelledby="clearCartModalTitle">
+      <div class="modal-card" style="width: min(440px, 94vw);">
+        <div class="modal-header">
+          <h2 id="clearCartModalTitle" style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0;">Vaciar Carrito</h2>
+          <button type="button" class="btn-close-modal" id="btnCloseClearCartModal" aria-label="Cerrar modal">✕</button>
+        </div>
+
+        <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+          ¿Estás seguro que quieres vaciar todos los diseños de tu carrito?
+        </p>
+
+        <div class="modal-actions-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" id="btnCancelClearCartModal" style="min-height: 44px;">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmClearCartModal" style="background: #ef4444; border-color: #ef4444; min-height: 44px;">Sí, Vaciar Carrito</button>
+        </div>
+      </div>
     </div>
   `;
 
@@ -204,7 +227,13 @@ function attachCartEventListeners(items, totals) {
   if (btnEmptyGoQuoter) {
     btnEmptyGoQuoter.addEventListener('click', () => {
       closeCartDrawer();
-      window.location.hash = '#cotizador';
+      if (typeof window !== 'undefined') {
+        if (window.router && typeof window.router.navigate === 'function') {
+          window.router.navigate('/');
+        } else {
+          window.location.href = '/';
+        }
+      }
     });
   }
 
@@ -242,13 +271,32 @@ function attachCartEventListeners(items, totals) {
     });
   });
 
-  // Vaciar carrito
+  // Vaciar carrito con modal consistente (Item 12 & 18)
   const btnClear = document.getElementById('btnClearCart');
-  if (btnClear) {
+  const clearModal = document.getElementById('clearCartConfirmModal');
+  const btnCloseClear = document.getElementById('btnCloseClearCartModal');
+  const btnCancelClear = document.getElementById('btnCancelClearCartModal');
+  const btnConfirmClear = document.getElementById('btnConfirmClearCartModal');
+
+  if (btnClear && clearModal) {
     btnClear.addEventListener('click', () => {
-      if (confirm('¿Deseas vaciar todos los diseños de tu carrito?')) {
-        cartStore.clearCart();
-      }
+      clearModal.style.display = 'block';
+    });
+  }
+  if (btnCloseClear && clearModal) {
+    btnCloseClear.addEventListener('click', () => {
+      clearModal.style.display = 'none';
+    });
+  }
+  if (btnCancelClear && clearModal) {
+    btnCancelClear.addEventListener('click', () => {
+      clearModal.style.display = 'none';
+    });
+  }
+  if (btnConfirmClear && clearModal) {
+    btnConfirmClear.addEventListener('click', () => {
+      cartStore.clearCart();
+      clearModal.style.display = 'none';
     });
   }
 
@@ -277,6 +325,38 @@ function attachCartEventListeners(items, totals) {
       const text = formatWhatsAppCartOrder(totals);
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
+    });
+  }
+
+  // Guardar como cotización
+  const btnSaveQuote = document.getElementById('btnCartSaveQuote');
+  if (btnSaveQuote) {
+    btnSaveQuote.addEventListener('click', () => {
+      closeCartDrawer();
+      const firstItem = items[0] || {};
+      openSaveQuoteModal({
+        items,
+        widthCm: firstItem.widthCm || 5,
+        heightCm: firstItem.heightCm || 5,
+        qty: totals.totalStickers || firstItem.qty || 50,
+        linearMeters: totals.totalBillableMeters || 1.0,
+        stickersPerRow: firstItem.stickersPerRow || 1,
+        rows: firstItem.rows || 1,
+        withCutting: totals.hasCutting,
+        unitRateQ: totals.tierRate || 140,
+        materialPriceQ: totals.materialTotalQ,
+        cuttingPriceQ: totals.cuttingTotalQ,
+        totalPriceQ: totals.grandTotalQ,
+        rawFile: firstItem.rawFile || null,
+        fileName: firstItem.fileName || firstItem.fileInfo?.name || null,
+        fileUrl: firstItem.fileUrl || firstItem.fileInfo?.fileUrl || null,
+        fileKey: firstItem.fileKey || null,
+        fileSizeBytes: firstItem.fileSizeBytes || firstItem.fileInfo?.size || null,
+        previewUrl: firstItem.previewUrl || firstItem.fileUrl || null,
+        canvasSnapshot: firstItem.canvasSnapshot || null,
+        canvasSnapshotUrl: firstItem.canvasSnapshotUrl || null,
+        rotationDeg: firstItem.rotationDeg || 0,
+      });
     });
   }
 

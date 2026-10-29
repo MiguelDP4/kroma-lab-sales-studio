@@ -27,7 +27,7 @@ describe('Receivables API (/api/receivables)', () => {
 
     await prisma.order.create({
       data: {
-        code: `KL-AGING-OVERDUE-${Date.now()}`,
+        code: `T-${Math.floor(10000 + Math.random() * 89999)}`,
         customerName: 'Cliente Mora Test',
         customerPhone: '+502 5555-0099',
         widthCm: 10,
@@ -48,7 +48,7 @@ describe('Receivables API (/api/receivables)', () => {
 
     await prisma.order.create({
       data: {
-        code: `KL-AGING-WARN-${Date.now()}`,
+        code: `T-${Math.floor(10000 + Math.random() * 89999)}`,
         customerName: 'Cliente Warn Test',
         customerPhone: '+502 5555-0088',
         widthCm: 10,
@@ -93,7 +93,7 @@ describe('Receivables API (/api/receivables)', () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.payment.paymentCode).toMatch(/^PAY-\d{4}-\d{3}$/);
-    expect(res.body.order.amountPaidQ).toBeGreaterThanOrEqual(100.0);
+    expect(Number(res.body.order.amountPaidQ)).toBeGreaterThanOrEqual(100.0);
     createdPaymentId = res.body.payment.id;
   });
 

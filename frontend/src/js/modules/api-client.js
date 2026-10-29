@@ -38,19 +38,32 @@ export class ApiClient {
 
   _loadToken() {
     try {
-      return localStorage.getItem('kromalab_jwt_token') || null;
+      if (typeof sessionStorage !== 'undefined') {
+        const s = sessionStorage.getItem('kromalab_jwt_token');
+        if (s) return s;
+      }
+      if (typeof localStorage !== 'undefined') {
+        return localStorage.getItem('kromalab_jwt_token') || null;
+      }
     } catch {
       return null;
     }
+    return null;
   }
 
-  setToken(token) {
+  setToken(token, rememberMe = true) {
     this.token = token;
     try {
       if (token) {
-        localStorage.setItem('kromalab_jwt_token', token);
+        if (rememberMe && typeof localStorage !== 'undefined') {
+          localStorage.setItem('kromalab_jwt_token', token);
+          if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('kromalab_jwt_token');
+        } else if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('kromalab_jwt_token', token);
+          if (typeof localStorage !== 'undefined') localStorage.removeItem('kromalab_jwt_token');
+        }
       } else {
-        localStorage.removeItem('kromalab_jwt_token');
+        this.clearToken();
       }
     } catch {
       // Ignorar quota exceeded
@@ -58,7 +71,13 @@ export class ApiClient {
   }
 
   clearToken() {
-    this.setToken(null);
+    this.token = null;
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('kromalab_jwt_token');
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('kromalab_jwt_token');
+    } catch {
+      // Ignorar
+    }
   }
 
   async _request(endpoint, options = {}) {
@@ -112,25 +131,41 @@ export class ApiClient {
 
   // --- Autenticación y Usuarios ---
   auth = {
-    login: async (email, password) => {
+    login: async (email, password, rememberMe = true) => {
       const res = await this._request('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
       if (res.token) {
-        this.setToken(res.token);
+        this.setToken(res.token, rememberMe);
       }
       return res;
     },
-    register: async (userData) => {
+    register: async (userData, rememberMe = true) => {
       const res = await this._request('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
       });
       if (res.token) {
-        this.setToken(res.token);
+        this.setToken(res.token, rememberMe);
       }
       return res;
+    },
+    verifyEmail: async (token) => {
+      const res = await this._request('/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      });
+      if (res.token) {
+        this.setToken(res.token, true);
+      }
+      return res;
+    },
+    resendVerification: async (email) => {
+      return this._request('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
     },
     logout: async () => {
       try {
@@ -146,6 +181,18 @@ export class ApiClient {
       return this._request('/auth/profile', {
         method: 'PUT',
         body: JSON.stringify(data),
+      });
+    },
+    changePassword: async (currentPassword, newPassword) => {
+      return this._request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    },
+    changeEmail: async (currentPassword, newEmail) => {
+      return this._request('/auth/change-email', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newEmail }),
       });
     },
     listUsers: async () => {
@@ -166,6 +213,12 @@ export class ApiClient {
     deleteUser: async (userId) => {
       return this._request(`/auth/users/${userId}`, {
         method: 'DELETE',
+      });
+    },
+    updateUser: async (userId, data) => {
+      return this._request(`/auth/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
       });
     },
   };
@@ -337,13 +390,43 @@ export class ApiClient {
         body: JSON.stringify(data),
       });
     },
-    convertToOrder: async (id) => {
+    convertToOrder: async (id, data = {}) => {
       return this._request(`/quotes/${id}/convert`, {
         method: 'POST',
+        body: JSON.stringify(data),
       });
     },
     delete: async (id) => {
       return this._request(`/quotes/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  // --- Carrito de Compras B2B ---
+  cart = {
+    getCart: async () => {
+      return this._request('/cart');
+    },
+    addItem: async (item) => {
+      return this._request('/cart/items', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+    },
+    syncCart: async (items) => {
+      return this._request('/cart/sync', {
+        method: 'PUT',
+        body: JSON.stringify({ items }),
+      });
+    },
+    removeItem: async (itemId) => {
+      return this._request(`/cart/items/${itemId}`, {
+        method: 'DELETE',
+      });
+    },
+    clearCart: async () => {
+      return this._request('/cart', {
         method: 'DELETE',
       });
     },

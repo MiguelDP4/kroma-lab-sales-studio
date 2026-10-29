@@ -207,4 +207,17 @@ describe('Reports View — Interfaz de Reportes Comerciales y Analítica UV DTF'
     const finGrid = document.getElementById('financialMetricsGrid');
     expect(finGrid.textContent).toContain('Sin saldos en mora');
   });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de ranking en topClientsCardsContainer', () => {
+      const container = document.getElementById('topClientsCardsContainer');
+      expect(container).not.toBeNull();
+
+      const cards = container.querySelectorAll('.ranking-card');
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+    });
+  });
 });

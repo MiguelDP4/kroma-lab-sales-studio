@@ -113,4 +113,18 @@ describe('Customers API (/api/customers)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.customer.tier).toBe('RECURRENTE');
   });
+
+  it('elimina un cliente por su ID', async () => {
+    const res = await request(app)
+      .delete(`/api/customers/${createdCustomerId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const getRes = await request(app)
+      .get(`/api/customers/${createdCustomerId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(getRes.status).toBe(404);
+  });
 });

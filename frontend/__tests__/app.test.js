@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   initApp,
+  initBackendSync,
+  purgeLegacyMockStorage,
   syncNavbarRole,
   renderQuoteResults,
   sendWhatsAppQuote,
@@ -10,8 +12,10 @@ import {
   setActivePreviewImg,
   getActiveRotation,
   getActiveImageAspectRatio,
+  router,
 } from '../src/js/app.js';
 import { store } from '../src/js/store.js';
+import { apiClient } from '../src/js/modules/api-client.js';
 import * as fileUploader from '../src/js/modules/file-uploader.js';
 
 vi.mock('../src/js/modules/file-uploader.js', async () => {
@@ -35,6 +39,8 @@ vi.mock('../src/js/modules/file-uploader.js', async () => {
 
 describe('App — Inicialización y DOM', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+    router.destroy();
     setActivePreviewImg(null);
     document.body.innerHTML = `
       <header>
@@ -55,6 +61,7 @@ describe('App — Inicialización y DOM', () => {
     `;
     store.setTheme('dark');
     store.clearUser();
+    vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'offline' });
     fileUploader.uploadFileToStorage.mockReset();
     fileUploader.uploadFileToStorage.mockImplementation(async (file, options) => {
       if (options && typeof options.onProgress === 'function') {
@@ -282,7 +289,7 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('minimumNotice').style.display).toBe('block');
     });
 
-    it('agrega el diseño al carrito y abre el drawer al hacer clic en btnAddToCart', () => {
+    it('agrega el diseño al carrito y muestra toast en la esquina inferior derecha sin abrir el drawer (Task 16)', () => {
       setActivePreviewImg(null);
       initApp();
 
@@ -292,7 +299,55 @@ describe('App — Inicialización y DOM', () => {
       btnAddToCart.click();
 
       const drawer = document.getElementById('cartDrawer');
-      expect(drawer.classList.contains('open')).toBe(true);
+      expect(drawer.classList.contains('open')).toBe(false);
+
+      const toast = document.getElementById('quoterToastNotification');
+      expect(toast).not.toBeNull();
+      expect(toast.textContent).toContain('Cotización agregada al carrito');
+    });
+
+    it('regresa automáticamente a 28 cuando el usuario escribe un ancho mayor a 28cm (Task 9)', () => {
+      setActivePreviewImg(null);
+      initApp();
+
+      const widthInput = document.getElementById('stickerWidth');
+      widthInput.value = '35';
+      widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(widthInput.value).toBe('28');
+
+      widthInput.value = '42.5';
+      widthInput.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(widthInput.value).toBe('28');
+    });
+
+    it('muestra aviso de optimización de fila cuando la última fila no se aprovecha completamente (Task 17)', () => {
+      setActivePreviewImg(null);
+      initApp();
+
+      const widthInput = document.getElementById('stickerWidth');
+      const heightInput = document.getElementById('stickerHeight');
+      const qtyInput = document.getElementById('stickerQty');
+
+      // Ancho 6cm -> en bobina de 28cm caben 4 stickers por fila (6 + 0.2 gap) * 4 = 24.8 <= 28
+      widthInput.value = '6';
+      heightInput.value = '6';
+      qtyInput.value = '21'; // 21 stickers en 4 por fila = 5 filas llenas (20) + 1 sticker en fila 6
+
+      qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      const notice = document.getElementById('rowOptimizationNotice');
+      expect(notice).not.toBeNull();
+      expect(notice.style.display).toBe('block');
+      expect(notice.textContent).toContain('Aprovechamiento de bobina');
+      expect(notice.textContent).toContain('24 copias por el mismo precio');
+
+      // Al pulsar el botón del aviso, actualiza la cantidad a 24
+      const btnApply = document.getElementById('btnApplyOptimalQty');
+      expect(btnApply).not.toBeNull();
+      btnApply.click();
+
+      expect(qtyInput.value).toBe('24');
     });
 
     it('gestiona la selección y remoción de archivos en el dropzone con Estrategia 1 (Lazy Upload)', async () => {
@@ -377,15 +432,18 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
+      await vi.waitFor(() => {
+        expect(document.getElementById('dropzoneFileName')?.textContent).toBe(validFile.name);
+      }, { timeout: 5000 });
 
       const btnAddToCart = document.getElementById('btnAddToCart');
       btnAddToCart.click();
-      await new Promise(r => setTimeout(r, 100));
+      await vi.waitFor(() => {
+        expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
+      }, { timeout: 5000 });
 
-      expect(fileUploader.uploadFileToStorage).toHaveBeenCalled();
-      const drawer = document.getElementById('cartDrawer');
-      expect(drawer.classList.contains('open')).toBe(true);
+      expect(document.getElementById('cartDrawer')?.classList.contains('open')).toBe(false);
+      expect(document.getElementById('quoterToastNotification')).not.toBeNull();
     });
 
     it('muestra badge local cuando provider retornado es local', async () => {
@@ -404,14 +462,16 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      await new Promise(r => setTimeout(r, 100));
-
-      const btnAddToCart = document.getElementById('btnAddToCart');
-      btnAddToCart.click();
-      await new Promise(r => setTimeout(r, 100));
+      await vi.waitFor(() => {
+        expect(document.getElementById('dropzoneFileName')?.textContent).toBe(validFile.name);
+      }, { timeout: 5000 });
 
       const uploadBadge = document.getElementById('dropzoneUploadBadge');
-      expect(uploadBadge.textContent).toContain('Local');
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      btnAddToCart.click();
+      await vi.waitFor(() => {
+        expect(uploadBadge.textContent).toContain('Local');
+      }, { timeout: 5000 });
     });
 
     it('maneja evento onerror al fallar carga de preview de imagen', async () => {
@@ -599,7 +659,8 @@ describe('App — Inicialización y DOM', () => {
       await new Promise(r => setTimeout(r, 100));
 
       const drawer = document.getElementById('cartDrawer');
-      expect(drawer.classList.contains('open')).toBe(true);
+      expect(drawer.classList.contains('open')).toBe(false);
+      expect(document.getElementById('quoterToastNotification')).not.toBeNull();
     });
 
     it('pasa rawFile y parámetros de archivo a openSaveQuoteModal al presionar btnSaveQuote', async () => {
@@ -698,7 +759,7 @@ describe('App — Inicialización y DOM', () => {
       const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
       const aspectRatioRow = document.getElementById('aspectRatioRow');
 
-      expect(aspectRatioRow.style.display).toBe('none');
+      expect(document.getElementById('aspectRatioRow')?.style?.display).toBe('none');
       expect(keepAspectCheckbox.checked).toBe(true);
 
       widthInput.value = '8';
@@ -710,11 +771,11 @@ describe('App — Inicialización y DOM', () => {
         writable: true,
       });
       fileInput.dispatchEvent(new Event('change'));
-      for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 50; i++) {
         if (aspectRatioRow && aspectRatioRow.style.display === 'flex') break;
         await new Promise(r => setTimeout(r, 20));
       }
-
+      
       expect(aspectRatioRow.style.display).toBe('flex');
       expect(getActiveImageAspectRatio()).toBe(0.5);
       // Al cargarse con ancho 8, el alto debe ajustarse a 8 * 0.5 = 4.0
@@ -836,9 +897,13 @@ describe('App — Inicialización y DOM', () => {
       // Pulsar eliminar archivo -> debe resetear rotación y ocultar controles
       const btnRemove = document.getElementById('btnRemoveFile');
       btnRemove.click();
+      for (let i = 0; i < 50; i++) {
+        if (document.getElementById('aspectRatioRow')?.style?.display === 'none') break;
+        await new Promise(r => setTimeout(r, 20));
+      }
       expect(getActiveRotation()).toBe(0);
       expect(getActiveImageAspectRatio()).toBeNull();
-      expect(aspectRatioRow.style.display).toBe('none');
+      expect(document.getElementById('aspectRatioRow')?.style?.display).toBe('none');
 
       global.Image = originalImage;
     });
@@ -933,9 +998,12 @@ describe('App — Inicialización y DOM', () => {
             <span id="mobileNavIcon">☰</span>
           </button>
           <span id="salesStudioTag" style="display: none;">Sales Studio</span>
-          <div id="userProfileChip">
-            <span id="userChipAvatar">👤</span>
-            <span id="userChipName">Admin</span>
+          <div class="user-chip-dropdown-wrapper" id="userChipDropdownWrapper">
+            <button type="button" id="userProfileChip">
+              <span id="userChipAvatar">👤</span>
+              <span id="userChipName">Admin</span>
+            </button>
+            <div id="userProfileDropdown" class="user-profile-dropdown" style="display: none;"></div>
           </div>
           <button id="themeToggleBtn"><span id="themeToggleIcon">☀️</span></button>
         </header>
@@ -1060,7 +1128,7 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('sidebarUserRole').textContent).toBe('OPERADOR TALLER');
 
       syncNavbarRole('CUSTOMER');
-      expect(document.getElementById('userChipName').textContent).toBe('Cliente B2B');
+      expect(document.getElementById('userChipName').textContent).toBe('Cliente');
       expect(document.getElementById('sidebarUserRole').textContent).toBe('CLIENTE REGISTRADO');
 
       syncNavbarRole('VISITOR');
@@ -1068,17 +1136,72 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('sidebarUserRole').textContent).toBe('COTIZADOR WEB');
     });
 
-    it('abre el modal de configuración de usuario al pulsar el chip de perfil tras inicializar la app', () => {
+    it('despliega el dropdown de usuario con opciones según el estado de la sesión al pulsar el chip', async () => {
       setActivePreviewImg(null);
-      initApp();
       const chip = document.getElementById('userProfileChip');
-      const modal = document.getElementById('userProfileModal');
+      const dropdown = document.getElementById('userProfileDropdown');
 
-      expect(modal).not.toBeNull();
-      expect(modal.style.display).toBe('none');
+      expect(dropdown).not.toBeNull();
+      expect(dropdown.style.display).toBe('none');
 
+      // 1. En modo visitante: debe mostrar Iniciar Sesión y Crear Cuenta, NO Mi Cuenta ni Logout
       chip.click();
-      expect(modal.style.display).toBe('block');
+      expect(dropdown.style.display).toBe('flex');
+      expect(dropdown.querySelector('#dropdownBtnLogin')).not.toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnRegister')).not.toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnAccount')).toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnLogout')).toBeNull();
+
+      // Cerrar dropdown al hacer click nuevamente
+      chip.click();
+      expect(dropdown.style.display).toBe('none');
+
+      // 2. Con sesión iniciada: debe mostrar Mi Cuenta y Logout, NO Iniciar Sesión ni Crear Cuenta
+      store.setUser({ id: 'usr_001', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' }, 'valid-token', ['ALL'], true);
+      expect(store.getInitialSession()?.user?.email).toBe('miguel@kromalab.gt');
+      store.setTheme('light');
+      expect(store.getInitialTheme()).toBe('light');
+      store.setTheme('dark');
+      expect(store.getInitialTheme()).toBe('dark');
+      localStorage.setItem('kromalab_orders', '[{"client":"Claudia Estrada"}]');
+      localStorage.setItem('kromalab_users', '[{"email":"sofia.ventas@kromalab.gt"}]');
+      localStorage.setItem('kromalab_quotes', '[{"valid":true}]');
+      purgeLegacyMockStorage(true);
+      expect(localStorage.getItem('kromalab_orders')).toBeNull();
+      expect(localStorage.getItem('kromalab_users')).toBeNull();
+      expect(localStorage.getItem('kromalab_quotes')).toBe('[{"valid":true}]');
+      chip.click();
+      expect(dropdown.style.display).toBe('flex');
+      expect(dropdown.querySelector('#dropdownBtnLogin')).toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnRegister')).toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnAccount')).not.toBeNull();
+      expect(dropdown.querySelector('#dropdownBtnLogout')).not.toBeNull();
+
+      // 3. Cerrar sesión desde el botón del dropdown debe limpiar store y cerrar dropdown
+      const logoutBtn = dropdown.querySelector('#dropdownBtnLogout');
+      logoutBtn.click();
+      await new Promise(r => setTimeout(r, 50));
+      expect(store.state.user).toBeNull();
+      expect(dropdown.style.display).toBe('none');
+
+      apiClient.setToken(null);
+      const healthSpy = vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' });
+      vi.spyOn(apiClient.auth, 'login').mockResolvedValueOnce({ token: 'mock-jwt-sync' });
+      const meSpy = vi.spyOn(apiClient.auth, 'me').mockResolvedValueOnce({
+        success: true,
+        user: { id: 'usr_sync', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', role: 'ADMIN' },
+      });
+
+      await initBackendSync();
+      expect(store.state.user?.email).toBe('miguel@kromalab.gt');
+
+      meSpy.mockRejectedValueOnce({ status: 401, message: '401 No autenticado' });
+      await initBackendSync();
+      expect(store.state.user).toBeNull();
+
+      healthSpy.mockRejectedValueOnce(new Error('Network offline'));
+      await initBackendSync();
+      apiClient.setToken(null);
     });
   });
 

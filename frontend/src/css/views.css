@@ -137,6 +137,93 @@
   white-space: nowrap;
 }
 
+.user-chip-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.user-chip-arrow {
+  font-size: 0.75rem;
+  transition: transform var(--transition-fast);
+  color: var(--text-muted);
+}
+
+.user-chip-dropdown-wrapper.is-open .user-chip-arrow {
+  transform: rotate(180deg);
+}
+
+.user-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 230px;
+  max-width: min(92vw, 300px);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  padding: 0.5rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-header {
+  padding: 0.5rem 0.75rem 0.35rem;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.35rem 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus-visible {
+  background: rgba(28, 114, 147, 0.12);
+  color: var(--cerulean);
+  outline: none;
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus-visible {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
 .btn-settings-toggle {
   display: inline-flex;
   align-items: center;
@@ -1787,20 +1874,32 @@
   color: #fff;
 }
 
-/* Hoja de Taller Imprimible */
-.workshop-sheet-card {
+/* Hoja de Taller y Recibo Imprimible Unificado Kroma Lab */
+.workshop-sheet-card,
+.dispatch-sheet-card,
+.kroma-print-sheet {
   background: #ffffff;
-  color: #111827;
-  padding: 2.5rem;
+  color: #21295c;
+  padding: 2rem;
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
+}
+
+.kroma-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kroma-receipt-meta-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .workshop-sheet-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid #111827;
+  border-bottom: 3px solid #1c7293;
   padding-bottom: 1.25rem;
   margin-bottom: 1.5rem;
 }
@@ -1810,10 +1909,11 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
-  background: #f8fafc;
+  background: #eef3f8;
   padding: 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid #9eb3c2;
+  border-left: 5px solid #065a82;
+  border-radius: 4px;
 }
 
 .workshop-table {
@@ -1824,14 +1924,15 @@
 
 .workshop-table th,
 .workshop-table td {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #9eb3c2;
   padding: 0.65rem 0.75rem;
   font-size: 0.85rem;
   text-align: left;
 }
 
 .workshop-table th {
-  background: #f1f5f9;
+  background: #21295c;
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -2401,6 +2502,12 @@
 }
 
 @media (max-width: 640px) {
+  .app-sidebar {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-right: none;
+  }
+
   .dispatch-cards-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -2561,3 +2668,474 @@
 }
 
 
+
+
+/* ==========================================================================
+   VISTA DE COBRANZA (RECEIVABLES) — DISEÑO MOBILE-FIRST & RESPONSIVE
+   ========================================================================== */
+
+.receivables-view {
+  width: 100%;
+  max-width: 100%;
+}
+
+.receivables-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.receivables-header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.receivables-bank-bar {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.receivables-section-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  margin-bottom: 2.25rem;
+}
+
+.receivables-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.receivables-filters-bar {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.receivables-filters-bar input {
+  min-height: 44px;
+  font-size: 0.85rem;
+  width: 220px;
+}
+
+.receivables-filters-bar select {
+  min-height: 44px;
+  font-size: 0.85rem;
+}
+
+/* Tabla Estructura Desktop */
+.receivables-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.receivables-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: unset !important; /* Elimina la restricción forzada de 850px */
+}
+
+.receivables-table th,
+.receivables-table td {
+  padding: 0.7rem 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.84rem;
+}
+
+.receivables-table th {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.col-order-code {
+  width: 105px;
+  white-space: nowrap;
+}
+
+.receivables-code-badge {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--cerulean);
+  letter-spacing: 0.03em;
+  font-size: 0.88rem;
+}
+
+.col-order-date {
+  width: 110px;
+  white-space: nowrap;
+}
+
+.receivables-date-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.col-order-client {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.receivables-client-name {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.receivables-client-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.col-order-total,
+.col-order-paid,
+.col-order-balance {
+  width: 90px;
+  white-space: nowrap;
+}
+
+.val-mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  display: block;
+}
+
+.val-balance {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.text-success {
+  color: #10b981;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+.col-order-status {
+  width: 95px;
+  white-space: nowrap;
+}
+
+.col-order-actions {
+  width: 115px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Columna de acciones de cobro vertical */
+.receivables-actions-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: stretch;
+  width: 100%;
+  min-width: 100px;
+}
+
+.receivables-actions-col .btn {
+  font-size: 0.76rem;
+  padding: 0.35rem 0.5rem;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  width: 100%;
+  line-height: 1;
+}
+
+.receivables-actions-col .btn-whatsapp-reminder {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.receivables-settled-badge {
+  font-size: 0.76rem;
+  color: #10b981;
+  font-weight: 700;
+  padding: 0.3rem 0.2rem;
+  display: block;
+  text-align: center;
+}
+
+.mobile-td-label {
+  display: none;
+}
+
+/* Tabla de Pagos */
+.receivables-payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: unset !important;
+}
+
+.receivables-payments-table th,
+.receivables-payments-table td {
+  padding: 0.65rem 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.82rem;
+}
+
+.receivables-pay-code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--cerulean);
+}
+
+/* ==========================================================================
+   BREAKPOINTS RESPONSIVOS: TABLAS DESKTOP (> 1200px) VS TARJETAS ESTILO DESPACHO (<= 1200px)
+   ========================================================================== */
+
+/* 1. Desktop (> 1200px): Mostrar tablas completas, ocultar tarjetas responsivas */
+@media (min-width: 1201px) {
+  .orders-table-wrapper,
+  .receivables-table-wrapper,
+  .clients-table-wrapper,
+  .reports-table-wrapper,
+  .profitability-table-wrapper {
+    display: block !important;
+  }
+
+  .orders-cards-grid,
+  .receivables-cards-grid,
+  .payments-cards-grid,
+  .clients-cards-grid,
+  .reports-cards-grid,
+  .profitability-cards-grid {
+    display: none !important;
+  }
+}
+
+/* 2. Pantallas <= 1200px (Laptops compactas, Tablets y Móviles):
+      Ocultar tablas con scroll horizontal y mostrar tarjetas estilo despacho */
+@media (max-width: 1200px) {
+  .orders-table-wrapper,
+  .receivables-table-wrapper,
+  .clients-table-wrapper,
+  .reports-table-wrapper,
+  .profitability-table-wrapper,
+  .mobile-scroll-hint,
+  .receivables-mobile-scroll-hint {
+    display: none !important;
+  }
+
+  .orders-cards-grid,
+  .receivables-cards-grid,
+  .payments-cards-grid,
+  .clients-cards-grid,
+  .reports-cards-grid,
+  .profitability-cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .orders-cards-grid,
+  .receivables-cards-grid,
+  .payments-cards-grid,
+  .clients-cards-grid,
+  .reports-cards-grid,
+  .profitability-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+}
+
+/* ==========================================================================
+   MOBILE-FIRST BREAKPOINT (Smartphones & Tablets <= 768px: Controles y Botones)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .receivables-header-actions {
+    width: 100%;
+  }
+
+  .receivables-header-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .receivables-bank-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .receivables-bank-bar .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .receivables-filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.6rem;
+  }
+
+  .receivables-filters-bar input,
+  .receivables-filters-bar select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+}
+/* ==========================================================================
+   TABLA DE DESGLOSE TÉCNICO DE INSUMOS (RENTABILIDAD - COMPACTA & RESPONSIVA)
+   ========================================================================== */
+.breakdown-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 0.5rem;
+}
+
+.breakdown-cost-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.breakdown-cost-table th,
+.breakdown-cost-table td {
+  padding: 0.55rem 0.5rem !important;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.breakdown-cost-table th {
+  font-size: 0.74rem !important;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid var(--border-color);
+  background: var(--bg-surface);
+  white-space: nowrap;
+}
+
+.breakdown-cost-table .col-cost-name {
+  width: 32%;
+  min-width: 130px;
+  line-height: 1.35;
+}
+
+.breakdown-cost-table .col-cost-detail {
+  width: 26%;
+  min-width: 95px;
+}
+
+.breakdown-cost-table .col-cost-unit {
+  width: 18%;
+  min-width: 75px;
+  white-space: nowrap;
+}
+
+.breakdown-cost-table .col-cost-total {
+  width: 14%;
+  min-width: 70px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.breakdown-cost-table .col-cost-pct {
+  width: 10%;
+  min-width: 50px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .breakdown-cost-table th,
+  .breakdown-cost-table td {
+    padding: 0.45rem 0.35rem !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .breakdown-cost-table th,
+  .breakdown-cost-table td {
+    padding: 0.4rem 0.3rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .breakdown-cost-table .col-cost-name {
+    min-width: 110px;
+  }
+
+  .breakdown-cost-table .col-cost-detail {
+    min-width: 80px;
+    font-size: 0.72rem !important;
+  }
+
+  .breakdown-cost-table .col-cost-unit {
+    min-width: 65px;
+    font-size: 0.72rem !important;
+  }
+
+  .breakdown-cost-table .col-cost-total {
+    min-width: 58px;
+  }
+
+  .breakdown-cost-table .col-cost-pct {
+    min-width: 42px;
+  }
+}
+
+/* Contenedor Ergonómico de Botones de Acción en Tablas de Pedidos */
+.orders-actions-cell {
+  text-align: right;
+  min-width: 125px;
+}
+
+.orders-actions-group {
+  display: inline-grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 4px;
+  justify-content: end;
+  align-items: center;
+}
+
+.btn-action-icon.btn-cancel-order:hover:not(.disabled) {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}

@@ -4,6 +4,7 @@ import { store } from '../src/js/store.js';
 describe('Store — Manejo Reactivo de Estado Global', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     store.clearUser();
   });
 
@@ -52,6 +53,61 @@ describe('Store — Manejo Reactivo de Estado Global', () => {
     expect(store.state.user).toBeNull();
     expect(store.state.token).toBeNull();
     expect(store.state.permissions).toEqual([]);
+  });
+
+  it('persiste en localStorage cuando rememberMe es true', () => {
+    const mockUser = { id: 'USR_REMEMBER', name: 'Miguel Dubois', role: 'ADMIN' };
+    const mockToken = 'token-remember-true';
+    const mockPerms = ['*'];
+
+    store.setUser(mockUser, mockToken, mockPerms, true);
+
+    expect(localStorage.getItem('kromalab_jwt_token')).toBe(mockToken);
+    expect(localStorage.getItem('kromalab_remember_me')).toBe('true');
+    const saved = JSON.parse(localStorage.getItem('kromalab_user_session'));
+    expect(saved.user).toEqual(mockUser);
+    expect(saved.permissions).toEqual(mockPerms);
+    expect(sessionStorage.getItem('kromalab_jwt_token')).toBeNull();
+  });
+
+  it('persiste en sessionStorage cuando rememberMe es false', () => {
+    const mockUser = { id: 'USR_SESSION_ONLY', name: 'Cliente Temporal', role: 'CUSTOMER' };
+    const mockToken = 'token-remember-false';
+    const mockPerms = ['ORDERS'];
+
+    store.setUser(mockUser, mockToken, mockPerms, false);
+
+    expect(sessionStorage.getItem('kromalab_jwt_token')).toBe(mockToken);
+    const saved = JSON.parse(sessionStorage.getItem('kromalab_user_session'));
+    expect(saved.user).toEqual(mockUser);
+    expect(saved.permissions).toEqual(mockPerms);
+    expect(localStorage.getItem('kromalab_jwt_token')).toBeNull();
+    expect(localStorage.getItem('kromalab_remember_me')).toBeNull();
+  });
+
+  it('clearUser limpia tanto localStorage como sessionStorage', () => {
+    localStorage.setItem('kromalab_jwt_token', 'token-local');
+    localStorage.setItem('kromalab_user_session', JSON.stringify({ user: { name: 'User' }, permissions: [] }));
+    sessionStorage.setItem('kromalab_jwt_token', 'token-session');
+    sessionStorage.setItem('kromalab_user_session', JSON.stringify({ user: { name: 'User' }, permissions: [] }));
+
+    store.clearUser();
+
+    expect(localStorage.getItem('kromalab_jwt_token')).toBeNull();
+    expect(localStorage.getItem('kromalab_user_session')).toBeNull();
+    expect(sessionStorage.getItem('kromalab_jwt_token')).toBeNull();
+    expect(sessionStorage.getItem('kromalab_user_session')).toBeNull();
+  });
+
+  it('getInitialSession recupera la sesión desde localStorage o sessionStorage', () => {
+    const mockUser = { id: 'USR_RECOVER', name: 'Lesly', role: 'CUSTOMER' };
+    localStorage.setItem('kromalab_jwt_token', 'token-recover');
+    localStorage.setItem('kromalab_user_session', JSON.stringify({ user: mockUser, permissions: ['ORDERS'] }));
+
+    const session = store.getInitialSession();
+    expect(session.token).toBe('token-recover');
+    expect(session.user).toEqual(mockUser);
+    expect(session.permissions).toEqual(['ORDERS']);
   });
 
   it('notifica a los suscriptores cuando el estado cambia', () => {

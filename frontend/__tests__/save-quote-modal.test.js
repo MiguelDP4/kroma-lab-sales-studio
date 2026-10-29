@@ -120,11 +120,11 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     expect(modal.style.display).toBe('none');
   });
 
-  it('cierra el modal al pulsar el backdrop fuera de la tarjeta', () => {
+  it('no cierra el modal al pulsar el backdrop fuera de la tarjeta (Task 5)', () => {
     openSaveQuoteModal();
     const modal = document.getElementById('saveQuoteModal');
     modal.click();
-    expect(modal.style.display).toBe('none');
+    expect(modal.style.display).toBe('block');
   });
 
   it('valida que el nombre de proyecto sea obligatorio', async () => {
@@ -276,8 +276,7 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     vi.useRealTimers();
   });
 
-  it('muestra y oculta la vista previa del snapshot técnico de la bobina', () => {
-    // Caso con snapshot presente
+  it('muestra la galería de items con su snapshot técnico y metadatos de bobina', () => {
     openSaveQuoteModal({
       widthCm: 8,
       heightCm: 5,
@@ -286,19 +285,10 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
       rotationDeg: 90,
     });
 
-    const wrap = document.getElementById('saveQuoteSnapshotWrap');
-    const img = document.getElementById('saveQuoteSnapshotImg');
-    expect(wrap.style.display).toBe('flex');
-    expect(img.src).toContain('mockSnapshotData');
-
-    // Caso sin snapshot
-    openSaveQuoteModal({
-      widthCm: 5,
-      heightCm: 5,
-      qty: 50,
-      canvasSnapshot: null,
-    });
-    expect(wrap.style.display).toBe('none');
+    const gallery = document.getElementById('saveQuoteItemsGallery');
+    expect(gallery).not.toBeNull();
+    expect(gallery.innerHTML).toContain('mockSnapshotData');
+    expect(gallery.innerHTML).toContain('Bobina 28cm');
   });
 
   it('persiste canvasSnapshot y rotationDeg en quotesStore al guardar', async () => {
@@ -353,5 +343,41 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
 
     expect(() => openSaveQuoteModal()).not.toThrow();
     expect(() => closeSaveQuoteModal()).not.toThrow();
+  });
+
+  it('renderiza la previsualización del arte del cliente en la galería de items y lo asocia a la cotización', async () => {
+    vi.useFakeTimers();
+
+    openSaveQuoteModal({
+      widthCm: 10,
+      heightCm: 10,
+      qty: 80,
+      linearMeters: 2.5,
+      totalPriceQ: 350.0,
+      previewUrl: 'data:image/png;base64,mockArtworkPreview',
+      fileName: 'mi-diseno-premium.png',
+      fileSizeBytes: 2048576,
+    });
+
+    const gallery = document.getElementById('saveQuoteItemsGallery');
+    expect(gallery).not.toBeNull();
+    expect(gallery.innerHTML).toContain('mockArtworkPreview');
+    expect(gallery.innerHTML).toContain('mi-diseno-premium.png');
+    expect(gallery.innerHTML).toContain('MB');
+
+    document.getElementById('saveQuoteProjectName').value = 'Proyecto Con Arte';
+    document.getElementById('saveQuoteLeadName').value = 'Miguel Dubois';
+    document.getElementById('saveQuoteLeadPhone').value = '+502 5555-8888';
+
+    const ok = await handleSaveQuoteSubmit();
+    expect(ok).toBe(true);
+
+    const quote = quotesStore.filterQuotes('Proyecto Con Arte')[0];
+    expect(quote).toBeDefined();
+    expect(quote.previewUrl).toBe('data:image/png;base64,mockArtworkPreview');
+    expect(quote.fileName).toBe('mi-diseno-premium.png');
+
+    vi.advanceTimersByTime(800);
+    vi.useRealTimers();
   });
 });

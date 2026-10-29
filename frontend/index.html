@@ -138,10 +138,14 @@
           <span id="cartCountBadge" class="cart-count-badge" style="display: none;">0</span>
         </button>
 
-        <!-- Chip de Perfil de Usuario -->
-        <div id="userProfileChip" class="user-profile-chip" title="Perfil y Rol Activo">
-          <span class="user-chip-avatar" id="userChipAvatar">👤</span>
-          <span class="user-chip-name" id="userChipName">Admin</span>
+        <!-- Contenedor y Chip de Perfil de Usuario con Menú Desplegable -->
+        <div class="user-chip-dropdown-wrapper" id="userChipDropdownWrapper">
+          <button type="button" id="userProfileChip" class="user-profile-chip" aria-haspopup="true" aria-expanded="false" title="Cuenta de usuario">
+            <span class="user-chip-avatar" id="userChipAvatar">👤</span>
+            <span class="user-chip-name" id="userChipName">Visitante</span>
+            <span class="user-chip-arrow" id="userChipArrow" aria-hidden="true">▾</span>
+          </button>
+          <div id="userProfileDropdown" class="user-profile-dropdown" style="display: none;" role="menu" aria-label="Menú de usuario"></div>
         </div>
 
         <!-- Botón Switch Modo Claro / Oscuro -->

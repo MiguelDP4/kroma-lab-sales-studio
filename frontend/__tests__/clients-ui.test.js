@@ -192,30 +192,34 @@ describe('Clients View — Interfaz de Directorio B2B y Cartera de Clientes', ()
     expect(dossierModal.style.display).toBe('none');
   });
 
-  it('elimina un cliente cuando el usuario confirma la acción', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
+  it('elimina un cliente cuando el usuario confirma la acción en el modal consistente', () => {
     const deleteBtn = document.querySelector('.btn-delete-client[data-client-id="CLI-005"]');
     expect(deleteBtn).not.toBeNull();
 
     deleteBtn.click();
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(clientsStore.getClientById('CLI-005')).toBeNull();
+    const modal = document.getElementById('deleteClientModal');
+    expect(modal.style.display).toBe('block');
 
-    confirmSpy.mockRestore();
+    const btnConfirm = document.getElementById('btnConfirmDeleteClient');
+    btnConfirm.click();
+
+    expect(modal.style.display).toBe('none');
+    expect(clientsStore.getClientById('CLI-005')).toBeNull();
   });
 
-  it('cancela la eliminación de un cliente si el usuario rechaza el diálogo', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
+  it('cancela la eliminación de un cliente si el usuario rechaza en el modal', () => {
     const deleteBtn = document.querySelector('.btn-delete-client[data-client-id="CLI-001"]');
     expect(deleteBtn).not.toBeNull();
 
     deleteBtn.click();
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(clientsStore.getClientById('CLI-001')).not.toBeNull();
+    const modal = document.getElementById('deleteClientModal');
+    expect(modal.style.display).toBe('block');
 
-    confirmSpy.mockRestore();
+    const btnCancel = document.getElementById('btnCancelDeleteClientModal');
+    btnCancel.click();
+
+    expect(modal.style.display).toBe('none');
+    expect(clientsStore.getClientById('CLI-001')).not.toBeNull();
   });
 
   it('actualiza reactivamente los KPIs cuando se añade una orden en ordersStore', () => {
@@ -289,5 +293,39 @@ describe('Clients View — Interfaz de Directorio B2B y Cartera de Clientes', ()
 
     const clients = clientsStore.getClients();
     expect(clients[0].company).toBe('Cliente B2B');
+  });
+describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
+    it('renderiza tarjetas de clientes en clientsCardsContainer', () => {
+      const container = document.getElementById('clientsCardsContainer');
+      expect(container).not.toBeNull();
+
+      const cards = container.querySelectorAll('.client-card');
+      expect(cards.length).toBeGreaterThanOrEqual(5);
+
+      const firstCard = cards[0];
+      expect(firstCard.querySelector('.dispatch-card-folio')).not.toBeNull();
+      expect(firstCard.querySelector('.dispatch-card-metrics-grid')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-view-dossier')).not.toBeNull();
+      expect(firstCard.querySelector('.btn-edit-client')).not.toBeNull();
+    });
+
+    it('permite abrir expediente y editar desde las tarjetas de clientes', () => {
+      const card = document.querySelector('.client-card');
+      expect(card).not.toBeNull();
+
+      // Abrir expediente desde tarjeta
+      const btnDossier = card.querySelector('.btn-view-dossier');
+      btnDossier.click();
+      const dossierModal = document.getElementById('clientDossierModal');
+      expect(dossierModal.style.display).toBe('block');
+      document.getElementById('btnCloseDossierModal').click();
+
+      // Abrir edición desde tarjeta
+      const btnEdit = card.querySelector('.btn-edit-client');
+      btnEdit.click();
+      const formModal = document.getElementById('clientFormModal');
+      expect(formModal.style.display).toBe('block');
+      document.getElementById('btnCloseClientFormModal').click();
+    });
   });
 });

@@ -115,9 +115,9 @@ export const reportsView = {
             <!-- Inyectado dinámicamente -->
           </div>
 
-          <!-- Tabla de Ranking de Clientes con Scroll Táctil -->
+          <!-- Tabla de Ranking de Clientes con Scroll Táctil (Desktop > 1200px) -->
           <div class="mobile-scroll-hint">Desliza para ver columnas fiscales y totales ↔</div>
-          <div class="orders-table-container">
+          <div class="orders-table-container reports-table-wrapper">
             <table class="orders-table">
               <thead>
                 <tr>
@@ -134,6 +134,14 @@ export const reportsView = {
                 <!-- Inyectado dinámicamente -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Tarjetas de Ranking de Clientes Estilo Despacho (<= 1200px) -->
+          <div id="topClientsCardsContainer" class="reports-cards-grid dispatch-cards-grid">
+            <!-- Inyectado dinámicamente por renderTopClientsTable() -->
+          </div>
+          <div id="topClientsEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
+            No se registran compras de clientes para el período seleccionado.
           </div>
         </div>
 
@@ -304,6 +312,8 @@ export const reportsView = {
 
     function renderTopClientsTable(report) {
       const tbody = document.getElementById('topClientsTableBody');
+      const cardsContainer = document.getElementById('topClientsCardsContainer');
+      const emptyState = document.getElementById('topClientsEmptyState');
       if (!tbody) return;
 
       const ranking = report.b2bPortfolio.topClientsRanking;
@@ -316,9 +326,14 @@ export const reportsView = {
             </td>
           </tr>
         `;
+        if (cardsContainer) cardsContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
         return;
       }
 
+      if (emptyState) emptyState.style.display = 'none';
+
+      // 1. Desktop Table Rows (> 1200px)
       tbody.innerHTML = ranking.map(c => {
         const tier = CLIENT_TIERS[c.tier] || { badge: c.tier, color: 'var(--cerulean)', bg: 'rgba(28, 114, 147, 0.15)' };
         return `
@@ -339,6 +354,58 @@ export const reportsView = {
           </tr>
         `;
       }).join('');
+
+      // 2. Responsive Cards (<= 1200px)
+      if (cardsContainer) {
+        cardsContainer.innerHTML = ranking.map(c => {
+          const tier = CLIENT_TIERS[c.tier] || { badge: c.tier, color: 'var(--cerulean)', bg: 'rgba(28, 114, 147, 0.15)' };
+          return `
+            <div class="dispatch-card ranking-card" data-ranking-card="${c.rank}" style="border-top: 4px solid ${tier.color};">
+              <!-- Cabecera: Posición en Ranking, Empresa y Nivel -->
+              <div class="dispatch-card-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="dispatch-card-folio" style="color: var(--cerulean);">#${c.rank}</span>
+                    <span style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">${c.company}</span>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="badge" style="background: ${tier.bg}; color: ${tier.color}; border-color: ${tier.color}; font-size: 0.75rem; font-weight: 700; padding: 0.35rem 0.65rem;">
+                    ${tier.badge}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Cuerpo: Contacto y Métricas Comerciales -->
+              <div class="dispatch-card-body">
+                <div class="dispatch-card-client-row">
+                  <div>
+                    <div class="dispatch-card-client-name">
+                      👤 ${c.name}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dispatch-card-metrics-grid">
+                  <div class="dispatch-card-metric-col">
+                    <span>Metraje</span>
+                    <span style="color: var(--cerulean);">${c.totalMeters.toFixed(2)} m</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Total Facturado</span>
+                    <span style="color: var(--color-success);">Q${c.totalSpentQ.toFixed(2)}</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Saldo Pendiente</span>
+                    <span style="color: ${c.pendingDebtQ > 0 ? '#ef4444' : '#10b981'}; font-size: 1.05rem;">Q${c.pendingDebtQ.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
     function renderStatusBreakdown(report) {

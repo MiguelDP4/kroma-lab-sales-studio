@@ -13,7 +13,33 @@ describe('Auth API (/api/auth)', () => {
 
   beforeAll(async () => {
     await seedDatabase();
+    it('permite a ADMIN actualizar rol y estado de un colaborador en /api/auth/users/:id', async () => {
+    const createRes = await request(app)
+      .post('/api/auth/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Empleado Prueba',
+        email: `empleado_${Date.now()}@test.gt`,
+        password: 'Password123!',
+        role: 'EMPLOYEE',
+      });
+
+    const newUserId = createRes.body.user.id;
+
+    const patchRes = await request(app)
+      .patch(`/api/auth/users/${newUserId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        role: 'ADMIN',
+        department: 'Impresión UV',
+      });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.success).toBe(true);
+    expect(patchRes.body.user.role).toBe('ADMIN');
+    expect(patchRes.body.user.department).toBe('Impresión UV');
   });
+});
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: { contains: '@pruebas.gt' } } });
@@ -67,7 +93,7 @@ describe('Auth API (/api/auth)', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.token).toBeDefined();
+    expect(res.body.requireVerification).toBe(true);
     expect(res.body.user.email).toBe(randomEmail);
     expect(res.body.user.role).toBe('CUSTOMER');
 
@@ -239,5 +265,87 @@ describe('Auth API (/api/auth)', () => {
     const res = await request(app).post('/api/auth/logout');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+  it('rechaza cambio de contraseña si la contraseña actual no es correcta (400) (Task 7)', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        currentPassword: 'WrongPassword!',
+        newPassword: 'BrandNewPass2026!'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('La contraseña actual no es correcta');
+  });
+
+  it('procesa solicitud de cambio de contraseña enviando correo de verificación (Task 7)', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        currentPassword: 'Admin2026!',
+        newPassword: 'BrandNewPass2026!'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain('correo de verificación');
+
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const userInDb = await prisma.user.findUnique({ where: { id: meRes.body.user.id } });
+    expect(userInDb?.verificationToken).toBeDefined();
+
+    // Confirmar cambio mediante verify-email
+    const verifyRes = await request(app)
+      .get(`/api/auth/verify-email?token=${userInDb?.verificationToken}`);
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.success).toBe(true);
+    expect(verifyRes.body.message).toContain('contraseña ha sido actualizada');
+  });
+
+  it('rechaza cambio de correo si la contraseña actual no es correcta (400) (Task 8)', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-email')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        currentPassword: 'WrongPassword!',
+        newEmail: 'nuevo_correo_test@empresa.gt'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('La contraseña actual no es correcta');
+  });
+
+  it('procesa solicitud de cambio de correo y lo confirma con token de verificación (Task 8)', async () => {
+    const targetEmail = `nuevo_email_${Date.now()}@pruebas.gt`;
+    const res = await request(app)
+      .post('/api/auth/change-email')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        currentPassword: 'BrandNewPass2026!',
+        newEmail: targetEmail
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain('correo de verificación');
+
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const userInDb = await prisma.user.findUnique({ where: { id: meRes.body.user.id } });
+    expect(userInDb?.verificationToken).toBeDefined();
+
+    // Confirmar cambio mediante verify-email
+    const verifyRes = await request(app)
+      .get(`/api/auth/verify-email?token=${userInDb?.verificationToken}`);
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.success).toBe(true);
+    expect(verifyRes.body.user.email).toBe(targetEmail);
   });
 });

@@ -18,7 +18,7 @@ import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
 import { validatePrintFile, readFileAsDataURL, uploadFileToStorage, uploadCanvasSnapshotToStorage } from './modules/file-uploader.js';
-import { initUserProfileModal, openUserProfileModal, closeUserProfileModal } from './components/user-profile-modal.js';
+import { initUserProfileModal, openUserProfileModal, closeUserProfileModal, handleLogout } from './components/user-profile-modal.js';
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
 import { quotesStore } from './modules/quotes-store.js';
@@ -35,12 +35,15 @@ import { receivablesView } from './views/receivables-view.js';
 import { dispatchView } from './views/dispatch-view.js';
 import { quotesView } from './views/quotes-view.js';
 import { softwareView } from './views/software-view.js';
+import { accountView } from './views/account-view.js';
+import { verifyEmailView } from './views/verify-email-view.js';
 
 export const routes = [
   quoterView,
   { ...quoterView, path: '/cotizador' },
   quotesView,
   { ...quotesView, path: '/cotizaciones' },
+  { ...quotesView, path: '/cotizaciones-guardadas' },
   ordersView,
   productionView,
   clientsView,
@@ -52,17 +55,26 @@ export const routes = [
   dispatchView,
   { ...dispatchView, path: '/remisiones' },
   usersView,
+  accountView,
+  { ...accountView, path: '/cuenta' },
+  { ...accountView, path: '/perfil' },
+  { ...accountView, path: '/configuracion' },
+  verifyEmailView,
+  { ...verifyEmailView, path: '/confirmar-correo' },
   softwareView,
   { ...softwareView, path: '/spot-studio' },
   { ...softwareView, path: '/preprensa' },
 ];
 
 export const router = new Router(routes, 'app');
+if (typeof window !== 'undefined') {
+  window.router = router;
+}
 
-export function purgeLegacyMockStorage() {
+export function purgeLegacyMockStorage(force = false) {
   if (typeof window === 'undefined' || !window.localStorage) return;
   const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-  if (IS_TEST) return;
+  if (IS_TEST && !force) return;
 
   const keysToClean = [
     'kromalab_dispatch_notes',
@@ -84,11 +96,7 @@ export function purgeLegacyMockStorage() {
         raw.includes('Rodrigo Méndez') ||
         raw.includes('Barbería Vintage') ||
         raw.includes('Sport Gym') ||
-        raw.includes('REM-2026-00') ||
-        raw.includes('KL-0004') ||
-        raw.includes('CLI-00') ||
-        raw.includes('COT-2026-00') ||
-        raw.includes('PAY-2026-00') ||
+        raw.includes('rodrigo@promoguate.gt') ||
         raw.includes('carlos.taller@kromalab.gt') ||
         raw.includes('sofia.ventas@kromalab.gt')
       ) {
@@ -112,15 +120,20 @@ export async function initBackendSync() {
         } catch (_) {}
       }
       if (apiClient.token) {
-        await Promise.allSettled([
-          ordersStore.syncWithApi(),
-          clientsStore.syncWithApi(),
-          inventoryStore.syncWithApi(),
-          receivablesStore.syncWithApi(),
-          dispatchStore.syncWithApi(),
-          usersStore.syncWithApi(),
-          quotesStore.syncWithApi(),
-        ]);
+        try {
+          const meRes = await apiClient.auth.me();
+          if (meRes && meRes.success && meRes.user) {
+            const isRemembered = typeof localStorage !== 'undefined' && localStorage.getItem('kromalab_remember_me') === 'true';
+            store.setUser(meRes.user, apiClient.token, store.state.permissions, isRemembered);
+          }
+        } catch (authErr) {
+          if (authErr?.status === 401 || authErr?.message?.includes('401') || authErr?.message?.includes('No autenticado')) {
+            store.clearUser();
+          }
+        }
+        // Carga bajo demanda (Lazy loading): no cargar masivamente todos los módulos en el arranque.
+        // Cada vista (orders, quotes, clients, inventory, dispatch, receivables, users) sincroniza
+        // sus datos en su respectivo onMount() únicamente cuando el usuario navega a ella.
       }
     }
   } catch (err) {
@@ -128,10 +141,151 @@ export async function initBackendSync() {
   }
 }
 
+export function initUserDropdown() {
+  const chipBtn = document.getElementById('userProfileChip');
+  const dropdown = document.getElementById('userProfileDropdown');
+  const wrapper = document.getElementById('userChipDropdownWrapper');
+
+  if (!chipBtn || !dropdown) return;
+  if (chipBtn.dataset.dropdownBound) return;
+  chipBtn.dataset.dropdownBound = 'true';
+
+  function renderDropdownContent() {
+    const user = store.state.user;
+    const role = user?.role || 'VISITOR';
+    const isVisitor = !user || role === 'VISITOR';
+
+    if (isVisitor) {
+      dropdown.innerHTML = `
+        <div class="dropdown-header">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">¡Hola!</div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem;">Accede a tu cuenta de Kroma Lab</div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <button type="button" class="dropdown-item" id="dropdownBtnLogin" style="min-height: 44px;">
+          <span>🔑</span>
+          <span>Iniciar Sesión</span>
+        </button>
+        <button type="button" class="dropdown-item" id="dropdownBtnRegister" style="min-height: 44px;">
+          <span>📝</span>
+          <span>Crear Cuenta</span>
+        </button>
+      `;
+
+      const btnLogin = dropdown.querySelector('#dropdownBtnLogin');
+      if (btnLogin) {
+        btnLogin.addEventListener('click', () => {
+          closeDropdown();
+          openUserProfileModal('login');
+        });
+      }
+
+      const btnReg = dropdown.querySelector('#dropdownBtnRegister');
+      if (btnReg) {
+        btnReg.addEventListener('click', () => {
+          closeDropdown();
+          openUserProfileModal('register');
+        });
+      }
+    } else {
+      const roleBadge = role === 'ADMIN' ? '👑 Admin' : (role === 'EMPLOYEE' ? '🛠️ Taller' : '🏢 Cliente');
+      dropdown.innerHTML = `
+        <div class="dropdown-header">
+          <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${user.name}
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem;">
+            ${user.email}
+          </div>
+          <div style="margin-top: 0.35rem;">
+            <span class="badge" style="font-size: 0.68rem; padding: 0.15rem 0.5rem;">${roleBadge}</span>
+          </div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <a href="/mi-cuenta" class="dropdown-item" id="dropdownBtnAccount" data-link style="min-height: 44px;">
+          <span>⚙️</span>
+          <span>Configuración de la Cuenta</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <button type="button" class="dropdown-item text-danger" id="dropdownBtnLogout" style="min-height: 44px; color: #ef4444;">
+          <span>🚪</span>
+          <span>Cerrar Sesión</span>
+        </button>
+      `;
+
+      const btnAccount = dropdown.querySelector('#dropdownBtnAccount');
+      if (btnAccount) {
+        btnAccount.addEventListener('click', (e) => {
+          e.preventDefault();
+          closeDropdown();
+          if (router) router.navigate('/mi-cuenta');
+        });
+      }
+
+      const btnLogout = dropdown.querySelector('#dropdownBtnLogout');
+      if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+          closeDropdown();
+          await handleLogout();
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/mi-cuenta')) {
+            window.location.href = '/';
+          }
+        });
+      }
+    }
+  }
+
+  function openDropdown() {
+    renderDropdownContent();
+    dropdown.style.display = 'flex';
+    if (wrapper) wrapper.classList.add('is-open');
+    chipBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDropdown() {
+    dropdown.style.display = 'none';
+    if (wrapper) wrapper.classList.remove('is-open');
+    chipBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleDropdown(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const isOpen = dropdown.style.display === 'flex' || dropdown.style.display === 'block';
+    if (isOpen) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
+  }
+
+  chipBtn.addEventListener('click', toggleDropdown);
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDropdown();
+      }
+    });
+  }
+
+  store.subscribe(() => {
+    if (dropdown.style.display === 'flex' || dropdown.style.display === 'block') {
+      renderDropdownContent();
+    }
+  });
+}
+
 export function initApp() {
   purgeLegacyMockStorage();
   initTheme();
   initNavbarRoleSync();
+  initUserDropdown();
   initMobileNav();
   initCartDrawer();
   initUserProfileModal();
@@ -337,9 +491,9 @@ export function syncNavbarRole(role) {
     if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'O';
     if (sidebarUserRole) sidebarUserRole.textContent = 'OPERADOR TALLER';
   } else if (role === 'CUSTOMER') {
-    if (userChipName) userChipName.textContent = currentName || 'Cliente B2B';
+    if (userChipName) userChipName.textContent = currentName || 'Cliente';
     if (userChipAvatar) userChipAvatar.textContent = '🏢';
-    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Cliente B2B';
+    if (sidebarUserName) sidebarUserName.textContent = currentName || 'Cliente';
     if (sidebarUserAvatar) sidebarUserAvatar.textContent = currentName ? currentName[0].toUpperCase() : 'C';
     if (sidebarUserRole) sidebarUserRole.textContent = 'CLIENTE REGISTRADO';
   } else {
@@ -475,9 +629,14 @@ export function syncNavbarRole(role) {
 }
 
 let lastSyncedRole = null;
+let unsubscribeNavbarRole = null;
 
 function initNavbarRoleSync() {
-  store.subscribe((state) => {
+  if (unsubscribeNavbarRole) {
+    unsubscribeNavbarRole();
+    unsubscribeNavbarRole = null;
+  }
+  unsubscribeNavbarRole = store.subscribe((state) => {
     const role = state.user?.role || 'VISITOR';
     if (role !== lastSyncedRole) {
       lastSyncedRole = role;
@@ -518,6 +677,11 @@ export function initQuoter() {
   }
 
   widthInput.addEventListener('input', () => {
+    let wVal = parseFloat(widthInput.value);
+    // Task 9: Si el usuario escribe ancho > 28, regresar automáticamente a 28
+    if (!isNaN(wVal) && wVal > 28) {
+      widthInput.value = '28';
+    }
     if (keepAspectCheckbox && keepAspectCheckbox.checked && currentPreviewImg && currentImageAspectRatio) {
       const w = parseFloat(widthInput.value);
       if (!isNaN(w) && w > 0) {
@@ -525,6 +689,14 @@ export function initQuoter() {
       }
     }
     handleCalculate();
+  });
+
+  widthInput.addEventListener('change', () => {
+    let wVal = parseFloat(widthInput.value);
+    if (!isNaN(wVal) && wVal > 28) {
+      widthInput.value = '28';
+      handleCalculate();
+    }
   });
 
   heightInput.addEventListener('input', () => {
@@ -658,7 +830,9 @@ export function initQuoter() {
     currentRotation = 0;
     currentImageAspectRatio = null;
 
-    if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+    if (aspectRatioRow) {
+      aspectRatioRow.style.display = 'none';
+    }
 
     redrawRollCanvas();
 
@@ -731,6 +905,7 @@ export function initQuoter() {
     if (currentPreviewUrl && typeof Image !== 'undefined') {
       const img = new Image();
       img.onload = () => {
+        if (currentRawFile !== file) return;
         currentPreviewImg = img;
         currentRotation = 0;
         const nw = img.naturalWidth || img.width || 1;
@@ -754,7 +929,8 @@ export function initQuoter() {
         currentPreviewImg = null;
         currentRotation = 0;
         currentImageAspectRatio = null;
-        if (aspectRatioRow) aspectRatioRow.style.display = 'none';
+        const aspectRowEl = document.getElementById('aspectRatioRow');
+    if (aspectRowEl) aspectRowEl.style.display = 'none';
         redrawRollCanvas();
       };
       img.src = currentPreviewUrl;
@@ -882,7 +1058,7 @@ export function initQuoter() {
       });
 
       clearDropzoneFile();
-      openCartDrawer();
+      showQuoterToast('Cotización agregada al carrito');
     });
   }
 
@@ -917,6 +1093,8 @@ export function initQuoter() {
         fileKey: currentAttachedFile ? currentAttachedFile.fileKey : null,
         fileSizeBytes: currentAttachedFile ? currentAttachedFile.size : null,
         provider: currentAttachedFile ? currentAttachedFile.provider : null,
+        previewUrl: currentPreviewUrl || (currentAttachedFile ? currentAttachedFile.fileUrl : null) || null,
+        fileInfo: currentAttachedFile ? { ...currentAttachedFile } : null,
         canvasSnapshot,
         rotationDeg: currentRotation,
       });
@@ -935,6 +1113,28 @@ export function initQuoter() {
 /**
  * Actualiza el DOM con los resultados numéricos de la cotización
  */
+
+/**
+ * Toast flotante de notificación en la esquina inferior derecha (Task 16).
+ */
+export function showQuoterToast(msg = 'Cotización agregada al carrito') {
+  if (typeof document === 'undefined') return;
+  let toast = document.getElementById('quoterToastNotification');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'quoterToastNotification';
+    toast.className = 'quoter-toast-notification';
+    if (document.body) document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span style="color: #10b981; font-size: 1.1rem;">✅</span> <span>${msg}</span>`;
+  toast.classList.add('is-visible');
+
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast?.classList.remove('is-visible');
+  }, 3500);
+}
+
 export function renderQuoteResults(quote) {
   const setEl = (id, text) => {
     const el = document.getElementById(id);
@@ -949,6 +1149,36 @@ export function renderQuoteResults(quote) {
   setEl('resTotalPrice', `Q${quote.totalPriceQ.toFixed(2)}`);
   setEl('canvasStats', `${quote.stickersPerRow} por fila (${(quote.stickersPerRow * quote.widthCm).toFixed(1)} cm)`);
   setEl('resUnitHint', `Costo aprox: Q${quote.unitPriceQ.toFixed(2)} por sticker ${quote.includeCutting ? '(impreso y cortado)' : ''}`);
+
+  // Task 17: Notificación de fila no aprovechada completamente
+  const rowOptNotice = document.getElementById('rowOptimizationNotice');
+  const qtyInputEl = document.getElementById('stickerQty');
+  if (rowOptNotice) {
+    if (quote.isRowIncomplete && quote.unusedInLastRow > 0) {
+      const remainder = quote.qty % quote.stickersPerRow;
+      const inLastRow = remainder === 0 ? quote.stickersPerRow : remainder;
+      rowOptNotice.style.display = 'block';
+      rowOptNotice.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.6rem;">
+          <span style="font-size: 1.25rem; line-height: 1;">💡</span>
+          <div style="flex: 1; font-size: 0.88rem; line-height: 1.45;">
+            <strong>Aprovechamiento de bobina:</strong> En la última fila caben <strong>${quote.stickersPerRow} stickers</strong> y solo estás usando <strong>${inLastRow}</strong> (${quote.unusedInLastRow} espacio${quote.unusedInLastRow > 1 ? 's' : ''} libre${quote.unusedInLastRow > 1 ? 's' : ''}).<br>
+            El material de impresión ya cubre esa fila. Puedes pedir <button type="button" id="btnApplyOptimalQty" style="background: none; border: none; color: var(--cerulean); font-weight: 800; text-decoration: underline; cursor: pointer; padding: 0 2px; font-size: inherit;">${quote.optimalQty} copias por el mismo precio</button>.
+          </div>
+        </div>
+      `;
+      const btnApply = document.getElementById('btnApplyOptimalQty');
+      if (btnApply && qtyInputEl) {
+        btnApply.addEventListener('click', () => {
+          qtyInputEl.value = String(quote.optimalQty);
+          qtyInputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      }
+    } else {
+      rowOptNotice.style.display = 'none';
+      rowOptNotice.innerHTML = '';
+    }
+  }
 
   // Detalle de corte
   const resCuttingCost = document.getElementById('resCuttingCost');
@@ -1039,4 +1269,4 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
 
-export { openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };
+export { accountView, openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };

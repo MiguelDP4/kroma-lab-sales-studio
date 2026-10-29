@@ -22,8 +22,8 @@ describe('Workshop Config API (/api/workshop)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.config.printableRollWidthCm).toBe(28.0);
-    expect(res.body.config.rollWidthCm).toBe(30.0);
+    expect(Number(res.body.config.printableRollWidthCm)).toBe(28.0);
+    expect(Number(res.body.config.rollWidthCm)).toBe(30.0);
     expect(res.body.config.bankBiAccount).toBe('5371667253');
   });
 
@@ -35,7 +35,7 @@ describe('Workshop Config API (/api/workshop)', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.config.id).toBe('default');
-    expect(res.body.config.printableRollWidthCm).toBe(28.0);
+    expect(Number(res.body.config.printableRollWidthCm)).toBe(28.0);
   });
 
   it('permite a ADMIN actualizar parámetros del taller Audley', async () => {
@@ -49,7 +49,7 @@ describe('Workshop Config API (/api/workshop)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.config.rateTier4).toBe(102.5);
-    expect(res.body.config.monthlyNetTargetQ).toBe(22000.0);
+    expect(Number(res.body.config.rateTier4)).toBe(102.5);
+    expect(Number(res.body.config.monthlyNetTargetQ)).toBe(22000.0);
   });
 });

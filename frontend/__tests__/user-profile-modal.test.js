@@ -106,7 +106,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(viewProfile.style.display).toBe('none');
 
       const title = document.getElementById('userProfileModalTitle');
-      expect(title.textContent).toBe('Registro de Cliente B2B');
+      expect(title.textContent).toBe('Crear Cuenta');
     });
 
     it('cambia a pestaña profile mostrando datos de usuario', () => {
@@ -201,7 +201,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(deptGroup.style.display).toBe('none');
 
       const roleBadge = document.getElementById('profileModalRoleBadge');
-      expect(roleBadge.textContent).toContain('Cliente B2B');
+      expect(roleBadge.textContent).toContain('Cliente Registrado');
     });
 
     it('maneja el modo Visitante con valores limpios e indicación de rol', () => {
@@ -234,21 +234,65 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(modal.style.display).toBe('none');
     });
 
-    it('abre el modal al pulsar el chip del topbar o la tarjeta del sidebar', () => {
-      const chip = document.getElementById('userProfileChip');
+    it('abre el modal al pulsar la tarjeta del sidebar', () => {
       const sidebarCard = document.getElementById('sidebarUserCard');
       const modal = document.getElementById('userProfileModal');
 
       expect(modal.style.display).toBe('none');
 
-      chip.click();
-      expect(modal.style.display).toBe('block');
-
-      closeUserProfileModal();
-      expect(modal.style.display).toBe('none');
-
       sidebarCard.click();
       expect(modal.style.display).toBe('block');
+    });
+
+    it('oculta completamente las pestanas y opciones de Iniciar Sesion y Crear Cuenta cuando la sesion esta activa', () => {
+      const activeUser = {
+        id: 'usr_001',
+        name: 'Miguel Dubois',
+        email: 'miguel@kromalab.gt',
+        role: 'ADMIN',
+      };
+      store.setUser(activeUser, 'valid-token', ['ALL']);
+
+      openUserProfileModal();
+
+      const authTabs = document.getElementById('authTabsContainer');
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabRegister = document.getElementById('tabBtnRegister');
+      const authViewLogin = document.getElementById('authViewLogin');
+      const authViewRegister = document.getElementById('authViewRegister');
+      const authViewProfile = document.getElementById('authViewProfile');
+
+      expect(authTabs.style.display).toBe('none');
+      expect(tabLogin.style.display).toBe('none');
+      expect(tabRegister.style.display).toBe('none');
+      expect(authViewProfile.style.display).toBe('block');
+      expect(authViewLogin.style.display).toBe('none');
+      expect(authViewRegister.style.display).toBe('none');
+
+      // Intentar forzar cambio a pestana login o register no debe surtir efecto si hay sesion activa
+      switchAuthTab('login');
+      expect(authViewLogin.style.display).toBe('none');
+      expect(authViewProfile.style.display).toBe('block');
+
+      switchAuthTab('register');
+      expect(authViewRegister.style.display).toBe('none');
+      expect(authViewProfile.style.display).toBe('block');
+    });
+
+    it('muestra las pestanas de Iniciar Sesion y Crear Cuenta solo cuando esta en modo visitante', () => {
+      store.clearUser();
+
+      openUserProfileModal();
+
+      const authTabs = document.getElementById('authTabsContainer');
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabRegister = document.getElementById('tabBtnRegister');
+      const tabProfile = document.getElementById('tabBtnProfile');
+
+      expect(authTabs.style.display).toBe('flex');
+      expect(tabLogin.style.display).toBe('block');
+      expect(tabRegister.style.display).toBe('block');
+      expect(tabProfile.style.display).toBe('none');
     });
 
     it('cierra el modal al pulsar el botón X o Cancelar', () => {
@@ -275,12 +319,12 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(modal.style.display).toBe('none');
     });
 
-    it('cierra el modal al hacer clic en el backdrop fuera de la tarjeta', () => {
+    it('no cierra el modal al hacer clic en el backdrop fuera de la tarjeta (Task 5)', () => {
       openUserProfileModal();
       const modal = document.getElementById('userProfileModal');
 
       modal.click();
-      expect(modal.style.display).toBe('none');
+      expect(modal.style.display).toBe('block');
     });
 
     it('cierra el modal al presionar la tecla Escape', () => {
@@ -465,7 +509,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
 
       // Permitir que la promesa de login se resuelva
       await vi.waitFor(() => {
-        expect(loginSpy).toHaveBeenCalledWith('taller@kromalab.gt', 'Taller2026!');
+        expect(loginSpy).toHaveBeenCalledWith('taller@kromalab.gt', 'Taller2026!', true);
       });
     });
   });
@@ -476,6 +520,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'test@empresa.gt';
       document.getElementById('registerPhoneInput').value = '55551234';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -489,6 +534,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'emailinvalido';
       document.getElementById('registerPhoneInput').value = '55551234';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -502,6 +548,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'juan@empresa.gt';
       document.getElementById('registerPhoneInput').value = '123';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -546,6 +593,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerAddressInput').value = 'Zona 9 Ciudad de Guatemala';
       document.getElementById('registerEmailInput').value = 'rodrigo@publicidad.gt';
       document.getElementById('registerPasswordInput').value = 'Promo2026!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Promo2026!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(true);
@@ -567,6 +615,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'existente@empresa.gt';
       document.getElementById('registerPhoneInput').value = '55551234';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -575,6 +624,62 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(feedback.textContent).toContain('Ya existe una cuenta registrada');
     });
   });
+
+
+    it('valida que las contraseñas coincidan al crear cuenta (Task 1)', async () => {
+      document.getElementById('registerNameInput').value = 'Carlos Gómez';
+      document.getElementById('registerEmailInput').value = 'carlos@gomez.gt';
+      document.getElementById('registerPhoneInput').value = '55551234';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'MismatchPass!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('Las contraseñas no coinciden');
+    });
+
+    it('valida teléfono numérico antes de enviar al backend (Task 2)', async () => {
+      document.getElementById('registerNameInput').value = 'Carlos Gómez';
+      document.getElementById('registerEmailInput').value = 'carlos@gomez.gt';
+      document.getElementById('registerPhoneInput').value = 'numero-invalido';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('únicamente números');
+    });
+
+    it('elimina notificación de credenciales inválidas al cambiar de login a crear cuenta (Task 3)', () => {
+      switchAuthTab('login');
+      showFeedback('Credenciales inválidas o servidor no disponible.', 'error');
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.style.display).toBe('block');
+      expect(feedback.textContent).toContain('Credenciales inválidas');
+
+      switchAuthTab('register');
+      expect(feedback.style.display).toBe('none');
+      expect(feedback.textContent).toBe('');
+    });
+
+    it('limpia correo, contraseña y credenciales inválidas al cerrar el modal (Task 6)', () => {
+      openUserProfileModal('login');
+      document.getElementById('loginEmailInput').value = 'usuario@test.gt';
+      document.getElementById('loginPasswordInput').value = 'PasswordErr123';
+      showFeedback('Credenciales inválidas.', 'error');
+
+      closeUserProfileModal();
+
+      expect(document.getElementById('loginEmailInput').value).toBe('');
+      expect(document.getElementById('loginPasswordInput').value).toBe('');
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toBe('');
+      expect(feedback.style.display).toBe('none');
+    });
 
   describe('Acciones Rápidas: Cambio de Cuenta y Cierre de Sesión', () => {
     it('cambia de cuenta al pulsar un botón de acceso rápido (.btn-switch-account)', () => {

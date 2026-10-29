@@ -7,6 +7,7 @@
 
 import { apiClient } from './api-client.js';
 import { ordersStore } from './orders-store.js';
+import { mapOrderItem, cleanOrderItemForApi } from './order-item.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -114,7 +115,7 @@ class QuotesStore {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             if (!IS_TEST_ENV) {
-              const clean = parsed.filter(q => !q.id?.startsWith('COT-2026-00') && !q.code?.startsWith('COT-2026-00') && !['qt_001', 'qt_002', 'qt_003'].includes(q.id));
+              const clean = parsed.filter(q => !['qt_001', 'qt_002', 'qt_003'].includes(q.id) && q.leadEmail !== 'rodrigo@promoguate.gt');
               this.quotes = clean;
               this.saveToStorage();
               return;
@@ -193,9 +194,42 @@ class QuotesStore {
       fileUrl: q.fileUrl || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileUrl) || null,
       fileName: q.fileName || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileName) || null,
       fileSizeBytes: q.fileSizeBytes || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileSizeBytes) || null,
+      previewUrl: q.fileUrl || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.previewUrl) || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.fileUrl) || null,
       canvasSnapshot: q.canvasSnapshot || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshot) || null,
       canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || (this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.canvasSnapshotUrl) || null,
       rotationDeg: q.rotationDeg !== undefined && q.rotationDeg !== null ? Number(q.rotationDeg) : ((this.quotes?.find(local => local.id === q.id || local.backendId === q.id || local.code === q.code)?.rotationDeg) || 0),
+      items: (() => {
+        if (Array.isArray(q.items) && q.items.length > 0) {
+          return q.items.map(it => mapOrderItem(it));
+        }
+        const local = this.quotes?.find(l => l.id === q.id || l.backendId === q.id || l.code === q.code);
+        if (local?.items && Array.isArray(local.items) && local.items.length > 0) {
+          return local.items.map(it => mapOrderItem(it));
+        }
+        if (q.notes && q.notes.includes('<!-- ITEMS_JSON:')) {
+          try {
+            const match = q.notes.match(/<!-- ITEMS_JSON:\s*(\[.*?\])\s*-->/s);
+            if (match && match[1]) return JSON.parse(match[1]).map(it => mapOrderItem(it));
+          } catch (_) {}
+        }
+        return [mapOrderItem({
+          id: `item_${q.id || '0'}`,
+          title: q.projectName || `Cotización ${q.widthCm}x${q.heightCm} cm`,
+          widthCm: Number(q.widthCm),
+          heightCm: Number(q.heightCm),
+          qty: Number(q.qty),
+          actualLinearMeters: Number(q.linearMeters),
+          stickersPerRow: Number(q.stickersPerRow || 1),
+          rows: Number(q.rows || 1),
+          includeCutting: Boolean(q.withCutting),
+          fileUrl: q.fileUrl || local?.fileUrl || null,
+          fileName: q.fileName || local?.fileName || null,
+          previewUrl: q.fileUrl || local?.previewUrl || null,
+          canvasSnapshot: q.canvasSnapshot || local?.canvasSnapshot || null,
+          canvasSnapshotUrl: (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || local?.canvasSnapshotUrl || null,
+          rotationDeg: q.rotationDeg || local?.rotationDeg || 0,
+        })];
+      })(),
       createdAt: q.createdAt,
       updatedAt: q.updatedAt || q.createdAt,
     };
@@ -208,9 +242,8 @@ class QuotesStore {
         if (res && res.success && Array.isArray(res.quotes)) {
           const apiQuotes = res.quotes.map(q => this._mapBackendQuote(q));
           const apiIds = new Set(apiQuotes.map(q => q.id));
-          const localOnly = IS_TEST_ENV
-            ? this.quotes.filter(q => !q.backendId && !apiIds.has(q.id))
-            : [];
+          const apiCodes = new Set(apiQuotes.map(q => q.code));
+          const localOnly = this.quotes.filter(q => !q.backendId && !apiIds.has(q.id) && !apiCodes.has(q.code));
           this.quotes = [...apiQuotes, ...localOnly];
           this.saveToStorage();
           this.notify();
@@ -250,7 +283,37 @@ class QuotesStore {
     const fileSizeBytes = data?.fileSizeBytes ? Number(data.fileSizeBytes) : null;
     const provider = data?.provider || (fileUrl ? 'cloudflare-r2' : (fileKey ? 'cloudflare-r2' : null));
     const canvasSnapshot = data?.canvasSnapshot || null;
+    const canvasSnapshotUrl = data?.canvasSnapshotUrl || (canvasSnapshot && !canvasSnapshot.startsWith('data:') ? canvasSnapshot : null) || null;
     const rotationDeg = Number(data?.rotationDeg) || 0;
+
+    let quoteItems = [];
+    if (Array.isArray(data?.items) && data.items.length > 0) {
+      quoteItems = data.items.map((it, idx) => mapOrderItem({
+        ...it,
+        id: it.id || `item_${Date.now()}_${idx}`,
+        title: it.title || `Diseño #${idx + 1}`,
+      }));
+    } else {
+      quoteItems = [mapOrderItem({
+        id: `item_${Date.now()}_0`,
+        title: projectName,
+        widthCm,
+        heightCm,
+        qty,
+        includeCutting: withCutting,
+        actualLinearMeters: linearMeters,
+        stickersPerRow,
+        rows,
+        fileInfo: fileUrl || fileName ? { name: fileName || 'diseño.png', fileUrl, size: fileSizeBytes || 0 } : null,
+        fileUrl,
+        fileName,
+        fileSizeBytes,
+        previewUrl: data?.previewUrl || fileUrl || null,
+        canvasSnapshot,
+        canvasSnapshotUrl,
+        rotationDeg,
+      })];
+    }
 
     const count = this.quotes.length + 1;
     const code = `COT-2026-${String(count).padStart(3, '0')}`;
@@ -286,10 +349,12 @@ class QuotesStore {
       fileKey,
       fileName,
       fileSizeBytes,
+      previewUrl: data?.previewUrl || fileUrl || null,
       provider,
       canvasSnapshot,
-      canvasSnapshotUrl: data?.canvasSnapshotUrl || (canvasSnapshot && !canvasSnapshot.startsWith('data:') ? canvasSnapshot : null) || null,
+      canvasSnapshotUrl,
       rotationDeg,
+      items: quoteItems,
       createdAt: now,
       updatedAt: now,
     };
@@ -300,6 +365,8 @@ class QuotesStore {
 
     // Sincronizar creación con Backend API si está disponible
     if (typeof apiClient !== 'undefined' && apiClient.quotes) {
+      const cleanItems = quoteItems.map(it => cleanOrderItemForApi(it));
+
       apiClient.quotes.create({
         projectName,
         leadName,
@@ -318,15 +385,18 @@ class QuotesStore {
         totalPriceQ,
         withCutting,
         finishType,
-        notes,
         source,
         fileUrl,
         fileName,
         fileSizeBytes,
+        items: cleanItems,
       }).then(res => {
         if (res && res.quote) {
           newQuote.backendId = res.quote.id;
           if (res.quote.code) newQuote.code = res.quote.code;
+          if (Array.isArray(res.quote.items) && res.quote.items.length > 0) {
+            newQuote.items = res.quote.items.map(it => mapOrderItem(it));
+          }
           this.saveToStorage();
           this.notify();
         }
@@ -403,7 +473,10 @@ class QuotesStore {
     if (typeof apiClient !== 'undefined' && apiClient.quotes) {
       try {
         const targetId = quote.backendId || quote.id;
-        const res = await apiClient.quotes.convertToOrder(targetId);
+        const hasCustomItems = Array.isArray(quote.items) && quote.items.length > 0;
+        const res = hasCustomItems
+          ? await apiClient.quotes.convertToOrder(targetId, { items: quote.items.map(it => cleanOrderItemForApi(it)) })
+          : await apiClient.quotes.convertToOrder(targetId);
         if (res && res.success && res.order) {
           quote.status = 'CONVERTED';
           quote.convertedOrderId = res.order.id;
@@ -414,6 +487,15 @@ class QuotesStore {
 
           // Sincronizar ordersStore para que la orden aparezca en producción de inmediato
           if (typeof ordersStore !== 'undefined') {
+            const mapped = ordersStore._mapBackendOrder(res.order);
+            const idx = ordersStore.orders.findIndex(o => o.id === mapped.id || o.backendId === mapped.backendId);
+            if (idx >= 0) {
+              ordersStore.orders[idx] = mapped;
+            } else {
+              ordersStore.orders.unshift(mapped);
+            }
+            ordersStore._saveOrders();
+            ordersStore._notify();
             ordersStore.syncWithApi().catch(() => {});
           }
 
@@ -448,7 +530,7 @@ class QuotesStore {
         canvasSnapshot: quote.canvasSnapshot || null,
         rotationDeg: quote.rotationDeg || 0,
       },
-      items: [{
+      items: (quote.items && quote.items.length > 0) ? quote.items.map(it => mapOrderItem(it)) : [{
         title: quote.projectName,
         widthCm: quote.widthCm,
         heightCm: quote.heightCm,
@@ -464,7 +546,7 @@ class QuotesStore {
         canvasSnapshot: quote.canvasSnapshot || null,
         rotationDeg: quote.rotationDeg || 0,
       }],
-      workshopNotes: `Convertido desde cotización ${quote.code} | Proyecto: ${quote.projectName}`,
+      workshopNotes: quote.notes || '',
     });
 
     quote.status = 'CONVERTED';

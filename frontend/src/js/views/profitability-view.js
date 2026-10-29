@@ -218,15 +218,15 @@ export const profitabilityView = {
               <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
                 Desglose Técnico de Insumos para este Tiraje de Stickers:
               </h3>
-              <div class="orders-table-container">
-                <table class="orders-table" style="font-size: 0.85rem;">
+              <div class="orders-table-container breakdown-table-wrapper">
+                <table class="breakdown-cost-table">
                   <thead>
                     <tr>
-                      <th>Concepto</th>
-                      <th>Consumo Estimado</th>
-                      <th>Costo Unitario Ref.</th>
-                      <th>Total Rubro (Q)</th>
-                      <th>% del Costo</th>
+                      <th class="col-cost-name">Insumo</th>
+                      <th class="col-cost-detail">Consumo</th>
+                      <th class="col-cost-unit">Costo Unit.</th>
+                      <th class="col-cost-total" style="text-align: right;">Total (Q)</th>
+                      <th class="col-cost-pct" style="text-align: right;">% Costo</th>
                     </tr>
                   </thead>
                   <tbody id="stkCostBreakdownTableBody"></tbody>
@@ -349,15 +349,15 @@ export const profitabilityView = {
               <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-primary);">
                 Desglose Técnico de Rubros de Costo (Metros Directos):
               </h3>
-              <div class="orders-table-container">
-                <table class="orders-table" style="font-size: 0.85rem;">
+              <div class="orders-table-container breakdown-table-wrapper">
+                <table class="breakdown-cost-table">
                   <thead>
                     <tr>
-                      <th>Concepto</th>
-                      <th>Consumo Estimado</th>
-                      <th>Costo Unitario Ref.</th>
-                      <th>Total Rubro (Q)</th>
-                      <th>% del Costo</th>
+                      <th class="col-cost-name">Insumo</th>
+                      <th class="col-cost-detail">Consumo</th>
+                      <th class="col-cost-unit">Costo Unit.</th>
+                      <th class="col-cost-total" style="text-align: right;">Total (Q)</th>
+                      <th class="col-cost-pct" style="text-align: right;">% Costo</th>
                     </tr>
                   </thead>
                   <tbody id="costBreakdownTableBody"></tbody>
@@ -381,8 +381,9 @@ export const profitabilityView = {
             </div>
           </div>
 
+          <!-- Tabla de Rentabilidad Histórica (Desktop > 1200px) -->
           <div class="mobile-scroll-hint">Desliza para ver columnas de costo y ganancia neta ↔</div>
-          <div class="orders-table-container">
+          <div class="orders-table-container profitability-table-wrapper">
             <table class="orders-table">
               <thead>
                 <tr>
@@ -400,6 +401,14 @@ export const profitabilityView = {
                 <!-- Inyectado por renderOrdersProfitabilityTable() -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Tarjetas de Rentabilidad Estilo Despacho (<= 1200px) -->
+          <div id="ordersProfitabilityCardsContainer" class="profitability-cards-grid dispatch-cards-grid">
+            <!-- Inyectado dinámicamente por renderOrdersProfitabilityTable() -->
+          </div>
+          <div id="ordersProfitabilityEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
+            No hay pedidos registrados en taller para evaluar rentabilidad.
           </div>
         </div>
 
@@ -899,11 +908,11 @@ export const profitabilityView = {
 
       tbody.innerHTML = rows.map(r => `
         <tr>
-          <td><strong>${r.name}</strong></td>
-          <td style="color: var(--text-secondary);">${r.detail}</td>
-          <td style="font-family: var(--font-mono);">${r.unit}</td>
-          <td style="font-family: var(--font-mono); font-weight: 700; color: #ef4444;">Q${r.cost.toFixed(2)}</td>
-          <td style="font-family: var(--font-mono); font-weight: 600;">${getPct(r.cost)}%</td>
+          <td class="col-cost-name"><strong>${r.name}</strong></td>
+          <td class="col-cost-detail" style="color: var(--text-secondary);">${r.detail}</td>
+          <td class="col-cost-unit" style="font-family: var(--font-mono); color: var(--text-secondary);">${r.unit}</td>
+          <td class="col-cost-total" style="font-family: var(--font-mono); font-weight: 700; color: #ef4444; text-align: right;">Q${r.cost.toFixed(2)}</td>
+          <td class="col-cost-pct" style="font-family: var(--font-mono); font-weight: 600; text-align: right;">${getPct(r.cost)}%</td>
         </tr>
       `).join('');
     }
@@ -954,6 +963,8 @@ export const profitabilityView = {
 
     function renderOrdersProfitabilityTable() {
       const tbody = document.getElementById('ordersProfitabilityTableBody');
+      const cardsContainer = document.getElementById('ordersProfitabilityCardsContainer');
+      const emptyState = document.getElementById('ordersProfitabilityEmptyState');
       if (!tbody) return;
 
       const orders = ordersStore.getOrders();
@@ -967,9 +978,14 @@ export const profitabilityView = {
             </td>
           </tr>
         `;
+        if (cardsContainer) cardsContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
         return;
       }
 
+      if (emptyState) emptyState.style.display = 'none';
+
+      // 1. Desktop Table Rows (> 1200px)
       tbody.innerHTML = portfolio.ordersList.map(item => {
         const p = item.profitability;
         const cust = item.customer || {};
@@ -993,6 +1009,73 @@ export const profitabilityView = {
           </tr>
         `;
       }).join('');
+
+      // 2. Responsive Cards (<= 1200px)
+      if (cardsContainer) {
+        cardsContainer.innerHTML = portfolio.ordersList.map(item => {
+          const p = item.profitability;
+          const cust = item.customer || {};
+
+          return `
+            <div class="dispatch-card profit-card" data-profit-card="${item.orderId}" style="border-top: 4px solid ${p.profitability.badgeColor};">
+              <!-- Cabecera: Folio Pedido y Badge de Evaluación -->
+              <div class="dispatch-card-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="dispatch-card-folio" style="color: var(--cerulean);">#${item.orderId}</span>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="badge" style="background: ${p.profitability.badgeColor}22; color: ${p.profitability.badgeColor}; border-color: ${p.profitability.badgeColor}; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.65rem;">
+                    ${p.profitability.profitabilityBadge}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Cuerpo: Cliente y Métricas de Costos/Utilidad -->
+              <div class="dispatch-card-body">
+                <div class="dispatch-card-client-row">
+                  <div>
+                    <div class="dispatch-card-client-name">
+                      👤 ${cust.company || cust.name || 'Cliente'}
+                    </div>
+                    <div class="dispatch-card-client-phone">
+                      <span>${cust.name ? `Contacto: ${cust.name}` : ''}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dispatch-card-metrics-grid">
+                  <div class="dispatch-card-metric-col">
+                    <span>Metraje</span>
+                    <span style="color: var(--cerulean);">${p.meters.toFixed(2)} m</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Costo Prod</span>
+                    <span style="color: #ef4444;">Q${p.costs.totalProductionCostQ.toFixed(2)}</span>
+                  </div>
+                  <div class="dispatch-card-metric-col">
+                    <span>Utilidad Neta</span>
+                    <span style="color: var(--color-success); font-size: 1.05rem;">Q${p.profitability.netProfitQ.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pie: Resumen de Margen y Rendimiento -->
+              <div class="dispatch-card-footer" style="font-size: 0.85rem; color: var(--text-secondary);">
+                <div>
+                  <span>Facturado: </span>
+                  <strong style="font-family: var(--font-mono); color: var(--text-primary);">Q${p.pricing.sellingPriceTotalQ.toFixed(2)}</strong>
+                </div>
+                <div style="font-weight: 700; color: ${p.profitability.badgeColor};">
+                  ${p.profitability.profitMarginPercent.toFixed(1)}% Margen (Q${(p.profitability.netProfitQ / p.meters).toFixed(2)}/m)
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
     function renderAll() {

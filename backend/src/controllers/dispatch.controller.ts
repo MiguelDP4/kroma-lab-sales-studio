@@ -136,3 +136,31 @@ export async function updateDispatchStatus(req: Request, res: Response, next: Ne
     next(error);
   }
 }
+
+export async function deleteDispatchNote(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.dispatchNote.findFirst({
+      where: {
+        OR: [{ id }, { folio: id }],
+      },
+    });
+
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Remisión no encontrada.' });
+      return;
+    }
+
+    await prisma.dispatchNote.delete({
+      where: { id: existing.id },
+    });
+
+    res.json({
+      success: true,
+      message: 'Guía de despacho eliminada exitosamente.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}

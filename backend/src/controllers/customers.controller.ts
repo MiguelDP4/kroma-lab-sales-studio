@@ -136,3 +136,35 @@ export async function updateCustomer(req: Request, res: Response, next: NextFunc
     next(error);
   }
 }
+
+export async function deleteCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.customer.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Cliente no encontrado en Cartera B2B.' });
+      return;
+    }
+
+    // Desvincular órdenes y usuarios asociados
+    await prisma.order.updateMany({
+      where: { customerId: id },
+      data: { customerId: null },
+    });
+
+    await prisma.user.updateMany({
+      where: { customerId: id },
+      data: { customerId: null },
+    });
+
+    await prisma.customer.delete({ where: { id } });
+
+    res.json({
+      success: true,
+      message: 'Cliente eliminado exitosamente de la Cartera B2B.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}

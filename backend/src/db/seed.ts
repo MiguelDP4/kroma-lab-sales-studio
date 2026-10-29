@@ -31,11 +31,35 @@ export async function seedDatabase() {
   });
 
   // 2. Usuario Administrador Oficial
-  const adminPassword = await bcrypt.hash('Admin2026!', 10);
+  const adminPassword = await bcrypt.hash('KromaAdmin!', 10);
+  await prisma.user.upsert({
+    where: { email: 'migueldp4@gmail.com' },
+    update: {
+      password: adminPassword,
+      name: 'Miguel',
+      phone: '+502 5406-6217',
+      role: 'ADMIN',
+      isVerified: true,
+    },
+    create: {
+      email: 'migueldp4@gmail.com',
+      password: adminPassword,
+      name: 'Miguel',
+      phone: '+502 5406-6217',
+      company: 'Kroma Lab',
+      taxId: 'CF',
+      address: 'San José El Placer, Villa Nueva, Guatemala',
+      department: 'Dirección General',
+      role: 'ADMIN',
+      isVerified: true,
+    },
+  });
+
+  const testAdminPassword = await bcrypt.hash('Admin2026!', 10);
   await prisma.user.upsert({
     where: { email: 'miguel@kromalab.gt' },
     update: {
-      password: adminPassword,
+      password: testAdminPassword,
       name: 'Miguel Dubois',
       phone: '+502 5406-6217',
       role: 'ADMIN',
@@ -43,7 +67,7 @@ export async function seedDatabase() {
     },
     create: {
       email: 'miguel@kromalab.gt',
-      password: adminPassword,
+      password: testAdminPassword,
       name: 'Miguel Dubois',
       phone: '+502 5406-6217',
       company: 'Kroma Lab',
@@ -141,7 +165,7 @@ export async function seedDatabase() {
         where: { paymentCode: { in: ['PAY-2026-001', 'PAY-2026-002', 'PAY-2026-003'] } },
       });
       await prisma.order.deleteMany({
-        where: { code: { in: ['KL-2026-001', 'KL-00042', 'KL-00041', 'KL-00040'] } },
+        where: { code: { in: ['0000000001', 'KL-2026-001', 'KL-00042', 'KL-00041', 'KL-00040'] } },
       });
       await prisma.user.deleteMany({
         where: { email: { in: ['rodrigo@promoguate.gt', 'taller@kromalab.gt'] } },
@@ -229,11 +253,11 @@ export async function seedDatabase() {
   });
 
   // 5. Órdenes iniciales de demostración para tests
-  let order1 = await prisma.order.findUnique({ where: { code: 'KL-2026-001' } });
+  let order1 = await prisma.order.findUnique({ where: { code: '0000000001' } });
   if (!order1) {
     order1 = await prisma.order.create({
       data: {
-        code: 'KL-2026-001',
+        code: '0000000001',
         status: 'PRINTING',
         paymentStatus: 'PARTIAL',
         customerId: promoGuate.id,
