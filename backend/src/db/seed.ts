@@ -2,7 +2,12 @@ import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 
 export async function seedDatabase() {
-  console.log('🌱 Inicializando configuración y datos de Kroma Lab...');
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('⛔ Seeding está estrictamente deshabilitado en entorno de producción.');
+    return;
+  }
+
+  console.log('🌱 Inicializando configuración y datos base para pruebas y desarrollo local...');
 
   // 1. Configuración de Taller Audley UV DTF
   await prisma.workshopConfig.upsert({
@@ -22,7 +27,7 @@ export async function seedDatabase() {
       bankBacAccount: null,
       bankGytAccount: null,
       bankBanruralAccount: null,
-      whatsappNumber: '+502 5406-6217',
+      whatsappNumber: '+502 5555-0000',
       filmACostPerM: 6.30,
       filmBCostPerM: 4.08,
       inkCostPerM: 8.25,
@@ -30,56 +35,7 @@ export async function seedDatabase() {
     },
   });
 
-  // 2. Usuario Administrador Oficial
-  const adminPassword = await bcrypt.hash('Admin!000', 10);
-  await prisma.user.upsert({
-    where: { email: 'migueldp4@gmail.com' },
-    update: {
-      password: adminPassword,
-      name: 'Miguel Dubois',
-      phone: '+502 5406-6217',
-      role: 'ADMIN',
-      isVerified: true,
-    },
-    create: {
-      email: 'migueldp4@gmail.com',
-      password: adminPassword,
-      name: 'Miguel Dubois',
-      phone: '+502 5406-6217',
-      company: 'Kroma Lab',
-      taxId: 'CF',
-      address: 'San José El Placer, Villa Nueva, Guatemala',
-      department: 'Dirección General',
-      role: 'ADMIN',
-      isVerified: true,
-    },
-  });
-
-  const testAdminPassword = await bcrypt.hash('Admin2026!', 10);
-  await prisma.user.upsert({
-    where: { email: 'miguel@kromalab.gt' },
-    update: {
-      password: testAdminPassword,
-      name: 'Miguel Dubois',
-      phone: '+502 5406-6217',
-      role: 'ADMIN',
-      isVerified: true,
-    },
-    create: {
-      email: 'miguel@kromalab.gt',
-      password: testAdminPassword,
-      name: 'Miguel Dubois',
-      phone: '+502 5406-6217',
-      company: 'Kroma Lab',
-      taxId: '8932451-9',
-      address: 'San José El Placer, Villa Nueva, Guatemala',
-      department: 'Dirección General',
-      role: 'ADMIN',
-      isVerified: true,
-    },
-  });
-
-  // 3. Insumos de Inventario de Taller UV DTF (7 insumos clave)
+  // 2. Insumos de Inventario de Taller UV DTF (7 insumos clave)
   const items = [
     {
       code: 'FILM_A',
@@ -154,33 +110,30 @@ export async function seedDatabase() {
     });
   }
 
-  // Si estamos en producción, asegurar que la base de datos esté libre de cualquier registro falso/demo
-  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prduction' || process.env.NODE_ENV?.includes('prod')) {
-    console.log('🧹 Producción detectada: Garantizando base de datos 100% limpia de datos de prueba...');
-    try {
-      await prisma.dispatchNote.deleteMany({
-        where: { folio: { in: ['REM-2026-001', 'REM-2026-002', 'REM-2026-003'] } },
-      });
-      await prisma.payment.deleteMany({
-        where: { paymentCode: { in: ['PAY-2026-001', 'PAY-2026-002', 'PAY-2026-003'] } },
-      });
-      await prisma.order.deleteMany({
-        where: { code: { in: ['0000000001', 'KL-2026-001', 'KL-00042', 'KL-00041', 'KL-00040'] } },
-      });
-      await prisma.user.deleteMany({
-        where: { email: { in: ['rodrigo@promoguate.gt', 'taller@kromalab.gt'] } },
-      });
-      await prisma.customer.deleteMany({
-        where: { email: { in: ['rodrigo@promoguate.gt', 'pedidos@cafesanjose.gt'] } },
-      });
-    } catch (cleanupErr) {
-      console.warn('Nota de limpieza:', cleanupErr);
-    }
-    console.log('✅ Base de datos de producción inicializada y limpia.');
-    return;
-  }
+  // 3. Usuario Administrador Exclusivo para Tests
+  const testAdminPassword = await bcrypt.hash('TestAdmin2026!', 10);
+  await prisma.user.upsert({
+    where: { email: 'testadmin@kromalab.gt' },
+    update: {
+      password: testAdminPassword,
+      role: 'ADMIN',
+      isVerified: true,
+    },
+    create: {
+      email: 'testadmin@kromalab.gt',
+      password: testAdminPassword,
+      name: 'Test Administrator',
+      phone: '+502 5555-0000',
+      company: 'Kroma Lab QA',
+      taxId: 'CF',
+      address: 'Guatemala',
+      department: 'QA Testing',
+      role: 'ADMIN',
+      isVerified: true,
+    },
+  });
 
-  // 4. Clientes B2B iniciales (para pruebas locales y tests automatizados)
+  // 4. Clientes B2B iniciales para tests
   const promoGuate = await prisma.customer.upsert({
     where: { email: 'rodrigo@promoguate.gt' },
     update: {},
@@ -325,7 +278,7 @@ export async function seedDatabase() {
     });
   }
 
-  console.log('✅ Base de datos inicializada exitosamente.');
+  console.log('✅ Base de datos de pruebas inicializada exitosamente.');
 }
 
 if (require.main === module) {

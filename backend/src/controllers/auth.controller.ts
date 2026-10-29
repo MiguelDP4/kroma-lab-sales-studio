@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
-import { seedDatabase } from '../db/seed';
 import { AuthenticatedRequest, signToken } from '../middlewares/auth';
 import { emailService } from '../services/email.service';
 
@@ -51,20 +50,9 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   try {
     const { email, password } = loginSchema.parse(req.body);
 
-    let user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
-
-    if (!user && email.toLowerCase().trim() === 'miguel@kromalab.gt' && password === 'Admin2026!') {
-      try {
-        await seedDatabase();
-        user = await prisma.user.findUnique({
-          where: { email: 'miguel@kromalab.gt' },
-        });
-      } catch (seedErr) {
-        console.error('Error durante auto-seed en login:', seedErr);
-      }
-    }
 
     if (!user) {
       res.status(401).json({ success: false, message: 'Credenciales inválidas.' });
@@ -77,16 +65,6 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    if (user.email.toLowerCase().trim() === 'miguel@kromalab.gt' && (!user.isVerified || user.role !== 'ADMIN')) {
-      try {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { role: 'ADMIN', isVerified: true },
-        });
-        user.role = 'ADMIN';
-        user.isVerified = true;
-      } catch (_) {}
-    }
 
     if (!user.isVerified) {
       res.status(403).json({

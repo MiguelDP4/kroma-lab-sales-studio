@@ -15,7 +15,7 @@ describe('Orders API (/api/orders)', () => {
 
     const adminLogin = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'miguel@kromalab.gt', password: 'Admin2026!' });
+      .send({ email: 'testadmin@kromalab.gt', password: 'TestAdmin2026!' });
     adminToken = adminLogin.body.token;
 
     const customerLogin = await request(app)

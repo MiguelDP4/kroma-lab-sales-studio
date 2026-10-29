@@ -17,7 +17,7 @@ describe('Controller Error Handlers & Catch Blocks', () => {
     await seedDatabase();
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'miguel@kromalab.gt', password: 'Admin2026!' });
+      .send({ email: 'testadmin@kromalab.gt', password: 'TestAdmin2026!' });
     adminToken = loginRes.body.token;
 
     const order = await prisma.order.findFirst();
@@ -37,7 +37,7 @@ describe('Controller Error Handlers & Catch Blocks', () => {
     vi.spyOn(prisma.user, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'miguel@kromalab.gt', password: 'Admin2026!' });
+      .send({ email: 'testadmin@kromalab.gt', password: 'TestAdmin2026!' });
     expect(res.status).toBe(500);
   });
 
