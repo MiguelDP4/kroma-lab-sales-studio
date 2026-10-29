@@ -369,7 +369,7 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
         fileSizeBytes: quote.fileSizeBytes,
         notes: orderNotes,
         items: candidateItems && candidateItems.length > 0 ? {
-          create: candidateItems.map(it => ({
+          create: candidateItems.map((it: any) => ({
             title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
             widthCm: it.widthCm,
             heightCm: it.heightCm,
