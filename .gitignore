@@ -9,6 +9,9 @@ coverage/
 
 # Entornos y Secretos
 .env
+.env.*
+backend/.env
+backend/.env.*
 .env.local
 .env.*.local
 *.db
