@@ -473,7 +473,10 @@ class QuotesStore {
     if (typeof apiClient !== 'undefined' && apiClient.quotes) {
       try {
         const targetId = quote.backendId || quote.id;
-        const res = await apiClient.quotes.convertToOrder(targetId);
+        const hasCustomItems = Array.isArray(quote.items) && quote.items.length > 0;
+        const res = hasCustomItems
+          ? await apiClient.quotes.convertToOrder(targetId, { items: quote.items.map(it => cleanOrderItemForApi(it)) })
+          : await apiClient.quotes.convertToOrder(targetId);
         if (res && res.success && res.order) {
           quote.status = 'CONVERTED';
           quote.convertedOrderId = res.order.id;
@@ -484,6 +487,15 @@ class QuotesStore {
 
           // Sincronizar ordersStore para que la orden aparezca en producción de inmediato
           if (typeof ordersStore !== 'undefined') {
+            const mapped = ordersStore._mapBackendOrder(res.order);
+            const idx = ordersStore.orders.findIndex(o => o.id === mapped.id || o.backendId === mapped.backendId);
+            if (idx >= 0) {
+              ordersStore.orders[idx] = mapped;
+            } else {
+              ordersStore.orders.unshift(mapped);
+            }
+            ordersStore._saveOrders();
+            ordersStore._notify();
             ordersStore.syncWithApi().catch(() => {});
           }
 
@@ -518,7 +530,7 @@ class QuotesStore {
         canvasSnapshot: quote.canvasSnapshot || null,
         rotationDeg: quote.rotationDeg || 0,
       },
-      items: (quote.items && quote.items.length > 0) ? quote.items : [{
+      items: (quote.items && quote.items.length > 0) ? quote.items.map(it => mapOrderItem(it)) : [{
         title: quote.projectName,
         widthCm: quote.widthCm,
         heightCm: quote.heightCm,
@@ -534,7 +546,7 @@ class QuotesStore {
         canvasSnapshot: quote.canvasSnapshot || null,
         rotationDeg: quote.rotationDeg || 0,
       }],
-      workshopNotes: `Convertido desde cotización ${quote.code} | Proyecto: ${quote.projectName}`,
+      workshopNotes: quote.notes || '',
     });
 
     quote.status = 'CONVERTED';

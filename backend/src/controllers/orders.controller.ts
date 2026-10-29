@@ -149,7 +149,9 @@ export async function listOrders(req: AuthenticatedRequest, res: Response, next:
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        items: true,
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
         customer: { select: { id: true, companyName: true, tier: true } },
         dispatchNotes: { select: { id: true, folio: true, status: true } },
         payments: { select: { id: true, paymentCode: true, amountPaidQ: true } },
@@ -169,7 +171,9 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response, nex
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        items: true,
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
         customer: true,
         dispatchNotes: true,
         payments: true,
@@ -221,6 +225,8 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
             fileUrl: it.fileUrl || null,
             fileName: it.fileName || null,
             fileInfo: it.fileInfo || null,
+            previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshot: it.canvasSnapshot || null,
             canvasSnapshotUrl: it.canvasSnapshotUrl || null,
             actualLinearMeters: it.actualLinearMeters || 0.0,
           }))
@@ -236,12 +242,15 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
             includeCutting: orderData.withCutting || false,
             fileUrl: orderData.fileUrl || null,
             fileName: orderData.fileName || null,
+            canvasSnapshot: canvasSnapshot || null,
             actualLinearMeters: orderData.linearMeters || 0.0,
           }]
         },
       },
       include: {
-        items: true,
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
         customer: true,
         dispatchNotes: true,
         payments: true,

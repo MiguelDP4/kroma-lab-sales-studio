@@ -276,8 +276,7 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     vi.useRealTimers();
   });
 
-  it('muestra y oculta la vista previa del snapshot técnico de la bobina', () => {
-    // Caso con snapshot presente
+  it('muestra la galería de items con su snapshot técnico y metadatos de bobina', () => {
     openSaveQuoteModal({
       widthCm: 8,
       heightCm: 5,
@@ -286,19 +285,10 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
       rotationDeg: 90,
     });
 
-    const wrap = document.getElementById('saveQuoteSnapshotWrap');
-    const img = document.getElementById('saveQuoteSnapshotImg');
-    expect(wrap.style.display).toBe('flex');
-    expect(img.src).toContain('mockSnapshotData');
-
-    // Caso sin snapshot
-    openSaveQuoteModal({
-      widthCm: 5,
-      heightCm: 5,
-      qty: 50,
-      canvasSnapshot: null,
-    });
-    expect(wrap.style.display).toBe('none');
+    const gallery = document.getElementById('saveQuoteItemsGallery');
+    expect(gallery).not.toBeNull();
+    expect(gallery.innerHTML).toContain('mockSnapshotData');
+    expect(gallery.innerHTML).toContain('Bobina 28cm');
   });
 
   it('persiste canvasSnapshot y rotationDeg en quotesStore al guardar', async () => {
@@ -355,7 +345,7 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
     expect(() => closeSaveQuoteModal()).not.toThrow();
   });
 
-  it('renderiza la previsualización del arte del cliente en el resumen y lo asocia a la cotización', async () => {
+  it('renderiza la previsualización del arte del cliente en la galería de items y lo asocia a la cotización', async () => {
     vi.useFakeTimers();
 
     openSaveQuoteModal({
@@ -369,15 +359,11 @@ describe('SaveQuoteModal — Modal para Guardar Cotizaciones', () => {
       fileSizeBytes: 2048576,
     });
 
-    const artWrap = document.getElementById('saveQuoteArtWrap');
-    const artImg = document.getElementById('saveQuoteArtImg');
-    const artName = document.getElementById('saveQuoteArtName');
-    const artSize = document.getElementById('saveQuoteArtSize');
-
-    expect(artWrap.style.display).toBe('flex');
-    expect(artImg.src).toContain('mockArtworkPreview');
-    expect(artName.textContent).toBe('mi-diseno-premium.png');
-    expect(artSize.textContent).toContain('MB');
+    const gallery = document.getElementById('saveQuoteItemsGallery');
+    expect(gallery).not.toBeNull();
+    expect(gallery.innerHTML).toContain('mockArtworkPreview');
+    expect(gallery.innerHTML).toContain('mi-diseno-premium.png');
+    expect(gallery.innerHTML).toContain('MB');
 
     document.getElementById('saveQuoteProjectName').value = 'Proyecto Con Arte';
     document.getElementById('saveQuoteLeadName').value = 'Miguel Dubois';

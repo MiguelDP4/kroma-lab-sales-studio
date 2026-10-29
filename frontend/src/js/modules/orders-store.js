@@ -6,7 +6,7 @@
 import { ORDER_STATUS } from '../../shared/business-config.js';
 import { inventoryStore } from './inventory-store.js';
 import { apiClient } from './api-client.js';
-import { mapOrderItem } from './order-item.js';
+import { mapOrderItem, cleanOrderItemForApi } from './order-item.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -305,15 +305,11 @@ class OrdersStore {
           return o.items.map(it => mapOrderItem(it));
         }
         const local = this.orders?.find(l => l.id === (o.code || o.id) || l.backendId === o.id || l.id === o.id);
-        if (local?.items && Array.isArray(local.items) && local.items.length > 0) return local.items;
-        if (o.notes && o.notes.includes('<!-- ITEMS_JSON:')) {
-          try {
-            const match = o.notes.match(/<!-- ITEMS_JSON:\s*(\[.*?\])\s*-->/s);
-            if (match && match[1]) return JSON.parse(match[1]);
-          } catch (_) {}
+        if (local?.items && Array.isArray(local.items) && local.items.length > 0) {
+          return local.items.map(it => mapOrderItem(it));
         }
         return [
-          {
+          mapOrderItem({
             title: firstItemTitle,
             widthCm: Number(o.widthCm),
             heightCm: Number(o.heightCm),
@@ -322,19 +318,11 @@ class OrdersStore {
             stickersPerRow: o.stickersPerRow || 1,
             rows: o.rows || 1,
             includeCutting: Boolean(o.withCutting),
-            cuttingRateUnit: o.withCutting ? 0.08 : 0,
-            finishType: o.finishType || 'Barniz con Relieve 3D',
-            fileInfo: {
-              name: o.fileName || local?.items?.[0]?.fileInfo?.name || 'diseño.png',
-              fileUrl: o.fileUrl || local?.items?.[0]?.fileInfo?.fileUrl || null,
-              sizeFormatted: local?.items?.[0]?.fileInfo?.sizeFormatted || '300 DPI',
-            },
-            fileUrl: o.fileUrl || local?.items?.[0]?.fileUrl || null,
-            fileName: o.fileName || local?.items?.[0]?.fileName || null,
-            canvasSnapshot: o.canvasSnapshot || local?.items?.[0]?.canvasSnapshot || null,
-            canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || local?.items?.[0]?.canvasSnapshotUrl || null,
-            rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : (local?.items?.[0]?.rotationDeg || 0),
-          },
+            fileUrl: o.fileUrl || null,
+            fileName: o.fileName || null,
+            canvasSnapshot: o.canvasSnapshot || null,
+            rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : 0,
+          })
         ];
       })(),
       metrics: {
@@ -425,6 +413,25 @@ class OrdersStore {
     });
     const newId = String(maxNum + 1).padStart(10, '0');
 
+    const normalizedItems = (items && items.length > 0)
+      ? items.map(it => mapOrderItem(it))
+      : [mapOrderItem({
+          title: `Stickers ${cartTotals.widthCm || 5} × ${cartTotals.heightCm || 5} cm`,
+          widthCm: cartTotals.widthCm || 5,
+          heightCm: cartTotals.heightCm || 5,
+          qty: cartTotals.qty || 50,
+          actualLinearMeters: cartTotals.totalBillableMeters || 1.0,
+          stickersPerRow: cartTotals.stickersPerRow || 5,
+          rows: cartTotals.rows || 10,
+          includeCutting: Boolean(cartTotals.hasCutting),
+          canvasSnapshot: cartTotals.canvasSnapshot || null,
+          canvasSnapshotUrl: cartTotals.canvasSnapshotUrl || null,
+          rotationDeg: cartTotals.rotationDeg || 0,
+        })];
+
+    const firstItem = normalizedItems[0];
+    const totalPieces = normalizedItems.reduce((acc, it) => acc + (it.qty || 0), 0) || firstItem.qty || 50;
+
     const newOrder = {
       id: newId,
       createdAt: new Date().toISOString(),
@@ -439,30 +446,12 @@ class OrdersStore {
       },
       paymentReceiptUrl: paymentReceiptUrl || cartTotals.paymentReceiptUrl || null,
       paymentReceiptFileName: paymentReceiptFileName || cartTotals.paymentReceiptFileName || null,
-      canvasSnapshot: items[0]?.canvasSnapshot || cartTotals.canvasSnapshot || null,
-      canvasSnapshotUrl: items[0]?.canvasSnapshotUrl || (items[0]?.canvasSnapshot && !items[0]?.canvasSnapshot.startsWith('data:') ? items[0]?.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
-      rotationDeg: items[0]?.rotationDeg || cartTotals.rotationDeg || 0,
-      fileUrl: items[0]?.fileUrl || items[0]?.fileInfo?.fileUrl || null,
-      fileName: items[0]?.fileName || items[0]?.fileInfo?.name || null,
-      items: items.map((it, idx) => ({
-        title: it.title || `Diseño #${idx + 1}`,
-        widthCm: parseFloat(it.widthCm) || 5,
-        heightCm: parseFloat(it.heightCm) || 5,
-        qty: parseInt(it.qty, 10) || 50,
-        actualLinearMeters: parseFloat(it.actualLinearMeters) || 1.0,
-        stickersPerRow: it.stickersPerRow || 5,
-        rows: it.rows || 10,
-        includeCutting: Boolean(it.includeCutting),
-        cuttingRateUnit: it.cuttingRateUnit || 0,
-        finishType: it.finishType || 'Barniz con Relieve 3D',
-        fileInfo: it.fileInfo || null,
-        fileUrl: it.fileUrl || it.fileInfo?.fileUrl || null,
-        fileName: it.fileName || it.fileInfo?.name || null,
-        previewUrl: it.previewUrl || null,
-        canvasSnapshot: it.canvasSnapshot || null,
-        canvasSnapshotUrl: it.canvasSnapshotUrl || (it.canvasSnapshot && !it.canvasSnapshot.startsWith('data:') ? it.canvasSnapshot : null) || null,
-        rotationDeg: Number(it.rotationDeg) || 0,
-      })),
+      canvasSnapshot: firstItem.canvasSnapshot || cartTotals.canvasSnapshot || null,
+      canvasSnapshotUrl: firstItem.canvasSnapshotUrl || (firstItem.canvasSnapshot && !firstItem.canvasSnapshot.startsWith('data:') ? firstItem.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
+      rotationDeg: firstItem.rotationDeg || cartTotals.rotationDeg || 0,
+      fileUrl: firstItem.fileUrl || firstItem.fileInfo?.fileUrl || null,
+      fileName: firstItem.fileName || firstItem.fileInfo?.name || null,
+      items: normalizedItems,
       metrics: {
         totalBillableMeters: parseFloat(cartTotals.totalBillableMeters) || 1.0,
         tierRate: parseFloat(cartTotals.tierRate) || 140.0,
@@ -481,7 +470,6 @@ class OrdersStore {
     this._notify();
 
     if (typeof apiClient !== 'undefined' && apiClient.orders) {
-      const firstItem = newOrder.items[0] || {};
       apiClient.orders.create({
         customerId: newOrder.customer.clientId || undefined,
         customerName: newOrder.customer.name,
@@ -491,7 +479,7 @@ class OrdersStore {
         customerAddress: newOrder.customer.address,
         widthCm: firstItem.widthCm || 5,
         heightCm: firstItem.heightCm || 5,
-        qty: firstItem.qty || 50,
+        qty: totalPieces,
         linearMeters: newOrder.metrics.totalBillableMeters,
         unitRateQ: newOrder.metrics.tierRate,
         materialPriceQ: newOrder.metrics.materialTotalQ,
@@ -507,14 +495,17 @@ class OrdersStore {
         rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
         paymentReceiptUrl: newOrder.paymentReceiptUrl,
         paymentReceiptFileName: newOrder.paymentReceiptFileName,
-        notes: (newOrder.items && newOrder.items.length > 1)
-          ? `${newOrder.workshopNotes ? newOrder.workshopNotes + ' | ' : ''}<!-- ITEMS_JSON: ${JSON.stringify(newOrder.items)} -->`
-          : newOrder.workshopNotes,
+        notes: newOrder.workshopNotes || null,
+        items: newOrder.items.map(it => cleanOrderItemForApi(it)),
       }).then(res => {
         if (res && res.order) {
           newOrder.backendId = res.order.id;
           if (res.order.code) newOrder.id = res.order.code;
+          if (Array.isArray(res.order.items) && res.order.items.length > 0) {
+            newOrder.items = res.order.items.map(it => mapOrderItem(it));
+          }
           this._saveOrders();
+          this._notify();
         }
       }).catch(() => {});
     }

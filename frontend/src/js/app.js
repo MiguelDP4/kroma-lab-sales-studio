@@ -131,15 +131,9 @@ export async function initBackendSync() {
             store.clearUser();
           }
         }
-        await Promise.allSettled([
-          ordersStore.syncWithApi(),
-          clientsStore.syncWithApi(),
-          inventoryStore.syncWithApi(),
-          receivablesStore.syncWithApi(),
-          dispatchStore.syncWithApi(),
-          usersStore.syncWithApi(),
-          quotesStore.syncWithApi(),
-        ]);
+        // Carga bajo demanda (Lazy loading): no cargar masivamente todos los módulos en el arranque.
+        // Cada vista (orders, quotes, clients, inventory, dispatch, receivables, users) sincroniza
+        // sus datos en su respectivo onMount() únicamente cuando el usuario navega a ella.
       }
     }
   } catch (err) {

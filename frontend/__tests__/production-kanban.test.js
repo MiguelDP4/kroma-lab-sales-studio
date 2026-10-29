@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { productionView } from '../src/js/views/production-view.js';
 import { productionStore } from '../src/js/modules/production-store.js';
+import { ordersStore } from '../src/js/modules/orders-store.js';
+import { apiClient } from '../src/js/modules/api-client.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
 
 describe('Production View — Tablero Kanban y Monitor de Bobina', () => {
@@ -223,5 +225,56 @@ describe('Production View — Tablero Kanban y Monitor de Bobina', () => {
     const btnOk = document.getElementById('btnOkDetailModal');
     btnOk.click();
     expect(detailModal.style.display).toBe('none');
+  });
+
+  describe('Sincronización con Backend PUT y Ciclo de Estados de Órdenes', () => {
+    it('dispara PUT /api/orders/:id/status al avanzar una orden a través de todas las fases del Kanban', async () => {
+      const updateStatusSpy = vi.spyOn(apiClient.orders, 'updateStatus').mockResolvedValue({ success: true });
+
+      // KL-00042 empieza en IN_AUDLEY_QUEUE
+      const btnAdvance = document.querySelector('.btn-advance[data-order-id="KL-00042"]');
+      expect(btnAdvance).not.toBeNull();
+
+      // 1. IN_AUDLEY_QUEUE -> PRINTING
+      btnAdvance.click();
+      expect(updateStatusSpy).toHaveBeenCalledWith('KL-00042', ORDER_STATUS.PRINTING);
+      let order = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+      expect(order.status).toBe(ORDER_STATUS.PRINTING);
+
+      // 2. PRINTING -> LAMINATING_CUTTING
+      const btnAdvance2 = document.querySelector('.btn-advance[data-order-id="KL-00042"]');
+      btnAdvance2.click();
+      expect(updateStatusSpy).toHaveBeenCalledWith('KL-00042', ORDER_STATUS.LAMINATING_CUTTING);
+      order = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+      expect(order.status).toBe(ORDER_STATUS.LAMINATING_CUTTING);
+
+      // 3. LAMINATING_CUTTING -> READY_FOR_DELIVERY
+      const btnAdvance3 = document.querySelector('.btn-advance[data-order-id="KL-00042"]');
+      btnAdvance3.click();
+      expect(updateStatusSpy).toHaveBeenCalledWith('KL-00042', ORDER_STATUS.READY_FOR_DELIVERY);
+      order = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+      expect(order.status).toBe(ORDER_STATUS.READY_FOR_DELIVERY);
+
+      // 4. READY_FOR_DELIVERY -> COMPLETED
+      const btnAdvance4 = document.querySelector('.btn-advance[data-order-id="KL-00042"]');
+      expect(btnAdvance4.textContent).toContain('Entregar');
+      btnAdvance4.click();
+      expect(updateStatusSpy).toHaveBeenCalledWith('KL-00042', ORDER_STATUS.COMPLETED);
+      order = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+      expect(order.status).toBe(ORDER_STATUS.COMPLETED);
+
+      updateStatusSpy.mockRestore();
+    });
+
+    it('maneja rechazos de red en el PUT request sin lanzar excepciones en la UI', async () => {
+      const updateStatusSpy = vi.spyOn(apiClient.orders, 'updateStatus').mockRejectedValue(new Error('Network error'));
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const btnAdvance = document.querySelector('.btn-advance[data-order-id="KL-00042"]');
+      expect(() => btnAdvance.click()).not.toThrow();
+
+      updateStatusSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
   });
 });

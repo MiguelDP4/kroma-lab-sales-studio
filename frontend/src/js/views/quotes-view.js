@@ -270,7 +270,7 @@ function renderQuotesCards(quotes) {
         </div>
 
         <!-- Desglose de OrderItems de la Cotización -->
-        ${(q.items && q.items.length > 0) ? `
+        ${(q.items && q.items.length > 1) ? `
           <div class="quote-multi-items-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.85rem;">
             ${q.items.map((it, idx) => {
               const itUrl = it.previewUrl || it.fileUrl || null;

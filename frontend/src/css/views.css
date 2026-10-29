@@ -3119,3 +3119,23 @@
     min-width: 42px;
   }
 }
+
+/* Contenedor Ergonómico de Botones de Acción en Tablas de Pedidos */
+.orders-actions-cell {
+  text-align: right;
+  min-width: 125px;
+}
+
+.orders-actions-group {
+  display: inline-grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 4px;
+  justify-content: end;
+  align-items: center;
+}
+
+.btn-action-icon.btn-cancel-order:hover:not(.disabled) {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}

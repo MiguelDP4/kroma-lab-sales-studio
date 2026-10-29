@@ -390,9 +390,10 @@ export class ApiClient {
         body: JSON.stringify(data),
       });
     },
-    convertToOrder: async (id) => {
+    convertToOrder: async (id, data = {}) => {
       return this._request(`/quotes/${id}/convert`, {
         method: 'POST',
+        body: JSON.stringify(data),
       });
     },
     delete: async (id) => {

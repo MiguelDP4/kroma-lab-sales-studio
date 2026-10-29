@@ -561,6 +561,10 @@ kroma-lab-sales-studio/
 
 El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en **TypeScript** y **Express**, respaldado por **Prisma ORM** con soporte de persistencia dual para garantizar autonomía operativa en desarrollo local y alta disponibilidad en la nube.
 
+### Estrategia de Carga Bajo Demanda (Lazy Loading por Vistas)
+
+Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplicación no sincroniza los módulos de forma masiva en el arranque (initBackendSync). Cada vista (/pedidos, /cotizaciones, /clientes, /inventario, /despacho, /cobranza, /usuarios) sincroniza sus datos mediante syncWithApi() exclusivamente en su respectivo ciclo de vida onMount() al navegar a ella.
+
 ### Topología de Persistencia Dual (Desarrollo Local vs Producción Neon)
 
 * **Desarrollo y Pruebas Locales (SQLite Embebido):**
@@ -596,9 +600,9 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Usuarios (RBAC)** | `POST /api/auth/users` | Creación de nuevos colaboradores y usuarios por Administrador con hash bcrypt (`ADMIN`) |
 | **Usuarios (RBAC)** | `PUT /api/auth/users/:id/reset-password` | Restablecimiento de contraseña de usuarios con hash bcrypt (`ADMIN`) |
 | **Usuarios (RBAC)** | `DELETE /api/auth/users/:id` | Eliminación de usuario con protección contra autoeliminación del administrador activo (`ADMIN`) |
-| **Pedidos** | `GET /api/orders` | Listado y filtrado por estado, pago y búsqueda de pedidos |
-| **Pedidos** | `GET /api/orders/:id` | Detalle de pedido y trazabilidad |
-| **Pedidos** | `POST /api/orders` | Creación de pedido con folio `KL-YYYY-XXX` (público / auth) |
+| **Pedidos** | `GET /api/orders` | Listado y filtrado por estado, pago y búsqueda de pedidos. **Incluye `items: OrderItem[]` canónicamente**. |
+| **Pedidos** | `GET /api/orders/:id` | Detalle de pedido y trazabilidad completa. **Incluye `items: OrderItem[]`**. |
+| **Pedidos** | `POST /api/orders` | Creación de pedido con folio `KL-YYYY-XXX` persistiendo el array `items: OrderItem[]` con sus URLs de arte y montaje técnico (`notes` limpio sin serializaciones JSON). |
 | **Pedidos** | `PUT /api/orders/:id/status` | Cambio de fase de producción (`ADMIN`, `EMPLOYEE`) |
 | **Pedidos** | `PUT /api/orders/:id/payment` | Actualización de estado y monto abonado (`ADMIN`, `EMPLOYEE`) |
 | **Pedidos** | `GET /api/orders/stats` | KPIs consolidados: metros en taller, facturación y saldo pendiente |
@@ -619,7 +623,7 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Cotizaciones** | `GET /api/quotes/:id` | Detalle de cotización por UUID o código correlativo `COT-YYYY-XXX`. **Incluye `items: OrderItem[]`**. |
 | **Cotizaciones** | `POST /api/quotes` | Guardado de cotización con validación de bobina (≤28 cm útiles) y creación persistente de `OrderItem` vinculados |
 | **Cotizaciones** | `PUT /api/quotes/:id` | Modificación de datos de cotización y sincronización de `OrderItem` |
-| **Cotizaciones** | `POST /api/quotes/:id/convert` | Conversión directa en 1 clic a Orden `KL-YYYY-XXX`, clonando íntegramente todos los `OrderItem` con sus artes y montajes |
+| **Cotizaciones** | `POST /api/quotes/:id/convert` | Conversión directa en 1 clic a Orden `KL-YYYY-XXX`, clonando íntegramente todos los `OrderItem` con sus artes y montajes técnicos sin pérdida de ítems ni concatenaciones sintéticas en `notes`. |
 | **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada y sus `OrderItem` asociados |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
@@ -661,6 +665,7 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Método `syncWithApi()`: mapea órdenes del backend (`GET /api/orders`) al modelo de vista local preservando métricas de bobina Audley y metadatos de diseño.
    * `createOrder()`: despacha `POST /api/orders` en segundo plano asignando el correlativo y `backendId`.
    * `updateProductionStatus()` y `updatePaymentStatus()`: despachan `PUT /api/orders/:id/status` y `PUT /api/orders/:id/payment` actualizando el estado de máquina e inventario.
+   * **Columna de Acciones Ergonómica & Cancelación (`orders-view.js`):** Se implementó el contenedor `.orders-actions-group` en cuadrícula compacta (3 columnas fijas con auto-wrap) para agrupar de forma limpia y accesible los 5 controles de Staff (`🔍 Ficha`, `🖨️ Taller`, `⚙️ A Producción`, `💬 WhatsApp`, `🚫 Cancelar`), evitando el desbordamiento o compresión horizontal de filas. El botón Cancelar emite confirmación de seguridad y actualiza el estado a `CANCELLED` en backend y almacenes.
 3. **`clientsStore` (`clients-store.js`):**
    * Método `syncWithApi()`: mapea clientes de cartera (`GET /api/customers`) con expediente 360°, clasificación de tiers (`VIP`, `RECURRENTE`, `NUEVO`) y sectores guatemaltecos.
    * `createClient()` y `updateClient()`: emiten mutaciones a `POST /api/customers` y `PUT /api/customers/:id`.

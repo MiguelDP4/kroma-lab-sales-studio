@@ -5,7 +5,10 @@
 
 import { productionStore, KANBAN_STAGES } from '../modules/production-store.js';
 import { dispatchStore } from '../modules/dispatch-store.js';
+import { ordersStore } from '../modules/orders-store.js';
 import { ORDER_STATUS } from '../../shared/business-config.js';
+
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
 export const productionView = {
   path: '/produccion',
@@ -528,6 +531,20 @@ export const productionView = {
       renderKanbanColumns();
     });
 
+    let unsubOrders = null;
+    if (!IS_TEST_ENV && typeof ordersStore !== 'undefined' && ordersStore.subscribe) {
+      unsubOrders = ordersStore.subscribe(() => {
+        if (typeof productionStore.syncWithOrdersStore === 'function') {
+          productionStore.syncWithOrdersStore();
+        }
+      });
+      if (typeof productionStore.syncWithApi === 'function') {
+        productionStore.syncWithApi().catch(err => {
+          console.warn('[ProductionView] Error al sincronizar con backend:', err);
+        });
+      }
+    }
+
     // Render inicial
     renderRollMonitor();
     renderKanbanColumns();
@@ -535,6 +552,7 @@ export const productionView = {
     // Retornar teardown para el router SPA
     return () => {
       unsubscribe();
+      if (unsubOrders) unsubOrders();
     };
   }
 };

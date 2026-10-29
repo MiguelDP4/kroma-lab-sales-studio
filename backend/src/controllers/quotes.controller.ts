@@ -332,13 +332,13 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
       }
     }
 
-    const orderNotes = [
-      quote.projectName ? `Proyecto: ${quote.projectName}` : '',
-      quote.notes ? `Notas: ${quote.notes}` : '',
-      `Convertido desde cotización ${quote.code || quote.id}`,
-    ]
-      .filter(Boolean)
-      .join(' | ');
+    // Las notas de la orden deben contener exclusivamente las notas de cliente/taller (sin embutir items ni descripciones sintéticas)
+    const orderNotes = quote.notes || null;
+
+    // Obtener items: de la cotización en BD o del body como fallback
+    const candidateItems = (quote.items && quote.items.length > 0)
+      ? quote.items
+      : (req.body && Array.isArray(req.body.items) && req.body.items.length > 0 ? req.body.items : []);
 
     // Crear orden de producción en base de datos clonando los items de la cotización
     const order = await prisma.order.create({
@@ -368,9 +368,9 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
         fileName: quote.fileName,
         fileSizeBytes: quote.fileSizeBytes,
         notes: orderNotes,
-        items: quote.items && quote.items.length > 0 ? {
-          create: quote.items.map(it => ({
-            title: it.title,
+        items: candidateItems && candidateItems.length > 0 ? {
+          create: candidateItems.map(it => ({
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
             widthCm: it.widthCm,
             heightCm: it.heightCm,
             qty: it.qty,
@@ -382,6 +382,7 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
             fileName: it.fileName || null,
             fileInfo: it.fileInfo || null,
             previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshot: it.canvasSnapshot || null,
             canvasSnapshotUrl: it.canvasSnapshotUrl || null,
             actualLinearMeters: it.actualLinearMeters || 0.0,
           }))

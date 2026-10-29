@@ -58,8 +58,6 @@ export function initSaveQuoteModal() {
           <div id="saveQuoteCuttingSummary" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
             Entrega: Rollo continuo sin corte
           </div>
-
-          <!-- Galería de Ítems de Orden (OrderItems) -->
           <div id="saveQuoteItemsGallery" style="margin-top: 0.75rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.65rem;"></div>
         </div>
 

@@ -252,7 +252,7 @@ describe('Quotes API (/api/quotes)', () => {
     expect(Number(res.body.order.heightCm)).toBe(5.0);
     expect(res.body.order.qty).toBe(100);
     expect(res.body.order.status).toBe('PENDING_REVIEW');
-    expect(res.body.order.notes).toContain('Edición Actualizada');
+    expect(res.body.order.notes).toBe('Se requiere corte circular especial');
 
     // Verificar que los items de la orden fueron clonados desde la cotización
     expect(Array.isArray(res.body.order.items)).toBe(true);
@@ -265,6 +265,76 @@ describe('Quotes API (/api/quotes)', () => {
     expect(res.body.quote.convertedOrderId).toBe(res.body.order.id);
     expect(res.body.quote.convertedOrderCode).toBe(res.body.order.code);
     expect(Array.isArray(res.body.quote.items)).toBe(true);
+  });
+
+  it('convierte cotización combo con múltiples OrderItems a orden preservando todos los items sin ensuciar notes', async () => {
+    // 1. Crear cotización combo con 3 items
+    const comboRes = await request(app)
+      .post('/api/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        projectName: 'Proyecto Combo 3 Diseños',
+        leadName: 'Cliente Combo',
+        leadPhone: '+502 4444-5555',
+        notes: 'Entrega prioritaria',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 230,
+        linearMeters: 3.7,
+        unitRateQ: 115,
+        materialPriceQ: 425.5,
+        totalPriceQ: 425.5,
+        items: [
+          {
+            title: 'Diseño A 5x5',
+            widthCm: 5,
+            heightCm: 5,
+            qty: 100,
+            actualLinearMeters: 1.0,
+            fileUrl: 'https://r2.kromalab.gt/a.png',
+            fileName: 'a.png',
+          },
+          {
+            title: 'Diseño B 7x5',
+            widthCm: 7,
+            heightCm: 5,
+            qty: 80,
+            actualLinearMeters: 1.2,
+            fileUrl: 'https://r2.kromalab.gt/b.png',
+            fileName: 'b.png',
+          },
+          {
+            title: 'Diseño C 10x5',
+            widthCm: 10,
+            heightCm: 5,
+            qty: 50,
+            actualLinearMeters: 1.5,
+            fileUrl: 'https://r2.kromalab.gt/c.png',
+            fileName: 'c.png',
+          },
+        ],
+      });
+
+    expect(comboRes.status).toBe(201);
+    const comboQuoteId = comboRes.body.quote.id;
+    expect(comboRes.body.quote.items.length).toBe(3);
+
+    // 2. Convertir a orden
+    const convertRes = await request(app)
+      .post(`/api/quotes/${comboQuoteId}/convert`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(convertRes.status).toBe(201);
+    expect(convertRes.body.order).toBeDefined();
+    expect(convertRes.body.order.notes).toBe('Entrega prioritaria');
+    expect(Array.isArray(convertRes.body.order.items)).toBe(true);
+    expect(convertRes.body.order.items.length).toBe(3);
+    expect(convertRes.body.order.items[0].title).toBe('Diseño A 5x5');
+    expect(convertRes.body.order.items[1].title).toBe('Diseño B 7x5');
+    expect(convertRes.body.order.items[2].title).toBe('Diseño C 10x5');
+    expect(convertRes.body.order.items[0].fileUrl).toBe('https://r2.kromalab.gt/a.png');
+    expect(convertRes.body.order.items[1].fileUrl).toBe('https://r2.kromalab.gt/b.png');
+    expect(convertRes.body.order.items[2].fileUrl).toBe('https://r2.kromalab.gt/c.png');
   });
 
   it('retorna 404 al convertir una cotización inexistente', async () => {

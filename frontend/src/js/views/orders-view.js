@@ -60,18 +60,14 @@ export function renderOrderReceiptSheetHtml(order) {
   const receiptItems = rawItems.map((it) => {
     const qty = Number(it.qty);
     const meters = Number(it.actualLinearMeters);
-    const itemFileUrl = it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl;
-    const itemFileName = it.fileInfo?.name || it.fileName || order.fileName || 'Descargar Arte R2';
-    const fileBadgeHtml = itemFileUrl
-      ? `<a href="${itemFileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 4px; background: rgba(28, 114, 147, 0.12); color: ${P.CERULEAN}; font-weight: 600; text-decoration: none;"><span>⬇️</span><span>${itemFileName}</span></a>`
-      : (it.fileInfo ? it.fileInfo.name : 'Archivo RIP directo');
-
     const lineSubQ = Number((meters * tierRate).toFixed(2));
     const unitRef = lineSubQ / qty;
 
+    const rot = it.rotationDeg ? ` • 🔄 ${it.rotationDeg}°` : '';
+
     return {
       qty,
-      descriptionHtml: `<strong>${it.title}</strong><div style="font-size: 0.72rem; color: ${P.TEXT_MUTED}; margin-top: 2px;">${it.stickersPerRow} / fila (${it.rows} filas) • ${fileBadgeHtml}</div>`,
+      descriptionHtml: `<strong>${it.title}</strong><div style="font-size: 0.72rem; color: ${P.TEXT_MUTED}; margin-top: 2px;">${it.stickersPerRow} / fila (${it.rows} filas)${rot}</div>`,
       measure: `${it.widthCm} × ${it.heightCm} cm`,
       linearMeters: `${meters.toFixed(2)} m`,
       ratePerMeter: `Q${tierRate.toFixed(2)}`,
@@ -180,47 +176,7 @@ export function renderOrderReceiptSheetHtml(order) {
     leftSlotHtml: checklistAndNotesHtml,
   });
 
-  const hasSnapshots = order.items.some(it => it.canvasSnapshot) || Boolean(order.canvasSnapshot);
-  const snapshotsHtml = hasSnapshots ? `
-    <div class="workshop-snapshot-section" style="margin: 1rem 0 0; padding: 0.85rem; border: 1px solid ${P.POWDER_BLUE}; border-left: 4px solid ${P.CERULEAN}; background: ${P.BG_ELEVATED}; border-radius: 4px;">
-      <div style="margin-bottom: 0.65rem;">
-        <strong style="font-size: 0.88rem; text-transform: uppercase; color: ${P.BALTIC_BLUE}; display: flex; align-items: center; gap: 0.4rem;">
-          <span>📐 Montaje en Superficie de Impresión:</span>
-        </strong>
-        <div style="font-size: 0.78rem; color: ${P.TEXT_MUTED}; margin-top: 0.15rem;">
-          Disposición configurada sobre los 28 cm útiles.${isCustomer ? '' : ' Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.'}
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem;">
-        ${order.items.map((it, idx) => {
-          const snap = it.canvasSnapshot || order.canvasSnapshot;
-          if (!snap) return '';
-          const fileLink = it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl;
-          return `
-            <div style="background: #ffffff; border: 1px solid ${P.POWDER_BLUE}; border-radius: 4px; padding: 0.65rem; text-align: center;">
-              <div style="font-size: 0.8rem; font-weight: 700; color: ${P.SPACE_INDIGO}; margin-bottom: 0.35rem;">
-                ${idx + 1}. ${it.title} (${it.stickersPerRow}/fila × ${it.rows} filas${it.rotationDeg ? ` • 🔄 ${it.rotationDeg}°` : ''})
-              </div>
-              <div style="background: #090e1c; border-radius: 4px; padding: 4px; display: inline-block; max-width: 100%;">
-                <img src="${snap}" alt="Esquema Bobina" class="workshop-snapshot-img" data-snapshot="${snap}" style="max-width: 100%; max-height: 180px; object-fit: contain; cursor: pointer; display: block;" title="Haz clic para ampliar">
-              </div>
-              <div class="btn-print-hide" style="margin-top: 0.45rem; display: flex; justify-content: center; gap: 0.45rem; flex-wrap: wrap;">
-                <button type="button" class="btn btn-secondary btn-expand-order-snapshot" data-snapshot="${snap}" style="font-size: 0.74rem; padding: 0.22rem 0.5rem; min-height: 30px;">
-                  <span>🔍 Ampliar Esquema</span>
-                </button>
-                ${fileLink ? `
-                  <a href="${fileLink}" target="_blank" rel="noopener noreferrer" style="font-size: 0.74rem; padding: 0.22rem 0.5rem; border-radius: 4px; background: ${P.CERULEAN}; color: #ffffff; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                    <span>⬇️ Archivo RIP</span>
-                  </a>
-                ` : ''}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  ` : '';
+  const snapshotsHtml = '';
 
   return `
     <div class="workshop-sheet-card kroma-print-sheet">
@@ -1148,21 +1104,28 @@ export const ordersView = {
               </td>
             ` : ''}
 
-            <td style="text-align: right; white-space: nowrap;">
-              <button class="btn-action-icon btn-view-order" data-order-id="${order.id}" title="Ver Ficha">
-                <span>🔍</span>
-              </button>
-              ${isStaff ? `
-                <button class="btn-action-icon btn-workshop-sheet" data-order-id="${order.id}" title="Hoja de Taller Audley">
-                  <span>🖨️</span>
+            <td class="orders-actions-cell" style="text-align: right;">
+              <div class="orders-actions-group">
+                <button class="btn-action-icon btn-view-order" data-order-id="${order.id}" title="Ver Ficha">
+                  <span>🔍</span>
                 </button>
-                <button type="button" class="btn-action-icon btn-add-to-production" data-order-id="${order.id}" title="Agregar a Cola de Producción">
-                  <span>⚙️</span>
-                </button>
-              ` : ''}
-              <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" target="_blank" rel="noopener noreferrer" class="btn-action-icon" title="Chat WhatsApp">
-                <span>💬</span>
-              </a>
+                ${isStaff ? `
+                  <button class="btn-action-icon btn-workshop-sheet" data-order-id="${order.id}" title="Hoja de Taller Audley">
+                    <span>🖨️</span>
+                  </button>
+                  <button type="button" class="btn-action-icon btn-add-to-production" data-order-id="${order.id}" title="Agregar a Cola de Producción">
+                    <span>⚙️</span>
+                  </button>
+                ` : ''}
+                <a href="https://api.whatsapp.com/send?phone=${(order.customer.phone || BUSINESS_CONFIG.phoneWhatsApp).replace(/\D/g, '')}&text=${encodeURIComponent(orderWaMsg)}" target="_blank" rel="noopener noreferrer" class="btn-action-icon" title="Chat WhatsApp">
+                  <span>💬</span>
+                </a>
+                ${isStaff ? `
+                  <button type="button" class="btn-action-icon btn-cancel-order ${order.productionStatus === ORDER_STATUS.CANCELLED ? 'disabled' : ''}" data-order-id="${order.id}" title="${order.productionStatus === ORDER_STATUS.CANCELLED ? 'Orden Cancelada' : 'Cancelar Pedido'}" style="${order.productionStatus === ORDER_STATUS.CANCELLED ? 'opacity: 0.45; cursor: not-allowed;' : 'color: #ef4444; border-color: rgba(239, 68, 68, 0.35);'}">
+                    <span>🚫</span>
+                  </button>
+                ` : ''}
+              </div>
             </td>
           </tr>
         `;
@@ -1280,7 +1243,7 @@ export const ordersView = {
                   <span>Ver Detalle</span>
                 </button>
 
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem;">
                   ${isStaff ? `
                     <button 
                       type="button" 
@@ -1303,6 +1266,19 @@ export const ordersView = {
                       <span>⚙️</span>
                       <span>A Producción</span>
                     </button>
+
+                    ${order.productionStatus !== ORDER_STATUS.CANCELLED ? `
+                      <button 
+                        type="button" 
+                        class="btn btn-secondary btn-cancel-order" 
+                        data-order-id="${order.id}" 
+                        title="Cancelar Pedido"
+                        style="font-size: 0.85rem; padding: 0.5rem 0.8rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.35rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);"
+                      >
+                        <span>🚫</span>
+                        <span>Cancelar</span>
+                      </button>
+                    ` : ''}
                   ` : ''}
 
                   <a 
@@ -1396,11 +1372,14 @@ export const ordersView = {
                   </div>
                 ` : ''}
 
-                ${(it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl) ? `
-                  <div style="margin-top: 0.5rem; font-size: 0.82rem;">
-                    <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.1); color: #10b981; font-weight: 600; text-decoration: none;">
-                      <span>⬇️ Descargar Arte Original (${it.fileInfo?.name || it.fileName || order.fileName || 'R2'})</span>
-                    </a>
+                ${(it.previewUrl || it.fileInfo?.fileUrl || it.fileUrl || order.previewUrl || order.fileUrl) ? `
+                  <div class="order-item-thumbnail-wrap" style="margin-top: 0.65rem; display: flex; align-items: center; gap: 0.65rem; background: var(--bg-surface-elevated); padding: 0.45rem 0.65rem; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <img src="${it.previewUrl || it.fileInfo?.fileUrl || it.fileUrl || order.previewUrl || order.fileUrl}" alt="Arte a imprimir" class="order-item-thumbnail-img" style="width: 44px; height: 44px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+                    <div style="font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      <span style="color: var(--text-primary); font-weight: 600;">🖼️ ${it.fileInfo?.name || it.fileName || order.fileName || 'Diseño a imprimir'}</span>
+                      <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">Miniatura para impresión</div>
+                    <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: none;"></a>
+                    </div>
                   </div>
                 ` : ''}
               </div>
@@ -1624,6 +1603,34 @@ export const ordersView = {
             });
           } else if (existingProd && productionStore?.setOrderStatus) {
             productionStore.setOrderStatus(existingProd.id, ORDER_STATUS.IN_AUDLEY_QUEUE);
+          }
+
+          renderOrdersTable();
+          renderOrdersMetrics();
+        });
+      });
+
+      // Cancelar Pedido (Task QA)
+      document.querySelectorAll('.btn-cancel-order').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.orderId;
+          const order = ordersStore.getOrderById(id);
+          if (!order) return;
+
+          if (order.productionStatus === ORDER_STATUS.CANCELLED) {
+            return;
+          }
+
+          if (typeof window !== 'undefined' && window.confirm && !window.confirm(`¿Estás seguro de cancelar la orden #${order.id}?`)) {
+            return;
+          }
+
+          ordersStore.updateProductionStatus(id, ORDER_STATUS.CANCELLED);
+
+          const existingProd = productionStore?.getState()?.orders?.find(o => o.id === order.id || o.id === order.code);
+          if (existingProd && productionStore?.setOrderStatus) {
+            productionStore.setOrderStatus(existingProd.id, ORDER_STATUS.CANCELLED);
           }
 
           renderOrdersTable();

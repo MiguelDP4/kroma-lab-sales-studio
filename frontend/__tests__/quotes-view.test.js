@@ -246,7 +246,7 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     expect(feedback.style.display).toBe('none');
   });
 
-  it('renderiza el recuadro de snapshot y permite abrirlo y cerrarlo en el lightbox', () => {
+  it('no renderiza recuadro redundante de snapshot de bobina en las tarjetas de cotización', () => {
     quotesStore.createQuote({
       projectName: 'Proyecto con Snapshot',
       leadName: 'Cliente Bobina',
@@ -262,38 +262,7 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     quotesView.onMount();
 
     const snapshotBox = document.querySelector('.quote-snapshot-box');
-    expect(snapshotBox).not.toBeNull();
-
-    const btnExpand = document.querySelector('.btn-expand-snapshot');
-    expect(btnExpand).not.toBeNull();
-
-    // Abrir Lightbox al pulsar botón expandir
-    btnExpand.click();
-    const modal = document.getElementById('snapshotLightboxModal');
-    const img = document.getElementById('snapshotLightboxImg');
-    expect(modal.style.display).toBe('block');
-    expect(img.src).toContain('mockFullSnapshotData');
-
-    // Cerrar al pulsar botón X
-    const btnClose = document.getElementById('btnCloseSnapshotLightbox');
-    btnClose.click();
-    expect(modal.style.display).toBe('none');
-
-    // Abrir al pulsar thumbnail de la imagen
-    const thumb = document.querySelector('.quote-snapshot-thumb');
-    thumb.click();
-    expect(modal.style.display).toBe('block');
-
-    // Cerrar al hacer clic en el backdrop
-    modal.click();
-    expect(modal.style.display).toBe('none');
-
-    // Abrir y cerrar con el botón cerrar inferior
-    thumb.click();
-    expect(modal.style.display).toBe('block');
-    const btnDismiss = document.getElementById('btnDismissSnapshotLightbox');
-    btnDismiss.click();
-    expect(modal.style.display).toBe('none');
+    expect(snapshotBox).toBeNull();
   });
 
   it('no muestra el chip de barniz ni botón de WhatsApp, y permite agregar la cotización al carrito sin eliminarla', () => {
@@ -326,9 +295,8 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     // 2. Verificar que NO está el chip "✨ Barniz Relieve 3D"
     expect(document.body.innerHTML).not.toContain('Barniz Relieve 3D');
 
-    // 3. Verificar botón de agregar al carrito y renderizado del arte adjunto
-    expect(document.querySelector('.quote-artwork-box')).not.toBeNull();
-    expect(document.body.innerHTML).toContain('https://pub-r2.dev/assets/quotes/maria_logo.png');
+    // 3. Verificar botón de agregar al carrito y ausencia de caja redundante de arte
+    expect(document.querySelector('.quote-artwork-box')).toBeNull();
 
     const btnAddToCart = document.querySelector('.btn-add-quote-to-cart');
     expect(btnAddToCart).not.toBeNull();
