@@ -155,4 +155,14 @@ describe('Production Store — Almacén Kanban y Bobina de Film', () => {
     setItemSpy.mockRestore();
     warnSpy.mockRestore();
   });
+  it('sincroniza órdenes desde ordersStore al tablero Kanban sin lanzar excepción', () => {
+    expect(() => productionStore.syncWithOrdersStore()).not.toThrow();
+  });
+
+  it('actualiza el estado de una orden y sincroniza con ordersStore y apiClient', () => {
+    const res = productionStore.setOrderStatus('KL-00042', ORDER_STATUS.PRINTING);
+    expect(res).toBe(true);
+    const order = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+    expect(order.status).toBe(ORDER_STATUS.PRINTING);
+  });
 });

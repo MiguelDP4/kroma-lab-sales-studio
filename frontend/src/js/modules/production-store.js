@@ -194,7 +194,7 @@ class ProductionStore {
     let syncedInOrdersStore = false;
     if (typeof ordersStore !== 'undefined' && ordersStore.updateProductionStatus) {
       const orderInStore = ordersStore.getOrderById(orderId) ||
-        ordersStore.getState()?.orders?.find(o =>
+        ((typeof ordersStore.getOrders === 'function' ? ordersStore.getOrders() : ordersStore.orders) || []).find(o =>
           o.id === orderId ||
           o.code === orderId ||
           (order.backendId && (o.backendId === order.backendId || o.id === order.backendId))
@@ -221,7 +221,7 @@ class ProductionStore {
    */
   syncWithOrdersStore() {
     if (typeof ordersStore === 'undefined') return;
-    const allOrders = ordersStore.getState()?.orders || [];
+    const allOrders = (typeof ordersStore.getOrders === 'function' ? ordersStore.getOrders() : ordersStore.orders) || [];
     if (!allOrders.length) return;
 
     const currentOrders = this.state.orders;
