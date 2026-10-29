@@ -1,4 +1,12 @@
 import { defineConfig } from 'vitest/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Cargar variables de entorno de prueba sin exponer credenciales en el repositorio
+dotenv.config({ path: path.resolve(__dirname, '.env.test') });
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+const testDbUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || '';
 
 export default defineConfig({
   test: {
@@ -9,7 +17,7 @@ export default defineConfig({
     hookTimeout: 20000,
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'postgresql://neondb_owner:npg_Bm5aK1UgeLdt@ep-fragrant-wave-b5s2zyjd-pooler.c-7.us-east-2.aws.neon.tech/kroma_test?sslmode=require&channel_binding=require',
+      DATABASE_URL: testDbUrl,
     },
     setupFiles: ['./vitest.setup.ts'],
     globalSetup: ['./vitest.global-setup.ts'],

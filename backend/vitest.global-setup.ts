@@ -1,7 +1,13 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
 export async function setup() {
   process.env.NODE_ENV = 'test';
-  if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:')) {
-    process.env.DATABASE_URL = 'postgresql://neondb_owner:npg_Bm5aK1UgeLdt@ep-fragrant-wave-b5s2zyjd-pooler.c-7.us-east-2.aws.neon.tech/kroma_test?sslmode=require&channel_binding=require';
+  dotenv.config({ path: path.resolve(__dirname, '.env.test') });
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+  if (process.env.TEST_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
   }
 }
 
