@@ -21,7 +21,7 @@ export const inventoryView = {
 
   render: () => {
     return `
-      <div style="padding: 2rem 0 4rem;">
+      <div style="padding: 2rem 0 4rem; width: 100%; max-width: 100%; overflow-x: hidden;">
         <!-- Cabecera de la Vista -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.25rem;">
           <div style="flex: 1 1 340px; min-width: 0;">
@@ -98,8 +98,8 @@ export const inventoryView = {
 
             <!-- Controles de Filtro de Kardex -->
             <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
-              <input type="text" id="kardexSearchInput" class="input-control" placeholder="Buscar por insumo, orden..." style="min-height: 44px; font-size: 0.85rem; width: 200px;">
-              <select id="kardexTypeFilter" class="input-control" style="min-height: 44px; font-size: 0.85rem; width: 170px;">
+              <input type="text" id="kardexSearchInput" class="input-control" placeholder="Buscar por insumo, orden..." style="min-height: 44px; font-size: 0.85rem; min-width: 140px; flex: 1 1 180px;">
+              <select id="kardexTypeFilter" class="input-control" style="min-height: 44px; font-size: 0.85rem; min-width: 140px; flex: 1 1 160px;">
                 <option value="ALL">Todos los Movimientos</option>
                 <option value="IN_PURCHASE">➕ Entradas por Compra</option>
                 <option value="OUT_PRODUCTION">➖ Salidas por Tiraje</option>
@@ -109,7 +109,7 @@ export const inventoryView = {
           </div>
 
           <div class="mobile-scroll-hint">Desliza para ver columnas de stock y costos ↔</div>
-          <div class="orders-table-container">
+          <div class="orders-table-container inventory-table-wrapper" style="width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
             <table class="orders-table" style="font-size: 0.85rem;">
               <thead>
                 <tr>

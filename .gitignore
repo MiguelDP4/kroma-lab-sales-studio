@@ -4,6 +4,7 @@ node_modules/
 .pnp.js
 
 # Testing y Cobertura
+qa-results/
 coverage/
 *.lcov
 
@@ -39,3 +40,7 @@ Thumbs.db
 uploads/
 backend/uploads/
 env.yaml
+
+# Scripts locales de QA
+qa-runner.js
+run-full-qa.js

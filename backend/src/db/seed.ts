@@ -31,12 +31,12 @@ export async function seedDatabase() {
   });
 
   // 2. Usuario Administrador Oficial
-  const adminPassword = await bcrypt.hash('KromaAdmin!', 10);
+  const adminPassword = await bcrypt.hash('Admin!000', 10);
   await prisma.user.upsert({
     where: { email: 'migueldp4@gmail.com' },
     update: {
       password: adminPassword,
-      name: 'Miguel',
+      name: 'Miguel Dubois',
       phone: '+502 5406-6217',
       role: 'ADMIN',
       isVerified: true,
@@ -44,7 +44,7 @@ export async function seedDatabase() {
     create: {
       email: 'migueldp4@gmail.com',
       password: adminPassword,
-      name: 'Miguel',
+      name: 'Miguel Dubois',
       phone: '+502 5406-6217',
       company: 'Kroma Lab',
       taxId: 'CF',
