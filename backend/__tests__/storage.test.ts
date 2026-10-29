@@ -20,7 +20,7 @@ describe('Storage & Cloudflare R2 Presigned URLs API (/api/storage)', () => {
   let customerToken: string;
 
   beforeEach(async () => {
-    adminToken = generateToken({ id: 'admin-1', email: 'miguel@kromalab.gt', role: 'ADMIN' });
+    adminToken = generateToken({ id: 'admin-1', email: 'testadmin@kromalab.gt', role: 'ADMIN' });
     employeeToken = generateToken({ id: 'emp-1', email: 'taller@kromalab.gt', role: 'EMPLOYEE' });
     customerToken = generateToken({ id: 'cust-1', email: 'cliente@test.gt', role: 'CUSTOMER' });
   });

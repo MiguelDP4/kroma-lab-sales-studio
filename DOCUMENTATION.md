@@ -810,3 +810,12 @@ Tras la auditoría E2E automatizada en producción con Playwright sobre `https:/
   2. Los campos de filtro (`#kardexSearchInput` y `#kardexTypeFilter`) se adaptaron con `min-width: 140px; flex: 1 1 auto;` para responder fluidamente al ancho móvil.
   3. Se incorporó `visibility: hidden;` en `.cart-drawer` en estado cerrado (`transform: translateX(100%)`) y `visibility: visible;` en `.cart-drawer.open`, evitando que los motores de renderizado móvil sumen el panel lateral offscreen al `scrollWidth` del documento.
   4. La vista `/inventario` cumple estrictamente con `scrollWidth = 375px` y `hasOverflow = false`.
+
+### 3. Aislamiento Estricto de Producción y Protección de Credenciales en Seeding
+* **Problema:** El servidor ejecutaba automáticamente `seedDatabase()` al arrancar en producción, sobreescribiendo datos y manteniendo credenciales personales hardcodeadas en el código fuente.
+* **Solución:**
+  1. Se eliminó la llamada automática a `seedDatabase()` en el arranque del servidor (`backend/src/index.ts`).
+  2. Se eliminó el bloque de auto-seed y bypass en `backend/src/controllers/auth.controller.ts`.
+  3. Se blindó `backend/src/db/seed.ts` con una guarda estricta que aborta la ejecución si `process.env.NODE_ENV === 'production'`.
+  4. Se removió cualquier dato personal o credencial real del archivo de semilla, configurando usuarios de prueba genéricos (`testadmin@kromalab.gt`) exclusivos para desarrollo local y suites automatizadas sobre la base de pruebas.
+  5. Se purgó la base de datos de producción preservando únicamente la cuenta administrativa autorizada.

@@ -49,12 +49,12 @@ describe('Auth API (/api/auth)', () => {
   it('inicia sesión exitosamente con credenciales válidas de Admin', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'miguel@kromalab.gt', password: 'Admin2026!' });
+      .send({ email: 'testadmin@kromalab.gt', password: 'TestAdmin2026!' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.token).toBeDefined();
-    expect(res.body.user.email).toBe('miguel@kromalab.gt');
+    expect(res.body.user.email).toBe('testadmin@kromalab.gt');
     expect(res.body.user.role).toBe('ADMIN');
     adminToken = res.body.token;
   });
@@ -62,7 +62,7 @@ describe('Auth API (/api/auth)', () => {
   it('rechaza inicio de sesión con contraseña incorrecta (401)', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'miguel@kromalab.gt', password: 'WrongPassword!' });
+      .send({ email: 'testadmin@kromalab.gt', password: 'WrongPassword!' });
 
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
@@ -117,7 +117,7 @@ describe('Auth API (/api/auth)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.user.name).toBe('Miguel Dubois');
+    expect(res.body.user.name).toBe('Test Administrator');
     expect(res.body.user.role).toBe('ADMIN');
   });
 
@@ -285,7 +285,7 @@ describe('Auth API (/api/auth)', () => {
       .post('/api/auth/change-password')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        currentPassword: 'Admin2026!',
+        currentPassword: 'TestAdmin2026!',
         newPassword: 'BrandNewPass2026!'
       });
 

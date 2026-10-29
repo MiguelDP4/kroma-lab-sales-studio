@@ -19,7 +19,7 @@ describe('Customers API (/api/customers)', () => {
 
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'miguel@kromalab.gt', password: 'Admin2026!' });
+      .send({ email: 'testadmin@kromalab.gt', password: 'TestAdmin2026!' });
     adminToken = loginRes.body.token;
   });
 
