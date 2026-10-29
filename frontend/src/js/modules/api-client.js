@@ -11,7 +11,11 @@ export function getApiBaseUrl() {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const stored = window.localStorage.getItem('kromalab_api_url');
-      if (stored) return stored;
+      if (stored && stored.includes('onrender.com')) {
+        window.localStorage.removeItem('kromalab_api_url');
+      } else if (stored) {
+        return stored;
+      }
     } catch {
       // Ignorar quota o storage error
     }
