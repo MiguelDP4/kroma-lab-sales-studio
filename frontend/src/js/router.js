@@ -12,6 +12,7 @@ export class Router {
     this.activeViewCleanup = null;
 
     this.handlePopState = this.handlePopState.bind(this);
+    this.handleHashChange = this.handleHashChange.bind(this);
     this.handleLinkClick = this.handleLinkClick.bind(this);
   }
 
@@ -21,24 +22,38 @@ export class Router {
   init() {
     if (typeof window !== 'undefined') {
       window.addEventListener('popstate', this.handlePopState);
+      window.addEventListener('hashchange', this.handleHashChange);
       document.addEventListener('click', this.handleLinkClick);
-      this.resolve(window.location.pathname);
+      if (window.location.hash && window.location.hash.startsWith('#/')) {
+        this.resolve(window.location.hash.slice(1));
+      } else {
+        this.resolve(window.location.pathname);
+      }
     }
   }
 
   /**
    * Destruye escuchas de eventos (útil para tests).
    */
+    _runActiveCleanup() {
+    if (typeof this.activeViewCleanup === 'function') {
+      try {
+        this.activeViewCleanup();
+      } catch (err) {
+        console.warn('[Router] Error ejecutando cleanup de vista:', err);
+      }
+    }
+    this.activeViewCleanup = null;
+  }
+
   destroy() {
     if (typeof window !== 'undefined') {
       window.removeEventListener('popstate', this.handlePopState);
+      window.removeEventListener('hashchange', this.handleHashChange);
       document.removeEventListener('click', this.handleLinkClick);
     }
     this.currentRoute = null;
-    if (this.activeViewCleanup) {
-      this.activeViewCleanup();
-      this.activeViewCleanup = null;
-    }
+    this._runActiveCleanup();
   }
 
   /**
@@ -78,7 +93,17 @@ export class Router {
   }
 
   handlePopState() {
-    this.resolve(window.location.pathname);
+    if (typeof window !== 'undefined' && window.location.hash && window.location.hash.startsWith('#/')) {
+      this.resolve(window.location.hash.slice(1));
+    } else if (typeof window !== 'undefined') {
+      this.resolve(window.location.pathname);
+    }
+  }
+
+  handleHashChange() {
+    if (typeof window !== 'undefined' && window.location.hash && window.location.hash.startsWith('#/')) {
+      this.resolve(window.location.hash.slice(1));
+    }
   }
 
   /**
@@ -132,6 +157,9 @@ export class Router {
 
   normalizePath(path) {
     if (!path || path === '') return '/';
+    if (path.startsWith('#/')) {
+      path = path.slice(1);
+    }
     const clean = path.split('?')[0].split('#')[0];
     return clean.endsWith('/') && clean.length > 1 ? clean.slice(0, -1) : clean;
   }
@@ -140,10 +168,7 @@ export class Router {
     const mountEl = document.getElementById(this.mountElementId);
     if (!mountEl) return;
 
-    if (this.activeViewCleanup) {
-      this.activeViewCleanup();
-      this.activeViewCleanup = null;
-    }
+    this._runActiveCleanup();
 
     mountEl.innerHTML = `
       <div style="text-align: center; padding: 4rem 1rem; max-width: 600px; margin: 0 auto;">
@@ -180,10 +205,7 @@ export class Router {
     if (!mountEl) return;
 
     // Ejecutar limpieza de la vista anterior
-    if (this.activeViewCleanup) {
-      this.activeViewCleanup();
-      this.activeViewCleanup = null;
-    }
+    this._runActiveCleanup();
 
     this.currentRoute = route;
 

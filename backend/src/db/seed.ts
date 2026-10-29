@@ -31,11 +31,35 @@ export async function seedDatabase() {
   });
 
   // 2. Usuario Administrador Oficial
-  const adminPassword = await bcrypt.hash('Admin2026!', 10);
+  const adminPassword = await bcrypt.hash('KromaAdmin!', 10);
+  await prisma.user.upsert({
+    where: { email: 'migueldp4@gmail.com' },
+    update: {
+      password: adminPassword,
+      name: 'Miguel',
+      phone: '+502 5406-6217',
+      role: 'ADMIN',
+      isVerified: true,
+    },
+    create: {
+      email: 'migueldp4@gmail.com',
+      password: adminPassword,
+      name: 'Miguel',
+      phone: '+502 5406-6217',
+      company: 'Kroma Lab',
+      taxId: 'CF',
+      address: 'San José El Placer, Villa Nueva, Guatemala',
+      department: 'Dirección General',
+      role: 'ADMIN',
+      isVerified: true,
+    },
+  });
+
+  const testAdminPassword = await bcrypt.hash('Admin2026!', 10);
   await prisma.user.upsert({
     where: { email: 'miguel@kromalab.gt' },
     update: {
-      password: adminPassword,
+      password: testAdminPassword,
       name: 'Miguel Dubois',
       phone: '+502 5406-6217',
       role: 'ADMIN',
@@ -43,7 +67,7 @@ export async function seedDatabase() {
     },
     create: {
       email: 'miguel@kromalab.gt',
-      password: adminPassword,
+      password: testAdminPassword,
       name: 'Miguel Dubois',
       phone: '+502 5406-6217',
       company: 'Kroma Lab',

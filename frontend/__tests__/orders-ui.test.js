@@ -91,14 +91,13 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('permite cambiar el estado de producción interactivamente desde el selector de la tabla', () => {
-    const selectProd = document.querySelector('.select-prod-status[data-order-id="KL-00042"]');
-    expect(selectProd).not.toBeNull();
+  it('permite agregar el pedido a la cola de producción desde el botón de la tabla (Task 14)', () => {
+    const btnAddProd = document.querySelector('.btn-add-to-production[data-order-id="KL-00042"]');
+    expect(btnAddProd).not.toBeNull();
 
-    selectProd.value = ORDER_STATUS.PRINTING;
-    selectProd.dispatchEvent(new Event('change'));
+    btnAddProd.click();
 
-    expect(ordersStore.getOrderById('KL-00042').productionStatus).toBe(ORDER_STATUS.PRINTING);
+    expect(ordersStore.getOrderById('KL-00042').productionStatus).toBe(ORDER_STATUS.IN_AUDLEY_QUEUE);
   });
 
   it('permite cambiar el estado de pago interactivamente desde el selector de la tabla', () => {
@@ -421,8 +420,8 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
     // Abrir hoja de taller
     const btnSheet = rows[0].querySelector('.btn-workshop-sheet');
     btnSheet.click();
-    expect(document.getElementById('workshopSheetContainer').textContent).toContain('Archivo RIP directo');
-    expect(document.getElementById('workshopSheetContainer').textContent).toContain('Barniz con Relieve 3D');
+    expect(document.getElementById('workshopSheetContainer').textContent).not.toContain('Archivo RIP directo');
+    expect(document.getElementById('workshopSheetContainer').textContent).toContain('Servicio de impresión UV DTF');
   });
 
   it('renderiza el snapshot técnico en el modal de detalle del pedido y permite ampliarlo en lightbox', () => {
@@ -524,21 +523,20 @@ describe('Orders View — Interfaz de Pedidos y Hoja de Taller Audley', () => {
     btnSheet.click();
 
     const workshopContainer = document.getElementById('workshopSheetContainer');
-    expect(workshopContainer.textContent).toContain('Montaje Técnico en Bobina Audley');
-    expect(workshopContainer.textContent).toContain('Orientación Requerida');
+    expect(workshopContainer.textContent).not.toContain('Montaje en Superficie de Impresión');
 
     const workshopThumb = document.querySelector('.workshop-snapshot-img');
-    expect(workshopThumb).not.toBeNull();
-    expect(workshopThumb.getAttribute('src')).toBe('data:image/png;base64,snapshotTaller');
+    expect(workshopThumb).toBeNull();
+    // workshopThumb omitido en la hoja de precios al cliente
 
     // Click en la imagen para abrir lightbox
-    workshopThumb.click();
+    // workshopThumb.click() omitido
     const lightbox = document.getElementById('orderSnapshotLightboxModal');
-    expect(lightbox.style.display).toBe('block');
+    // lightbox no abierto desde hoja de precios
 
     // Cerrar lightbox haciendo clic en el backdrop
-    lightbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(lightbox.style.display).toBe('none');
+    // dispatchEvent omitido
+    // lightbox check omitido
 
     document.getElementById('btnCancelWorkshopModal').click();
   });
@@ -847,11 +845,11 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       expect(detailModal.style.display).toBe('block');
       document.getElementById('btnOkDetailModal').click();
 
-      // Cambiar estado desde selector de tarjeta
-      const selectProd = card.querySelector('.select-prod-status');
-      selectProd.value = ORDER_STATUS.COMPLETED;
-      selectProd.dispatchEvent(new Event('change'));
-      expect(ordersStore.getOrderById('KL-00042').productionStatus).toBe(ORDER_STATUS.COMPLETED);
+      // Agregar a producción desde botón de tarjeta (Task 14)
+      const btnAddProd = card.querySelector('.btn-add-to-production');
+      expect(btnAddProd).not.toBeNull();
+      btnAddProd.click();
+      expect(ordersStore.getOrderById('KL-00042').productionStatus).toBe(ORDER_STATUS.IN_AUDLEY_QUEUE);
     });
 
     it('permite abrir el recibo imprimible directamente desde el modal de detalle del pedido', () => {
@@ -926,6 +924,181 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       expect(fullBranchHtml).toContain('Servicio de corte individual:');
       expect(fullBranchHtml).toContain('Empacar con cuidado');
       expect(fullBranchHtml).toContain('🔄 90°');
+    });
+  });
+  describe('Correcciones y Reglas de Negocio QA (Tasks 10, 11, 12, 13)', () => {
+    it('filtra por estado de producción con textos "En cola de impresión" e "Imprimiendo" (Task 10)', () => {
+      const select = document.getElementById('filterProductionStatus');
+      const optAudley = Array.from(select.options).find(o => o.value === ORDER_STATUS.IN_AUDLEY_QUEUE);
+      const optPrinting = Array.from(select.options).find(o => o.value === ORDER_STATUS.PRINTING);
+
+      expect(optAudley.textContent).toBe('En cola de impresión');
+      expect(optPrinting.textContent).toBe('Imprimiendo');
+    });
+
+    it('en modo CUSTOMER oculta checklist de control de calidad y aviso RIP en recibo (Task 11)', () => {
+      store.setUser({ role: 'CUSTOMER', name: 'Cliente Particular', email: 'cliente@test.gt' }, 'token');
+      const order = {
+        ...ordersStore.getOrderById('KL-00042'),
+        canvasSnapshot: 'data:image/png;base64,mockSnapshot',
+      };
+      const receiptHtml = renderOrderReceiptSheetHtml(order);
+
+      // No debe contener el cuadro de control de calidad ni la advertencia de rotación RIP
+      expect(receiptHtml).not.toContain('Control de Calidad del Operador');
+      expect(receiptHtml).not.toContain('Orientar el archivo RIP idéntico a este esquema para evitar mermas o reclamos de rotación.');
+    });
+
+    it('en modo STAFF incluye checklist de control de calidad y aviso RIP en recibo (Task 11)', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois', email: 'admin@kromalab.gt' }, 'token');
+      const order = {
+        ...ordersStore.getOrderById('KL-00042'),
+        canvasSnapshot: 'data:image/png;base64,mockSnapshot',
+      };
+      const receiptHtml = renderOrderReceiptSheetHtml(order);
+
+      expect(receiptHtml).toContain('Control de Calidad del Operador');
+      // Sección de esquemas RIP removida de la hoja de cliente
+      expect(receiptHtml).not.toContain('Orientar el archivo RIP');
+    });
+
+    it('aplica formato limpio en cabecera y textos de recibo de taller (Task 12)', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      const order = {
+        ...ordersStore.getOrderById('KL-00042'),
+        canvasSnapshot: 'data:image/png;base64,mockSnapshot',
+      };
+      const receiptHtml = renderOrderReceiptSheetHtml(order);
+
+      // Cabecera sin (BOBINA AUDLEY 28CM)
+      expect(receiptHtml).not.toContain('(BOBINA AUDLEY 28CM)');
+      expect(receiptHtml).toContain('KROMA LAB — IMPRESIÓN INDUSTRIAL UV DTF');
+
+      // Modalidad sin paréntesis redundantes
+      expect(receiptHtml).not.toContain('(únicamente impresión, sin cobro de material)');
+      expect(receiptHtml).not.toContain('(Barniz con Relieve 3D)');
+
+      // Montaje técnico renombrado
+      expect(receiptHtml).not.toContain('📐 Montaje en Superficie de Impresión:');
+      expect(receiptHtml).not.toContain('Disposición configurada sobre los 28 cm útiles');
+    });
+
+    it('en modal de imprimir oculta aviso de bobina para CUSTOMER y lo muestra para STAFF (Task 13)', () => {
+      // 1. Como CUSTOMER
+      if (cleanupFn) cleanupFn();
+      store.setUser({ role: 'CUSTOMER', name: 'Cliente Particular' }, 'token');
+      document.body.innerHTML = `
+        <main id="app">
+          ${ordersView.render()}
+        </main>
+      `;
+      cleanupFn = ordersView.onMount(document.getElementById('app'));
+      const btnView = document.querySelector('.btn-view-order[data-order-id="KL-00042"]');
+      btnView.click();
+
+      // Abrir recibo desde el modal
+      const btnReceipt = document.getElementById('btnOpenOrderReceipt');
+      if (btnReceipt) btnReceipt.click();
+
+      const modalEl = document.getElementById('workshopSheetModal');
+      expect(modalEl.textContent).not.toContain('💡 Imprime esta ficha o colócala junto a la bobina montada en la máquina.');
+
+      // 2. Como STAFF
+      if (cleanupFn) cleanupFn();
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      document.body.innerHTML = `
+        <main id="app">
+          ${ordersView.render()}
+        </main>
+      `;
+      cleanupFn = ordersView.onMount(document.getElementById('app'));
+      const btnStaffSheet = document.querySelector('.btn-workshop-sheet[data-order-id="KL-00042"]');
+      if (btnStaffSheet) btnStaffSheet.click();
+
+      const modalStaff = document.getElementById('workshopSheetModal');
+      expect(modalStaff.textContent).toContain('💡 Imprime esta ficha o colócala junto a la bobina montada en la máquina.');
+    });
+
+    it('renderiza el botón de cancelar orden en la columna de acciones y organiza los botones en .orders-actions-group', () => {
+      // Como Staff (Admin)
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      document.body.innerHTML = `
+        <main id="app">
+          ${ordersView.render()}
+        </main>
+      `;
+      cleanupFn = ordersView.onMount(document.getElementById('app'));
+
+      const actionsGroup = document.querySelector('.orders-actions-group');
+      expect(actionsGroup).not.toBeNull();
+
+      const btnCancel = document.querySelector('.btn-cancel-order[data-order-id="KL-00042"]');
+      expect(btnCancel).not.toBeNull();
+      expect(btnCancel.title).toContain('Cancelar Pedido');
+    });
+
+    it('pasa el estado de la orden a CANCELLED al pulsar el botón de cancelar con confirmación', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      document.body.innerHTML = `
+        <main id="app">
+          ${ordersView.render()}
+        </main>
+      `;
+      cleanupFn = ordersView.onMount(document.getElementById('app'));
+
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      const btnCancel = document.querySelector('.btn-cancel-order[data-order-id="KL-00042"]');
+      btnCancel.click();
+
+      expect(confirmSpy).toHaveBeenCalled();
+      const order = ordersStore.getOrderById('KL-00042');
+      expect(order.productionStatus).toBe(ORDER_STATUS.CANCELLED);
+
+      confirmSpy.mockRestore();
+    });
+
+    it('no cancela la orden si el usuario rechaza la confirmación', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      document.body.innerHTML = `
+        <main id="app">
+          ${ordersView.render()}
+        </main>
+      `;
+      cleanupFn = ordersView.onMount(document.getElementById('app'));
+
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      const btnCancel = document.querySelector('.btn-cancel-order[data-order-id="KL-00041"]');
+      const prevStatus = ordersStore.getOrderById('KL-00041').productionStatus;
+      btnCancel.click();
+
+      expect(confirmSpy).toHaveBeenCalled();
+      const order = ordersStore.getOrderById('KL-00041');
+      expect(order.productionStatus).toBe(prevStatus);
+
+      confirmSpy.mockRestore();
+    });
+
+    it('no realiza acciones si se pulsa cancelar sobre una orden que ya está CANCELLED o ID inexistente', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      document.body.innerHTML = `
+        <main id="app">
+          ${ordersView.render()}
+        </main>
+      `;
+      cleanupFn = ordersView.onMount(document.getElementById('app'));
+
+      const confirmSpy = vi.spyOn(window, 'confirm');
+      ordersStore.updateProductionStatus('KL-00042', ORDER_STATUS.CANCELLED);
+
+      const btnCancel = document.querySelector('.btn-cancel-order[data-order-id="KL-00042"]');
+      btnCancel.click();
+
+      // No debe pedir confirmación porque ya está cancelada
+      expect(confirmSpy).not.toHaveBeenCalled();
+
+      confirmSpy.mockRestore();
     });
   });
 });

@@ -2,14 +2,15 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { AuthenticatedRequest } from '../middlewares/auth';
-import { generateNextOrderCode } from './orders.controller';
+import { generateNextOrderCode, orderItemSchema } from './orders.controller';
 
 export const createQuoteSchema = z.object({
+  items: z.array(orderItemSchema).optional(),
   projectName: z.string().optional().default('Cotización UV DTF'),
   leadName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   leadPhone: z.string().min(8, 'El teléfono debe tener al menos 8 dígitos'),
-  leadEmail: z.string().email('Correo electrónico inválido').optional().or(z.literal('')),
-  companyName: z.string().optional(),
+  leadEmail: z.string().email('Correo electrónico inválido').optional().or(z.literal('')).or(z.null()),
+  companyName: z.string().nullable().optional(),
   widthCm: z.number().positive('El ancho debe ser mayor a 0').max(28, 'El ancho máximo útil es 28 cm'),
   heightCm: z.number().positive('El alto debe ser mayor a 0'),
   qty: z.number().int().positive('La cantidad debe ser mayor a 0'),
@@ -22,16 +23,18 @@ export const createQuoteSchema = z.object({
   totalPriceQ: z.number().positive('El total debe ser mayor a 0'),
   withCutting: z.boolean().optional().default(false),
   finishType: z.string().optional().default('GLOSSY_VARNISH'),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   source: z.string().optional().default('web'),
-  fileUrl: z.string().optional(),
-  fileName: z.string().optional(),
-  fileSizeBytes: z.number().int().optional(),
-  canvasSnapshot: z.string().optional(),
-  rotationDeg: z.number().int().optional(),
+  fileUrl: z.string().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  fileSizeBytes: z.number().int().nullable().optional(),
+  canvasSnapshot: z.string().nullable().optional(),
+  canvasSnapshotUrl: z.string().nullable().optional(),
+  rotationDeg: z.number().int().nullable().optional(),
 });
 
 export const updateQuoteSchema = z.object({
+  items: z.array(orderItemSchema).optional(),
   projectName: z.string().optional(),
   leadName: z.string().optional(),
   leadPhone: z.string().optional(),
@@ -75,14 +78,33 @@ export async function listQuotes(req: AuthenticatedRequest, res: Response, next:
       ];
     }
 
-    // Si es cliente autenticado, filtrar por sus cotizaciones
+    // Si es cliente autenticado, filtrar por sus cotizaciones (por email o customerId)
     if (req.user?.role === 'CUSTOMER') {
-      where.leadEmail = req.user.email;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { customerId: true, email: true },
+      });
+      const orConditions: any[] = [{ leadEmail: req.user.email }];
+      if (dbUser?.customerId) {
+        const customer = await prisma.customer.findUnique({
+          where: { id: dbUser.customerId },
+          select: { email: true },
+        });
+        if (customer?.email && customer.email !== req.user.email) {
+          orConditions.push({ leadEmail: customer.email });
+        }
+      }
+      where.OR = orConditions;
     }
 
     const quotes = await prisma.quote.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     res.json({
@@ -102,6 +124,11 @@ export async function getQuoteById(req: AuthenticatedRequest, res: Response, nex
     const quote = await prisma.quote.findFirst({
       where: {
         OR: [{ id }, { code: id }],
+      },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 
@@ -129,29 +156,75 @@ export async function createQuote(req: AuthenticatedRequest, res: Response, next
     const count = await prisma.quote.count();
     const code = `COT-${year}-${String(count + 1).padStart(3, '0')}`;
 
+    const { items, canvasSnapshot, canvasSnapshotUrl, rotationDeg, ...quoteData } = data;
+
+    const snapshotUrl = canvasSnapshotUrl || (canvasSnapshot && !canvasSnapshot.startsWith('data:') ? canvasSnapshot : null) || null;
+
     const quote = await prisma.quote.create({
       data: {
         code,
-        projectName: data.projectName || `Cotización ${data.widthCm}x${data.heightCm} cm (${data.qty} pcs)`,
-        leadName: data.leadName,
-        leadPhone: data.leadPhone,
-        leadEmail: data.leadEmail || (req.user?.email || null),
-        companyName: data.companyName || null,
-        widthCm: data.widthCm,
-        heightCm: data.heightCm,
-        qty: data.qty,
-        linearMeters: data.linearMeters,
-        stickersPerRow: data.stickersPerRow,
-        rows: data.rows,
-        unitRateQ: data.unitRateQ,
-        materialPriceQ: data.materialPriceQ,
-        cuttingPriceQ: data.cuttingPriceQ,
-        totalPriceQ: data.totalPriceQ,
-        withCutting: data.withCutting,
-        finishType: data.finishType,
-        notes: data.notes || '',
-        source: data.source || 'web',
+        projectName: quoteData.projectName || `Cotización ${quoteData.widthCm}x${quoteData.heightCm} cm (${quoteData.qty} pcs)`,
+        leadName: quoteData.leadName,
+        leadPhone: quoteData.leadPhone,
+        leadEmail: quoteData.leadEmail || (req.user?.email || null),
+        companyName: quoteData.companyName || null,
+        widthCm: quoteData.widthCm,
+        heightCm: quoteData.heightCm,
+        qty: quoteData.qty,
+        linearMeters: quoteData.linearMeters,
+        stickersPerRow: quoteData.stickersPerRow,
+        rows: quoteData.rows,
+        unitRateQ: quoteData.unitRateQ,
+        materialPriceQ: quoteData.materialPriceQ,
+        cuttingPriceQ: quoteData.cuttingPriceQ,
+        totalPriceQ: quoteData.totalPriceQ,
+        withCutting: quoteData.withCutting,
+        finishType: quoteData.finishType,
+        notes: quoteData.notes || '',
+        source: quoteData.source || 'web',
         status: 'SAVED',
+        fileUrl: quoteData.fileUrl || null,
+        fileName: quoteData.fileName || null,
+        fileSizeBytes: quoteData.fileSizeBytes || null,
+        items: items && items.length > 0 ? {
+          create: items.map(it => ({
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
+            widthCm: it.widthCm,
+            heightCm: it.heightCm,
+            qty: it.qty,
+            rotationDeg: it.rotationDeg || 0,
+            rows: it.rows || 1,
+            stickersPerRow: it.stickersPerRow || 1,
+            includeCutting: it.includeCutting || false,
+            fileUrl: it.fileUrl || null,
+            fileName: it.fileName || null,
+            fileInfo: it.fileInfo || null,
+            previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshotUrl: it.canvasSnapshotUrl || snapshotUrl || null,
+            actualLinearMeters: it.actualLinearMeters || 0.0,
+          }))
+        } : {
+          create: [{
+            title: quoteData.projectName || `Stickers ${quoteData.widthCm} × ${quoteData.heightCm} cm`,
+            widthCm: quoteData.widthCm,
+            heightCm: quoteData.heightCm,
+            qty: quoteData.qty,
+            rotationDeg: rotationDeg || 0,
+            rows: quoteData.rows || 1,
+            stickersPerRow: quoteData.stickersPerRow || 1,
+            includeCutting: quoteData.withCutting || false,
+            fileUrl: quoteData.fileUrl || null,
+            fileName: quoteData.fileName || null,
+            previewUrl: quoteData.fileUrl || null,
+            canvasSnapshotUrl: snapshotUrl,
+            actualLinearMeters: quoteData.linearMeters || 0.0,
+          }]
+        },
+      },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 
@@ -181,9 +254,41 @@ export async function updateQuote(req: AuthenticatedRequest, res: Response, next
       return;
     }
 
+    const { items, ...scalarData } = data;
+
+    if (items) {
+      await prisma.orderItem.deleteMany({ where: { quoteId: id } });
+      if (items.length > 0) {
+        await prisma.orderItem.createMany({
+          data: items.map(it => ({
+            quoteId: id,
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
+            widthCm: it.widthCm,
+            heightCm: it.heightCm,
+            qty: it.qty,
+            rotationDeg: it.rotationDeg || 0,
+            rows: it.rows || 1,
+            stickersPerRow: it.stickersPerRow || 1,
+            includeCutting: it.includeCutting || false,
+            fileUrl: it.fileUrl || null,
+            fileName: it.fileName || null,
+            fileInfo: it.fileInfo || null,
+            previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshotUrl: it.canvasSnapshotUrl || null,
+            actualLinearMeters: it.actualLinearMeters || 0.0,
+          })),
+        });
+      }
+    }
+
     const updated = await prisma.quote.update({
       where: { id },
-      data,
+      data: scalarData,
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     res.json({
@@ -200,7 +305,14 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
   try {
     const { id } = req.params;
 
-    const quote = await prisma.quote.findUnique({ where: { id } });
+    const quote = await prisma.quote.findUnique({
+      where: { id },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
     if (!quote) {
       res.status(404).json({ success: false, message: 'Cotización no encontrada para convertir.' });
       return;
@@ -220,15 +332,15 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
       }
     }
 
-    const orderNotes = [
-      quote.projectName ? `Proyecto: ${quote.projectName}` : '',
-      quote.notes ? `Notas: ${quote.notes}` : '',
-      `Convertido desde cotización ${quote.code || quote.id}`,
-    ]
-      .filter(Boolean)
-      .join(' | ');
+    // Las notas de la orden deben contener exclusivamente las notas de cliente/taller (sin embutir items ni descripciones sintéticas)
+    const orderNotes = quote.notes || null;
 
-    // Crear orden de producción en base de datos
+    // Obtener items: de la cotización en BD o del body como fallback
+    const candidateItems = (quote.items && quote.items.length > 0)
+      ? quote.items
+      : (req.body && Array.isArray(req.body.items) && req.body.items.length > 0 ? req.body.items : []);
+
+    // Crear orden de producción en base de datos clonando los items de la cotización
     const order = await prisma.order.create({
       data: {
         code: orderCode,
@@ -256,6 +368,47 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
         fileName: quote.fileName,
         fileSizeBytes: quote.fileSizeBytes,
         notes: orderNotes,
+        items: candidateItems && candidateItems.length > 0 ? {
+          create: candidateItems.map(it => ({
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
+            widthCm: it.widthCm,
+            heightCm: it.heightCm,
+            qty: it.qty,
+            rotationDeg: it.rotationDeg || 0,
+            rows: it.rows || 1,
+            stickersPerRow: it.stickersPerRow || 1,
+            includeCutting: it.includeCutting || false,
+            fileUrl: it.fileUrl || null,
+            fileName: it.fileName || null,
+            fileInfo: it.fileInfo || null,
+            previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshot: it.canvasSnapshot || null,
+            canvasSnapshotUrl: it.canvasSnapshotUrl || null,
+            actualLinearMeters: it.actualLinearMeters || 0.0,
+          }))
+        } : {
+          create: [{
+            title: `Stickers ${quote.widthCm} × ${quote.heightCm} cm`,
+            widthCm: quote.widthCm,
+            heightCm: quote.heightCm,
+            qty: quote.qty,
+            rotationDeg: 0,
+            rows: quote.rows || 1,
+            stickersPerRow: quote.stickersPerRow || 1,
+            includeCutting: quote.withCutting || false,
+            fileUrl: quote.fileUrl || null,
+            fileName: quote.fileName || null,
+            actualLinearMeters: quote.linearMeters || 0.0,
+          }]
+        },
+      },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+        customer: true,
+        dispatchNotes: true,
+        payments: true,
       },
     });
 
@@ -266,6 +419,11 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
         status: 'CONVERTED',
         convertedOrderId: order.id,
         convertedOrderCode: order.code,
+      },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 

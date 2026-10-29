@@ -105,4 +105,19 @@ describe('Dispatch API (/api/dispatch)', () => {
     const updatedOrder = await prisma.order.findUnique({ where: { id: testOrderId } });
     expect(updatedOrder?.status).toBe('COMPLETED');
   });
+
+  it('elimina una remisión de despacho por ID', async () => {
+    const res = await request(app)
+      .delete(`/api/dispatch/${createdDispatchId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const checkRes = await request(app)
+      .get(`/api/dispatch/${createdDispatchId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(checkRes.status).toBe(404);
+  });
 });

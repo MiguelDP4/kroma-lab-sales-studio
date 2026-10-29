@@ -191,4 +191,105 @@ describe('AccountView — Vista de Mi Cuenta y Configuración (/mi-cuenta)', () 
 
     expect(submitEvent.defaultPrevented).toBe(true);
   });
+  it('requiere contraseña actual para cambiar correo electrónico (Task 8)', async () => {
+    const user = { id: 'USR_01', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', phone: '55551234', role: 'ADMIN' };
+    store.setUser(user, 'token-123', ['*']);
+
+    container.innerHTML = accountView.render();
+    accountView.onMount(container);
+
+    const emailInput = container.querySelector('#accountEmailInput');
+    emailInput.value = 'nuevo@kromalab.gt';
+
+    const form = container.querySelector('#formAccountSettings');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      const feedback = container.querySelector('#accountFeedbackMsg');
+      expect(feedback.style.display).toBe('block');
+      expect(feedback.textContent).toContain('debes ingresar tu contraseña actual');
+    });
+  });
+
+  it('invoca changeEmail al proporcionar nuevo correo y contraseña actual válida (Task 8)', async () => {
+    const user = { id: 'USR_01', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', phone: '55551234', role: 'ADMIN' };
+    store.setUser(user, 'token-123', ['*']);
+
+    const changeEmailSpy = vi.spyOn(apiClient.auth, 'changeEmail').mockResolvedValue({
+      success: true,
+      message: 'Hemos enviado un correo de verificación a nuevo@kromalab.gt'
+    });
+    vi.spyOn(apiClient.auth, 'updateProfile').mockResolvedValue({ success: true, user });
+
+    container.innerHTML = accountView.render();
+    accountView.onMount(container);
+
+    container.querySelector('#accountEmailInput').value = 'nuevo@kromalab.gt';
+    container.querySelector('#accountCurrentPasswordInput').value = 'Admin2026!';
+
+    const form = container.querySelector('#formAccountSettings');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      expect(changeEmailSpy).toHaveBeenCalledWith('Admin2026!', 'nuevo@kromalab.gt');
+      const feedback = container.querySelector('#accountFeedbackMsg');
+      expect(feedback.textContent).toContain('Hemos enviado un correo de verificación');
+    });
+    changeEmailSpy.mockRestore();
+  });
+
+  it('valida requisitos y contraseñas al cambiar contraseña (Task 7)', async () => {
+    const user = { id: 'USR_01', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', phone: '55551234', role: 'ADMIN' };
+    store.setUser(user, 'token-123', ['*']);
+
+    container.innerHTML = accountView.render();
+    accountView.onMount(container);
+
+    container.querySelector('#accountNewPasswordInput').value = 'NewPass2026!';
+    container.querySelector('#accountConfirmPasswordInput').value = 'DifferentPass!';
+
+    const form = container.querySelector('#formAccountSettings');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      const feedback = container.querySelector('#accountFeedbackMsg');
+      expect(feedback.textContent).toContain('debes ingresar tu contraseña actual');
+    });
+
+    container.querySelector('#accountCurrentPasswordInput').value = 'Admin2026!';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      const feedback = container.querySelector('#accountFeedbackMsg');
+      expect(feedback.textContent).toContain('Las contraseñas no coinciden');
+    });
+  });
+
+  it('invoca changePassword al enviar contraseña actual y nueva contraseña coincidente (Task 7)', async () => {
+    const user = { id: 'USR_01', name: 'Miguel Dubois', email: 'miguel@kromalab.gt', phone: '55551234', role: 'ADMIN' };
+    store.setUser(user, 'token-123', ['*']);
+
+    const changePwSpy = vi.spyOn(apiClient.auth, 'changePassword').mockResolvedValue({
+      success: true,
+      message: 'Hemos enviado un correo de verificación para activar tu nueva contraseña'
+    });
+    vi.spyOn(apiClient.auth, 'updateProfile').mockResolvedValue({ success: true, user });
+
+    container.innerHTML = accountView.render();
+    accountView.onMount(container);
+
+    container.querySelector('#accountCurrentPasswordInput').value = 'Admin2026!';
+    container.querySelector('#accountNewPasswordInput').value = 'SuperNewPass2026!';
+    container.querySelector('#accountConfirmPasswordInput').value = 'SuperNewPass2026!';
+
+    const form = container.querySelector('#formAccountSettings');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      expect(changePwSpy).toHaveBeenCalledWith('Admin2026!', 'SuperNewPass2026!');
+      const feedback = container.querySelector('#accountFeedbackMsg');
+      expect(feedback.textContent).toContain('correo de verificación');
+    });
+    changePwSpy.mockRestore();
+  });
 });

@@ -105,7 +105,9 @@ describe('Dispatch View — Interfaz de Remisiones y Guías de Entrega UV DTF', 
       expect(html).toContain('REMISIÓN DE DESPACHO');
       expect(html).toContain(note.id);
       expect(html).toContain(note.clientName);
-      expect(html).toContain('Control de Calidad Técnico en Taller');
+      expect(html).not.toContain('Control de Calidad Técnico en Taller');
+      expect(html).toContain('Kroma Lab — Miguel Dubois');
+      expect(html).not.toContain('Despachado en taller por:');
       expect(html).toContain('Garantía y Condiciones de Aplicación');
       expect(html).toContain('Despachado en Taller (Firma y Sello)');
       expect(html).toContain('Receptor / Transportista');

@@ -1,10 +1,14 @@
 /**
  * Vista de Cotizaciones Guardadas y Conversión a Orden (QuotesView)
  * Enfoque Mobile-First en tarjetas ergonómicas con conversión directa en 1 clic.
+ * Muestra información detallada de los ítems de orden (OrderItems) e imágenes persistentes.
  */
 
 import { quotesStore } from '../modules/quotes-store.js';
+import { cartStore } from '../modules/cart-store.js';
+import { openCartDrawer } from '../components/cart-drawer.js';
 import { store } from '../store.js';
+import { mapOrderItem } from '../modules/order-item.js';
 
 let currentFilter = 'ALL';
 let currentSearch = '';
@@ -41,7 +45,7 @@ export const quotesView = {
             </p>
           </div>
 
-          <a href="#/" class="btn btn-primary" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+          <a href="/" class="btn btn-primary" data-link style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
             <span>+ Nueva Cotización</span>
             <span>📐</span>
           </a>
@@ -181,7 +185,7 @@ function renderQuotesCards(quotes) {
         <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 420px; margin: 0 auto 1.25rem;">
           Calcula un tiraje en el cotizador interactivo y pulsa "Guardar Cotización" para conservarla o enviarla a producción.
         </p>
-        <a href="#/" class="btn btn-primary" style="min-height: 44px;">
+        <a href="/" class="btn btn-primary" data-link style="min-height: 44px;">
           Ir al Cotizador UV DTF 📐
         </a>
       </div>
@@ -205,27 +209,12 @@ function renderQuotesCards(quotes) {
       minute: '2-digit',
     }) : 'Reciente';
 
-    // Generar texto para WhatsApp
-    const clientArtUrl = q.fileUrl || null;
-    const clientArtText = clientArtUrl ? `🖼️ *Arte del cliente:* ${clientArtUrl}\n` : '';
-    const snapUrl = q.canvasSnapshotUrl || (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null);
-    const snapText = snapUrl ? `📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+    // Identificar recursos gráficos del primer ítem o nivel raíz
+    const clientArtUrl = q.fileUrl || q.previewUrl || q.items?.[0]?.previewUrl || q.items?.[0]?.fileUrl || null;
+    const clientFileName = q.fileName || q.items?.[0]?.fileName || (clientArtUrl ? 'diseño.png' : null);
+    const clientFileSize = q.fileSizeBytes || q.items?.[0]?.fileSizeBytes || null;
 
-    const waText = encodeURIComponent(
-      `¡Hola! Te comparto la cotización formal de Kroma Lab UV DTF:\n` +
-      `📌 *Proyecto:* ${q.projectName}\n` +
-      `🔖 *Código:* ${q.code}\n` +
-      `📏 *Medidas:* ${q.widthCm} x ${q.heightCm} cm (${q.qty} piezas)\n` +
-      `📐 *Metros lineales:* ${Number(q.linearMeters).toFixed(2)} m\n` +
-      `✂️ *Corte:* ${q.withCutting ? 'Despiece individual incluido' : 'En rollo continuo'}\n` +
-      clientArtText +
-      snapText +
-      `💰 *Total:* Q${Number(q.totalPriceQ).toFixed(2)}\n\n` +
-      `¿Deseas que lo ingresemos a cola de impresión?`
-    );
-
-    const waPhone = q.leadPhone ? q.leadPhone.replace(/[^0-9]/g, '') : '50254066217';
-    const waUrl = `https://wa.me/${waPhone}?text=${waText}`;
+    const snapUrl = q.canvasSnapshotUrl || (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || q.items?.[0]?.canvasSnapshotUrl || (q.items?.[0]?.canvasSnapshot && !q.items[0].canvasSnapshot.startsWith('data:') ? q.items[0].canvasSnapshot : null) || null;
 
     return `
       <div class="calc-card quote-item-card" data-quote-id="${q.id}" style="padding: 1.25rem; border-left: 4px solid ${isConverted ? '#10b981' : 'var(--cerulean)'};">
@@ -264,10 +253,10 @@ function renderQuotesCards(quotes) {
           </div>
         </div>
 
-        <!-- Chips de Especificaciones Técnicas -->
+        <!-- Chips de Especificaciones Técnicas Generales -->
         <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 1rem;">
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
-            📏 ${q.widthCm} × ${q.heightCm} cm
+            ${(q.items && q.items.length > 1) ? `🎨 ${q.items.length} Diseños` : `📏 ${q.widthCm} × ${q.heightCm} cm`}
           </span>
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
             📦 ${q.qty} piezas
@@ -278,29 +267,33 @@ function renderQuotesCards(quotes) {
           <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem; color: ${q.withCutting ? '#10b981' : 'var(--text-muted)'};">
             ${q.withCutting ? '✂️ Con corte (+Q' + Number(q.cuttingPriceQ).toFixed(2) + ')' : '📦 En rollo continuo'}
           </span>
-          <span class="badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
-            ✨ Barniz Relieve 3D
-          </span>
         </div>
 
-        <!-- Previsualización del montaje en bobina (Snapshot técnico) -->
-        ${q.canvasSnapshot ? `
-          <div class="quote-snapshot-box" style="margin-top: -0.25rem; margin-bottom: 1rem; background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px;">
-              <img src="${q.canvasSnapshot}" alt="Montaje en bobina" class="quote-snapshot-thumb" data-snapshot="${q.canvasSnapshot}" style="width: 100px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; cursor: pointer;" title="Haz clic para ampliar la disposición en bobina">
-              <div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem;">
-                  <span>📐 Disposición en Bobina Audley</span>
-                  <span class="badge" style="font-size: 0.68rem; padding: 0.1rem 0.4rem; color: var(--cerulean); border-color: var(--cerulean);">28 cm</span>
+        <!-- Desglose de OrderItems de la Cotización -->
+        ${(q.items && q.items.length > 1) ? `
+          <div class="quote-multi-items-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.85rem;">
+            ${q.items.map((it, idx) => {
+              const itUrl = it.previewUrl || it.fileUrl || null;
+              const itName = it.fileName || it.fileInfo?.name || ('Diseño #' + (idx + 1));
+              return `
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); gap: 0.5rem; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    ${itUrl ? `
+                      <img src="${itUrl}" alt="${itName}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
+                    ` : `
+                      <div style="width: 38px; height: 38px; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">📁</div>
+                    `}
+                    <div>
+                      <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">${it.title || itName}</div>
+                      <div style="font-size: 0.76rem; color: var(--text-muted);">${it.widthCm} × ${it.heightCm} cm • ${it.includeCutting ? '✂️ Con corte' : '📦 En rollo'} • ${it.qty} pcs</div>
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="badge" style="font-size: 0.75rem; font-weight: 700;">${Number(it.actualLinearMeters || 0).toFixed(2)} m</span>
+                  </div>
                 </div>
-                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">
-                  ${q.stickersPerRow} por fila • ${q.rows} filas • ${q.widthCm}×${q.heightCm} cm
-                </div>
-              </div>
-            </div>
-            <button type="button" class="btn btn-secondary btn-expand-snapshot" data-snapshot="${q.canvasSnapshot}" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Ver montaje técnico en tamaño completo">
-              <span>🔍 Ampliar</span>
-            </button>
+              `;
+            }).join('')}
           </div>
         ` : ''}
 
@@ -321,7 +314,7 @@ function renderQuotesCards(quotes) {
                 <span style="font-size: 0.85rem; font-weight: 700; color: #10b981;">
                   ✅ Orden en Taller: ${q.convertedOrderCode || 'KL-2026-XXX'}
                 </span>
-                <a href="#/orders" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.3rem 0.65rem; min-height: 36px;">
+                <a href="/pedidos" class="btn btn-secondary" data-link style="font-size: 0.78rem; padding: 0.3rem 0.65rem; min-height: 36px;">
                   🔍 Ver en Pedidos
                 </a>
               </div>
@@ -341,9 +334,9 @@ function renderQuotesCards(quotes) {
 
           <!-- Lado Derecho: Acciones Secundarias (WhatsApp, Cotizador, Eliminar) -->
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Compartir presupuesto por WhatsApp">
-              <span>💬 WhatsApp</span>
-            </a>
+            <button type="button" class="btn btn-primary btn-add-quote-to-cart" data-quote-id="${q.id}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Agregar esta cotización al carrito">
+              <span>🛒 Agregar al Carrito</span>
+            </button>
 
             <button type="button" class="btn btn-secondary btn-load-quoter" data-width="${q.widthCm}" data-height="${q.heightCm}" data-qty="${q.qty}" data-cutting="${q.withCutting}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px;" title="Cargar en Cotizador">
               <span>🔄 Cotizador</span>
@@ -390,6 +383,14 @@ function attachQuotesViewEvents() {
   const container = document.getElementById('quotesListContainer');
   if (container) {
     container.addEventListener('click', async (e) => {
+      // Agregar al Carrito
+      const btnAddToCart = e.target.closest('.btn-add-quote-to-cart');
+      if (btnAddToCart) {
+        const quoteId = btnAddToCart.dataset.quoteId;
+        handleAddQuoteToCart(quoteId);
+        return;
+      }
+
       // 1. Convertir a Orden en 1 Clic
       const btnConvert = e.target.closest('.btn-convert-quote');
       if (btnConvert) {
@@ -479,6 +480,42 @@ async function handleConvertQuote(quoteId) {
   }
 }
 
+function handleAddQuoteToCart(quoteId) {
+  const q = quotesStore.getQuoteById(quoteId);
+  if (!q) return;
+
+  if (Array.isArray(q.items) && q.items.length > 0) {
+    q.items.forEach((it, idx) => {
+      cartStore.addItem(mapOrderItem({
+        ...it,
+        id: it.id || `item_${Date.now()}_${idx}`,
+        title: it.title || q.projectName || `Sticker ${it.widthCm}x${it.heightCm}cm`,
+      }));
+    });
+  } else {
+    cartStore.addItem(mapOrderItem({
+      title: q.projectName || ('Sticker ' + q.widthCm + 'x' + q.heightCm + 'cm'),
+      widthCm: q.widthCm,
+      heightCm: q.heightCm,
+      qty: q.qty,
+      includeCutting: Boolean(q.withCutting),
+      fileUrl: q.fileUrl || null,
+      fileName: q.fileName || null,
+      previewUrl: q.previewUrl || q.fileUrl || null,
+      fileSizeBytes: q.fileSizeBytes || null,
+      canvasSnapshot: q.canvasSnapshot || null,
+      canvasSnapshotUrl: q.canvasSnapshotUrl || null,
+      rotationDeg: q.rotationDeg || 0,
+      actualLinearMeters: q.linearMeters || 0,
+      stickersPerRow: q.stickersPerRow || 1,
+      rows: q.rows || 1,
+    }));
+  }
+
+  showQuotesFeedback('Cotización "' + (q.projectName || q.code) + '" agregada al carrito de compras.', 'success');
+  openCartDrawer();
+}
+
 function handleDeleteQuote(quoteId) {
   const quote = quotesStore.getQuoteById(quoteId);
   const name = quote?.projectName || quote?.code || 'esta cotización';
@@ -497,8 +534,13 @@ function handleDeleteQuote(quoteId) {
 }
 
 function loadQuoteIntoQuoter({ width, height, qty, cutting }) {
-  if (typeof window !== 'undefined' && window.location) {
-    window.location.hash = '#/';
+  if (typeof window !== 'undefined') {
+    if (window.router) {
+      window.router.navigate('/');
+    }
+    if (window.location) {
+      window.location.hash = '#/';
+    }
     setTimeout(() => {
       const wInput = document.getElementById('stickerWidth');
       const hInput = document.getElementById('stickerHeight');

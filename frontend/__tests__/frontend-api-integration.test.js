@@ -632,7 +632,7 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
   });
 
   describe('App initBackendSync bootstrap', () => {
-    it('inicializa backend y logea sesión de administrador si el token está ausente', async () => {
+    it('inicializa backend y logea sesión de administrador si el token está ausente sin llamadas ansiosas (Lazy Loading)', async () => {
       vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
       apiClient.clearToken();
       const loginSpy = vi.spyOn(apiClient.auth, 'login').mockResolvedValueOnce({
@@ -641,51 +641,45 @@ describe('Frontend API Integration & Store Synchronization Layer', () => {
         user: { name: 'Miguel Dubois' },
       });
 
-      vi.spyOn(ordersStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(clientsStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(inventoryStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(receivablesStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(dispatchStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(usersStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(quotesStore, 'syncWithApi').mockResolvedValueOnce([]);
+      const ordersSpy = vi.spyOn(ordersStore, 'syncWithApi');
+      const clientsSpy = vi.spyOn(clientsStore, 'syncWithApi');
+      const inventorySpy = vi.spyOn(inventoryStore, 'syncWithApi');
+      const receivablesSpy = vi.spyOn(receivablesStore, 'syncWithApi');
+      const dispatchSpy = vi.spyOn(dispatchStore, 'syncWithApi');
+      const usersSpy = vi.spyOn(usersStore, 'syncWithApi');
+      const quotesSpy = vi.spyOn(quotesStore, 'syncWithApi');
 
       await initBackendSync();
 
       expect(loginSpy).toHaveBeenCalledWith('miguel@kromalab.gt', 'Admin2026!');
-      expect(ordersStore.syncWithApi).toHaveBeenCalled();
-      expect(clientsStore.syncWithApi).toHaveBeenCalled();
-      expect(inventoryStore.syncWithApi).toHaveBeenCalled();
-      expect(receivablesStore.syncWithApi).toHaveBeenCalled();
-      expect(dispatchStore.syncWithApi).toHaveBeenCalled();
-      expect(usersStore.syncWithApi).toHaveBeenCalled();
-      expect(quotesStore.syncWithApi).toHaveBeenCalled();
+      // Lazy loading por vistas: no deben llamarse en el arranque de la app
+      expect(ordersSpy).not.toHaveBeenCalled();
+      expect(clientsSpy).not.toHaveBeenCalled();
+      expect(inventorySpy).not.toHaveBeenCalled();
+      expect(receivablesSpy).not.toHaveBeenCalled();
+      expect(dispatchSpy).not.toHaveBeenCalled();
+      expect(usersSpy).not.toHaveBeenCalled();
+      expect(quotesSpy).not.toHaveBeenCalled();
     });
 
-    it('utiliza token existente sin realizar nuevo login', async () => {
+    it('utiliza token existente sin realizar nuevo login ni disparar sincronización ansiosa', async () => {
       vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'ok' });
       apiClient.setToken('existing-jwt-token');
       const loginSpy = vi.spyOn(apiClient.auth, 'login');
-
-      vi.spyOn(ordersStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(clientsStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(inventoryStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(receivablesStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(dispatchStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(usersStore, 'syncWithApi').mockResolvedValueOnce([]);
-      vi.spyOn(quotesStore, 'syncWithApi').mockResolvedValueOnce([]);
+      const ordersSpy = vi.spyOn(ordersStore, 'syncWithApi');
 
       await initBackendSync();
 
       expect(loginSpy).not.toHaveBeenCalled();
-      expect(ordersStore.syncWithApi).toHaveBeenCalled();
+      expect(ordersSpy).not.toHaveBeenCalled();
     });
 
     it('no sincroniza si health.status es diferente de ok', async () => {
       vi.spyOn(apiClient, 'checkHealth').mockResolvedValueOnce({ status: 'error' });
-      const ordersSpy = vi.spyOn(ordersStore, 'syncWithApi');
+      const loginSpy = vi.spyOn(apiClient.auth, 'login');
 
       await initBackendSync();
-      expect(ordersSpy).not.toHaveBeenCalled();
+      expect(loginSpy).not.toHaveBeenCalled();
     });
 
     it('no falla si el backend está apagado o retorna error de conexión', async () => {

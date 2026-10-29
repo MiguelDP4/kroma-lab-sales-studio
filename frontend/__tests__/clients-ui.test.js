@@ -192,30 +192,34 @@ describe('Clients View — Interfaz de Directorio B2B y Cartera de Clientes', ()
     expect(dossierModal.style.display).toBe('none');
   });
 
-  it('elimina un cliente cuando el usuario confirma la acción', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
+  it('elimina un cliente cuando el usuario confirma la acción en el modal consistente', () => {
     const deleteBtn = document.querySelector('.btn-delete-client[data-client-id="CLI-005"]');
     expect(deleteBtn).not.toBeNull();
 
     deleteBtn.click();
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(clientsStore.getClientById('CLI-005')).toBeNull();
+    const modal = document.getElementById('deleteClientModal');
+    expect(modal.style.display).toBe('block');
 
-    confirmSpy.mockRestore();
+    const btnConfirm = document.getElementById('btnConfirmDeleteClient');
+    btnConfirm.click();
+
+    expect(modal.style.display).toBe('none');
+    expect(clientsStore.getClientById('CLI-005')).toBeNull();
   });
 
-  it('cancela la eliminación de un cliente si el usuario rechaza el diálogo', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
+  it('cancela la eliminación de un cliente si el usuario rechaza en el modal', () => {
     const deleteBtn = document.querySelector('.btn-delete-client[data-client-id="CLI-001"]');
     expect(deleteBtn).not.toBeNull();
 
     deleteBtn.click();
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(clientsStore.getClientById('CLI-001')).not.toBeNull();
+    const modal = document.getElementById('deleteClientModal');
+    expect(modal.style.display).toBe('block');
 
-    confirmSpy.mockRestore();
+    const btnCancel = document.getElementById('btnCancelDeleteClientModal');
+    btnCancel.click();
+
+    expect(modal.style.display).toBe('none');
+    expect(clientsStore.getClientById('CLI-001')).not.toBeNull();
   });
 
   it('actualiza reactivamente los KPIs cuando se añade una orden en ordersStore', () => {

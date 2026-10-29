@@ -77,6 +77,10 @@ export function calculateQuote({ widthCm, heightCm, qty, includeCutting = false 
   // Cantidad de piezas por fila a lo ancho de los 28 cm útiles
   const stickersPerRow = Math.max(1, Math.floor((rollWidth + gap) / (w + gap)));
   const rows = Math.ceil(q / stickersPerRow);
+  const maxInCurrentRows = rows * stickersPerRow;
+  const isRowIncomplete = stickersPerRow > 1 && q < maxInCurrentRows;
+  const unusedInLastRow = isRowIncomplete ? (maxInCurrentRows - q) : 0;
+  const optimalQty = maxInCurrentRows;
 
   // Largo físico en centímetros
   const physicalLengthCm = Math.max(0, (rows * (h + gap)) - gap);
@@ -132,5 +136,9 @@ export function calculateQuote({ widthCm, heightCm, qty, includeCutting = false 
     isCuttingMinApplied,
     totalPriceQ: Number(totalPriceQ.toFixed(2)),
     unitPriceQ: Number(unitPriceQ.toFixed(2)),
+    maxInCurrentRows,
+    isRowIncomplete,
+    unusedInLastRow,
+    optimalQty,
   };
 }

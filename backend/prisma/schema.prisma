@@ -51,6 +51,7 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  cart              Cart?
   paymentsRecorded  Payment[]
   kardexMovements   InventoryMovement[]
 }
@@ -118,6 +119,7 @@ model Order {
   paymentReceiptUrl      String?
   paymentReceiptFileName String?
 
+  items          OrderItem[]
   dispatchNotes  DispatchNote[]
   payments       Payment[]
 
@@ -155,6 +157,7 @@ model Quote {
   notes              String?
   source             String?
 
+  items              OrderItem[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -268,4 +271,44 @@ model WorkshopConfig {
   monthlyNetTargetQ     Decimal  @default(20000.0) @db.Decimal(10, 2)
 
   updatedAt             DateTime @updatedAt
+}
+
+model Cart {
+  id         String      @id @default(cuid())
+  userId     String?     @unique
+  user       User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId  String?     @unique
+  items      OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model OrderItem {
+  id                 String    @id @default(cuid())
+  orderId            String?
+  order              Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quoteId            String?
+  quote              Quote?    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  cartId             String?
+  cart               Cart?     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  title              String
+  widthCm            Decimal   @db.Decimal(6, 2)
+  heightCm           Decimal   @db.Decimal(6, 2)
+  qty                Int
+  rotationDeg        Int       @default(0)
+  rows               Int       @default(1)
+  stickersPerRow     Int       @default(1)
+  includeCutting     Boolean   @default(false)
+
+  fileUrl            String?
+  fileName           String?
+  fileInfo           Json?
+  previewUrl         String?   @db.Text
+  canvasSnapshot     String?   @db.Text
+  canvasSnapshotUrl  String?   @db.Text
+  actualLinearMeters Decimal   @default(0.0) @db.Decimal(6, 2)
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }

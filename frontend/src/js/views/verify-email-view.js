@@ -1,3 +1,5 @@
+let activeVerifyingToken = null;
+let verifiedTokensSet = new Set();
 /**
  * Vista de Verificación de Correo Electrónico (VerifyEmailView) — Kroma Lab Sales Studio
  * Procesa la activación de cuenta cuando el usuario pulsa el enlace enviado por correo electrónico.
@@ -56,7 +58,7 @@ export const verifyEmailView = {
 
           <!-- Estado 3: Error / Token Inválido o Expirado -->
           <div id="verifyStateError" style="display: none;">
-            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 2.25rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 2.25rem; align-items: center; justify-content: center; margin: 1.5rem auto 1.5rem;">
               ⚠️
             </div>
             <h1 style="font-size: clamp(1.4rem, 3.5vw, 1.85rem); font-weight: 800; margin: 0 0 0.75rem; color: var(--text-primary);">
@@ -98,56 +100,100 @@ export const verifyEmailView = {
     `;
   },
 
-  onMount: async (container) => {
+  onMount: (container) => {
     const root = container || document.getElementById('app') || (typeof document !== 'undefined' ? document : null);
-    if (!root) return;
+    if (!root) return () => {};
 
     const stateLoading = root.querySelector('#verifyStateLoading');
     const stateSuccess = root.querySelector('#verifyStateSuccess');
     const stateError = root.querySelector('#verifyStateError');
     const errorMsg = root.querySelector('#verifyErrorMsg');
 
-    // Obtener token de la query string
+    function showState(stateName) {
+      if (stateLoading) stateLoading.style.display = stateName === 'loading' ? 'block' : 'none';
+      if (stateSuccess) stateSuccess.style.display = stateName === 'success' ? 'block' : 'none';
+      if (stateError) stateError.style.display = stateName === 'error' ? 'block' : 'none';
+    }
+
+    // Inicialmente sólo cargando
+    showState('loading');
+
+    // Obtener token de query string o de hash routing
     let token = '';
     if (typeof window !== 'undefined' && window.location) {
       const params = new URLSearchParams(window.location.search);
       token = params.get('token') || '';
+      if (!token && window.location.hash) {
+        const hashQIndex = window.location.hash.indexOf('?');
+        if (hashQIndex !== -1) {
+          const hashParams = new URLSearchParams(window.location.hash.slice(hashQIndex));
+          token = hashParams.get('token') || '';
+        }
+      }
     }
 
     if (!token) {
-      if (stateLoading) stateLoading.style.display = 'none';
-      if (stateError) stateError.style.display = 'block';
+      if (store.state.user?.isVerified) {
+        showState('success');
+        const successMsgEl = root.querySelector('#verifySuccessMsg');
+        if (successMsgEl) successMsgEl.textContent = 'Tu cuenta ya está verificada y activa.';
+        return () => {};
+      }
+      showState('error');
       if (errorMsg) errorMsg.textContent = 'No se proporcionó ningún token de verificación en el enlace.';
-      return;
+      return () => {};
     }
 
-    try {
-      const res = await apiClient.auth.verifyEmail(token);
-      if (res && res.success) {
-        if (stateLoading) stateLoading.style.display = 'none';
-        if (stateSuccess) stateSuccess.style.display = 'block';
+    if (verifiedTokensSet.has(token)) {
+      showState('success');
+      return () => {};
+    }
 
-        // Actualizar sesión en store si recibimos datos del usuario
-        if (res.user && res.token) {
-          const perms = res.user.role === 'ADMIN' ? ['*'] : (res.user.role === 'EMPLOYEE' ? ['ORDERS', 'WORKSHOP'] : ['ORDERS']);
-          store.setUser(res.user, res.token, perms, true);
+    if (activeVerifyingToken === token) {
+      return () => {};
+    }
+
+    activeVerifyingToken = token;
+
+    // Procesar validación con backend
+    (async () => {
+      try {
+        const res = await apiClient.auth.verifyEmail(token);
+        activeVerifyingToken = null;
+        verifiedTokensSet.add(token);
+        if (res && res.success) {
+          showState('success');
+          if (res.message) {
+            const successMsgEl = root.querySelector('#verifySuccessMsg');
+            if (successMsgEl) successMsgEl.textContent = res.message;
+          }
+          if (res.user && res.token) {
+            const perms = res.user.role === 'ADMIN' ? ['*'] : (res.user.role === 'EMPLOYEE' ? ['ORDERS', 'WORKSHOP'] : ['ORDERS']);
+            store.setUser(res.user, res.token, perms, true);
+          }
+        } else {
+          throw new Error(res?.message || 'Error al validar el enlace.');
         }
-      } else {
-        throw new Error(res?.message || 'Error al validar el enlace.');
+      } catch (err) {
+        activeVerifyingToken = null;
+        if (store.state.user?.isVerified) {
+          showState('success');
+          const successMsgEl = root.querySelector('#verifySuccessMsg');
+          if (successMsgEl) successMsgEl.textContent = 'Tu cuenta ya se encuentra verificada y activa.';
+          return;
+        }
+        showState('error');
+        if (errorMsg) {
+          errorMsg.textContent = err.message || 'El enlace de confirmación no es válido o ha expirado.';
+        }
       }
-    } catch (err) {
-      if (stateLoading) stateLoading.style.display = 'none';
-      if (stateError) stateError.style.display = 'block';
-      if (errorMsg) {
-        errorMsg.textContent = err.message || 'El enlace de confirmación no es válido o ha expirado.';
-      }
-    }
+    })();
 
     // Manejar reenvío de correo
-    const formResend = container.querySelector('#formResendVerification');
+    const formResend = root.querySelector('#formResendVerification');
     const resendEmailInput = root.querySelector('#resendEmailInput');
     const resendFeedback = root.querySelector('#resendFeedbackMsg');
-    const btnSubmitResend = container.querySelector('#btnSubmitResend');
+    const btnSubmitResend = root.querySelector('#btnSubmitResend');
 
     if (formResend) {
       formResend.addEventListener('submit', async (e) => {
@@ -184,6 +230,8 @@ export const verifyEmailView = {
         }
       });
     }
+
+    return () => {};
   },
 };
 export default verifyEmailView;

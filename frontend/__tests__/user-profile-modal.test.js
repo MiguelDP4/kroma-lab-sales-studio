@@ -319,12 +319,12 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(modal.style.display).toBe('none');
     });
 
-    it('cierra el modal al hacer clic en el backdrop fuera de la tarjeta', () => {
+    it('no cierra el modal al hacer clic en el backdrop fuera de la tarjeta (Task 5)', () => {
       openUserProfileModal();
       const modal = document.getElementById('userProfileModal');
 
       modal.click();
-      expect(modal.style.display).toBe('none');
+      expect(modal.style.display).toBe('block');
     });
 
     it('cierra el modal al presionar la tecla Escape', () => {
@@ -520,6 +520,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'test@empresa.gt';
       document.getElementById('registerPhoneInput').value = '55551234';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -533,6 +534,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'emailinvalido';
       document.getElementById('registerPhoneInput').value = '55551234';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -546,6 +548,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'juan@empresa.gt';
       document.getElementById('registerPhoneInput').value = '123';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -590,6 +593,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerAddressInput').value = 'Zona 9 Ciudad de Guatemala';
       document.getElementById('registerEmailInput').value = 'rodrigo@publicidad.gt';
       document.getElementById('registerPasswordInput').value = 'Promo2026!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Promo2026!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(true);
@@ -611,6 +615,7 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       document.getElementById('registerEmailInput').value = 'existente@empresa.gt';
       document.getElementById('registerPhoneInput').value = '55551234';
       document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
 
       const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
       expect(ok).toBe(false);
@@ -619,6 +624,62 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
       expect(feedback.textContent).toContain('Ya existe una cuenta registrada');
     });
   });
+
+
+    it('valida que las contraseñas coincidan al crear cuenta (Task 1)', async () => {
+      document.getElementById('registerNameInput').value = 'Carlos Gómez';
+      document.getElementById('registerEmailInput').value = 'carlos@gomez.gt';
+      document.getElementById('registerPhoneInput').value = '55551234';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'MismatchPass!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('Las contraseñas no coinciden');
+    });
+
+    it('valida teléfono numérico antes de enviar al backend (Task 2)', async () => {
+      document.getElementById('registerNameInput').value = 'Carlos Gómez';
+      document.getElementById('registerEmailInput').value = 'carlos@gomez.gt';
+      document.getElementById('registerPhoneInput').value = 'numero-invalido';
+      document.getElementById('registerPasswordInput').value = 'Secret123!';
+      document.getElementById('registerPasswordConfirmInput').value = 'Secret123!';
+
+      const ok = await handleRegisterSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(false);
+
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toContain('únicamente números');
+    });
+
+    it('elimina notificación de credenciales inválidas al cambiar de login a crear cuenta (Task 3)', () => {
+      switchAuthTab('login');
+      showFeedback('Credenciales inválidas o servidor no disponible.', 'error');
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.style.display).toBe('block');
+      expect(feedback.textContent).toContain('Credenciales inválidas');
+
+      switchAuthTab('register');
+      expect(feedback.style.display).toBe('none');
+      expect(feedback.textContent).toBe('');
+    });
+
+    it('limpia correo, contraseña y credenciales inválidas al cerrar el modal (Task 6)', () => {
+      openUserProfileModal('login');
+      document.getElementById('loginEmailInput').value = 'usuario@test.gt';
+      document.getElementById('loginPasswordInput').value = 'PasswordErr123';
+      showFeedback('Credenciales inválidas.', 'error');
+
+      closeUserProfileModal();
+
+      expect(document.getElementById('loginEmailInput').value).toBe('');
+      expect(document.getElementById('loginPasswordInput').value).toBe('');
+      const feedback = document.getElementById('profileFeedbackMsg');
+      expect(feedback.textContent).toBe('');
+      expect(feedback.style.display).toBe('none');
+    });
 
   describe('Acciones Rápidas: Cambio de Cuenta y Cierre de Sesión', () => {
     it('cambia de cuenta al pulsar un botón de acceso rápido (.btn-switch-account)', () => {

@@ -176,5 +176,6 @@ flowchart TD
 4. **Canvas y Simuladores Gráficos:**
    * El simulador de bobina Audley y el dropzone deben escalar dinámicamente según el ancho de pantalla (`max-width: 100%`, auto-resize en Canvas), manteniendo legibilidad sin recortes.
 
-
-
+## 7. Regla de Base de Datos para Pruebas Automatizadas
+- **Aislamiento absoluto de Staging:** Queda estrictamente prohibido ejecutar pruebas automatizadas (unitarias, de integración o e2e) contra la base de datos de staging (`neondb`), ya que dicha base de datos se utiliza para pruebas manuales y validación de features antes de producción.
+- **Base de datos exclusiva de tests:** Todas las suites de pruebas deben conectarse y operar exclusivamente sobre la base de datos de test (`kroma_test`).

@@ -312,7 +312,7 @@ kroma-lab-sales-studio/
       2. **Bloque Apilado de Metadatos:** Tabla de ancho completo con borde izquierdo de `5px solid #065a82` (`Baltic Blue`), contorno `1px solid #9eb3c2` (`Powder Blue`) y filas alternadas (`#eef3f8` / `#f4f7fb`) para `Proveedor:`, `Cliente:`, `Fecha:`, `Modalidad:` y `Tarifa acordada:`.
       3. **Tabla Oficial de 7 Columnas (`renderKromaReceiptItemsAndSummary`):** Columnas `Cant.`, `Descripción del Artículo`, `Medida`, `Metros Lineales` (en `Cerulean` negrita), `Tarifa / m`, `Costo Unit. Ref.` y `Subtotal`, con cabecera en `Space Indigo` (`#21295c`), filas alternadas (`#ffffff` / `#f4f7fb`) y fila de `TOTALES` en `Regal Navy` (`#1b3b6f`).
       4. **Cuadro `RESUMEN DE LIQUIDACIÓN`:** Recuadro alineado a la derecha con fondo `#eef3f8`, borde `#9eb3c2`, acento izquierdo `4px solid #1c7293` y gran total destacado en `Baltic Blue` (`#065a82`).
-  * **Hoja Oficial de Despacho Imprimible (`@media print`):** Documento formal en `/despacho` que integra el formato de recibo Kroma Lab junto con el checklist técnico auditado, aviso financiero de cobro contraentrega (si aplica), términos de garantía (48 hrs) y cajas de firma legal (Taller vs Recibido Conforme con DPI).
+  * **Hoja Oficial de Despacho Imprimible (`@media print`):** Documento formal en `/despacho` y desde el Tablero Kanban (`production-view.js`) que integra el formato de recibo Kroma Lab con cabecera corporativa clara (`Proveedor: Kroma Lab — Miguel Dubois`), aviso financiero de cobro contraentrega (si aplica), términos de garantía (48 hrs) y cajas de firma formal (Taller vs Recibido Conforme con DPI). Se mantiene limpio y ágil adaptado a la operación ágil del taller (sin checklists redundantes de control de calidad).
   * **Notificación y Notificación Automática por WhatsApp:** Genera texto enriquecido con formato profesional para enviar al cliente o mensajero con detalles de guía, bultos y saldo adeudado.
   * **Sincronización Bidireccional de Estados:** Al marcar una remisión como `DELIVERED`, la orden vinculada en `ordersStore` se actualiza automáticamente a `COMPLETED`.
   * **Diseño en Cuadrícula de Tarjetas Responsivas (`.dispatch-cards-grid` / `.dispatch-card`):** Sustituye las tablas sobrecargadas por un feed estructurado de tarjetas modulares con borde temático superior según el estado (`PREPARED`, `IN_TRANSIT`, `DELIVERED`, `CANCELLED`). Muestra cliente, courier, dirección completa, métricas de metraje/bultos/total, selector directo interactivo de estado, badge financiero de saldo contraentrega y accesos táctiles directos a WhatsApp, hoja de despacho física y actualización de entrega con DPI. Cero desbordamiento horizontal en móviles y laptops.
@@ -561,6 +561,10 @@ kroma-lab-sales-studio/
 
 El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en **TypeScript** y **Express**, respaldado por **Prisma ORM** con soporte de persistencia dual para garantizar autonomía operativa en desarrollo local y alta disponibilidad en la nube.
 
+### Estrategia de Carga Bajo Demanda (Lazy Loading por Vistas)
+
+Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplicación no sincroniza los módulos de forma masiva en el arranque (initBackendSync). Cada vista (/pedidos, /cotizaciones, /clientes, /inventario, /despacho, /cobranza, /usuarios) sincroniza sus datos mediante syncWithApi() exclusivamente en su respectivo ciclo de vida onMount() al navegar a ella.
+
 ### Topología de Persistencia Dual (Desarrollo Local vs Producción Neon)
 
 * **Desarrollo y Pruebas Locales (SQLite Embebido):**
@@ -596,9 +600,9 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Usuarios (RBAC)** | `POST /api/auth/users` | Creación de nuevos colaboradores y usuarios por Administrador con hash bcrypt (`ADMIN`) |
 | **Usuarios (RBAC)** | `PUT /api/auth/users/:id/reset-password` | Restablecimiento de contraseña de usuarios con hash bcrypt (`ADMIN`) |
 | **Usuarios (RBAC)** | `DELETE /api/auth/users/:id` | Eliminación de usuario con protección contra autoeliminación del administrador activo (`ADMIN`) |
-| **Pedidos** | `GET /api/orders` | Listado y filtrado por estado, pago y búsqueda de pedidos |
-| **Pedidos** | `GET /api/orders/:id` | Detalle de pedido y trazabilidad |
-| **Pedidos** | `POST /api/orders` | Creación de pedido con folio `KL-YYYY-XXX` (público / auth) |
+| **Pedidos** | `GET /api/orders` | Listado y filtrado por estado, pago y búsqueda de pedidos. **Incluye `items: OrderItem[]` canónicamente**. |
+| **Pedidos** | `GET /api/orders/:id` | Detalle de pedido y trazabilidad completa. **Incluye `items: OrderItem[]`**. |
+| **Pedidos** | `POST /api/orders` | Creación de pedido con folio `KL-YYYY-XXX` persistiendo el array `items: OrderItem[]` con sus URLs de arte y montaje técnico (`notes` limpio sin serializaciones JSON). |
 | **Pedidos** | `PUT /api/orders/:id/status` | Cambio de fase de producción (`ADMIN`, `EMPLOYEE`) |
 | **Pedidos** | `PUT /api/orders/:id/payment` | Actualización de estado y monto abonado (`ADMIN`, `EMPLOYEE`) |
 | **Pedidos** | `GET /api/orders/stats` | KPIs consolidados: metros en taller, facturación y saldo pendiente |
@@ -615,12 +619,12 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 | **Cobranza** | `GET /api/receivables` | Cuentas por cobrar con clasificación de antigüedad (0-7d, 8-15d, >15d) |
 | **Cobranza** | `POST /api/receivables/payments` | Registro de abono `PAY-YYYY-XXX` y amortización de deuda |
 | **Cobranza** | `DELETE /api/receivables/payments/:id` | Anulación de abono y restitución del saldo |
-| **Cotizaciones** | `GET /api/quotes` | Lista de cotizaciones con filtros por estado (`SAVED`, `CONVERTED`), texto y rol de cliente |
-| **Cotizaciones** | `GET /api/quotes/:id` | Detalle de cotización por UUID o código correlativo `COT-YYYY-XXX` |
-| **Cotizaciones** | `POST /api/quotes` | Guardado de cotización con validación de bobina (≤28 cm útiles) |
-| **Cotizaciones** | `PUT /api/quotes/:id` | Modificación de nombre de proyecto, dimensiones o notas |
-| **Cotizaciones** | `POST /api/quotes/:id/convert` | Conversión directa en 1 clic a Orden de Producción `KL-YYYY-XXX` |
-| **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada |
+| **Cotizaciones** | `GET /api/quotes` | Lista de cotizaciones con filtros por estado (`SAVED`, `CONVERTED`), texto y rol de cliente. **Incluye `items: OrderItem[]`**. |
+| **Cotizaciones** | `GET /api/quotes/:id` | Detalle de cotización por UUID o código correlativo `COT-YYYY-XXX`. **Incluye `items: OrderItem[]`**. |
+| **Cotizaciones** | `POST /api/quotes` | Guardado de cotización con validación de bobina (≤28 cm útiles) y creación persistente de `OrderItem` vinculados |
+| **Cotizaciones** | `PUT /api/quotes/:id` | Modificación de datos de cotización y sincronización de `OrderItem` |
+| **Cotizaciones** | `POST /api/quotes/:id/convert` | Conversión directa en 1 clic a Orden `KL-YYYY-XXX`, clonando íntegramente todos los `OrderItem` con sus artes y montajes técnicos sin pérdida de ítems ni concatenaciones sintéticas en `notes`. |
+| **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada y sus `OrderItem` asociados |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
 | **Almacenamiento** | `GET /api/storage/status` | Estado operativo de almacenamiento (R2 o fallback local) y límites |
@@ -633,7 +637,7 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 
 ### Calidad de Código y Pruebas Unitarias del Backend
 
-* **135 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 13 suites de pruebas).
+* **161 pruebas unitarias e integración en Vitest + Supertest** (100% pass rate en 15 suites de pruebas).
 * **Métricas de Cobertura de Código (> 85% obligatoria):**
   * Declaraciones (Statements): **97.54%**
   * Ramas (Branches): **85.84%**
@@ -652,14 +656,16 @@ El backend de Kroma Lab Sales Studio es un servicio REST moderno desarrollado en
 Se completó la migración de datos mock a persistencia real mediante una capa de sincronización distribuida entre los almacenes reactivos del frontend y los endpoints del backend Express + Prisma:
 
 1. **`quotesStore` (`quotes-store.js`):**
-   * Módulo reactivo para cotizaciones guardadas con persistencia local (`kromalab_quotes`) y sincronización automática con la API REST (`/api/quotes`).
+   * Módulo reactivo para cotizaciones guardadas con persistencia local (`kromalab_quotes`) y sincronización automática bidireccional con la API REST (`/api/quotes`).
+   * **Inclusión de `OrderItem[]`:** Las cotizaciones consumen y persisten ítems estructurados (`q.items`), integrando dimensiones, cantidad, bobina útil (28 cm), metros lineales, corte individual y enlaces persistentes a Cloudflare R2 (`fileUrl`, `canvasSnapshotUrl`).
    * Generación correlativa de códigos `COT-2026-XXX`.
-   * Conversión en 1 Clic (`convertToOrder`): crea la orden en backend `POST /api/quotes/:id/convert` o genera orden local en `ordersStore`, vinculando cliente, metadatos y marcando la cotización como `CONVERTED`.
+   * Conversión en 1 Clic (`convertToOrder`): crea la orden en backend `POST /api/quotes/:id/convert` clonando íntegramente los `OrderItem` a la orden de taller, o genera orden local en `ordersStore`, vinculando cliente, metadatos y marcando la cotización como `CONVERTED`.
    * Métricas comerciales consolidadas: total cotizado, pendientes, convertidas y tasa de conversión porcentual.
 2. **`ordersStore` (`orders-store.js`):**
    * Método `syncWithApi()`: mapea órdenes del backend (`GET /api/orders`) al modelo de vista local preservando métricas de bobina Audley y metadatos de diseño.
    * `createOrder()`: despacha `POST /api/orders` en segundo plano asignando el correlativo y `backendId`.
    * `updateProductionStatus()` y `updatePaymentStatus()`: despachan `PUT /api/orders/:id/status` y `PUT /api/orders/:id/payment` actualizando el estado de máquina e inventario.
+   * **Columna de Acciones Ergonómica & Cancelación (`orders-view.js`):** Se implementó el contenedor `.orders-actions-group` en cuadrícula compacta (3 columnas fijas con auto-wrap) para agrupar de forma limpia y accesible los 5 controles de Staff (`🔍 Ficha`, `🖨️ Taller`, `⚙️ A Producción`, `💬 WhatsApp`, `🚫 Cancelar`), evitando el desbordamiento o compresión horizontal de filas. El botón Cancelar emite confirmación de seguridad y actualiza el estado a `CANCELLED` en backend y almacenes.
 3. **`clientsStore` (`clients-store.js`):**
    * Método `syncWithApi()`: mapea clientes de cartera (`GET /api/customers`) con expediente 360°, clasificación de tiers (`VIP`, `RECURRENTE`, `NUEVO`) y sectores guatemaltecos.
    * `createClient()` y `updateClient()`: emiten mutaciones a `POST /api/customers` y `PUT /api/customers/:id`.
@@ -672,12 +678,15 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
 6. **`dispatchStore` (`dispatch-store.js`):**
    * Método `syncWithApi()`: obtiene remisiones activas (`GET /api/dispatch`) mapeando transportistas locales (Moto Express, Cargo Expreso, Guatex, Forza Delivery, Pick-up).
    * `createDispatchNote()` y `updateDispatchStatus()`: despachan `POST /api/dispatch` y `PUT /api/dispatch/:id/status` transicionando la orden a `COMPLETED` tras la entrega.
+   * **Emisión Directa desde el Tablero Kanban (`production-view.js`):** En la estación *Listo / Empaque*, el botón `🚚` permite al operador emitir la remisión oficial mediante el modal interactivo `#kanbanCreateDispatchModal` con datos pre-rellenados (orden, cliente, bultos, courier). Si ya existe una remisión previa, abre directamente la Hoja Oficial de Despacho (`#kanbanDispatchSheetModal`) lista para imprimir en formato membretado o compartir por WhatsApp.
 7. **`usersStore` (`users-store.js`):**
    * Método `syncWithApi()`: recupera el personal de taller y clientes (`GET /api/auth/users`) manteniendo la matriz RBAC.
    * `createUser()`: despacha creación de colaborador en backend (`POST /api/auth/users`) con persistencia en BD y asignación de `backendId`.
    * `resetPassword()`: despacha restablecimiento de contraseña en backend (`PUT /api/auth/users/:id/reset-password`).
    * `deleteUser()`: despacha eliminación de usuario en backend (`DELETE /api/auth/users/:id`).
-8. **Interfaz Mobile-First de Cotizaciones Guardadas (`quotes-view.js` & `save-quote-modal.js`):**
+8. **Interfaz Mobile-First de Cotizaciones Guardadas y Estructura Canónica (`quotes-view.js`, `save-quote-modal.js` & `order-item.js`):**
+   * **Normalización Canónica (`order-item.js`):** Módulo Single Source of Truth para homogeneizar la estructura de `OrderItem` entre Cotizaciones (`Quote`), Pedidos (`Order`) y Carrito (`Cart`). Provee `mapOrderItem()` y `cleanOrderItemForApi()`.
+   * **Persistencia Real de Imágenes en Cloudflare R2:** `SaveQuoteModal` sube los archivos de arte del cliente (`fileUrl`) y los snapshots de bobina (`canvasSnapshotUrl`) a Cloudflare R2 / API storage antes de persistir la cotización, almacenando las URLs en PostgreSQL. Si el usuario cierra el navegador o recarga, las imágenes permanecen seguras sin depender de `localStorage` ni blobs base64 efímeros.
    * Vista de tarjetas Mobile-First en `#/quotes` con filtros reactivos (`Todas`, `Pendientes`, `Convertidas`), búsqueda en vivo y botón `⚡ Convertir en Orden de Producción` de 1 clic.
    * Modal accesible y táctil `SaveQuoteModal` enlazado directamente al cotizador principal (`#/`) para guardar especificaciones de bobina con datos pre-rellenados.
    * Integración con WhatsApp para compartir cotizaciones con formato comercial detallado en Quetzales (Q).
@@ -694,7 +703,7 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
    * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
 11. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **641 pruebas unitarias pasando al 100% en 35 suites** de Vitest.
+   * **799 pruebas unitarias pasando al 100% en 39 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
      * Declaraciones (Statements): **99.35%**
      * Ramas (Branches): **85.13%**

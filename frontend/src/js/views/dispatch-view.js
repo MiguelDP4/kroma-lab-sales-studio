@@ -10,7 +10,6 @@ import {
   DELIVERY_METHODS,
   DISPATCH_STATUS,
   PACKAGE_TYPES,
-  QUALITY_CHECKLIST_LABELS,
 } from '../modules/dispatch-store.js';
 import { ordersStore } from '../modules/orders-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
@@ -345,9 +344,30 @@ export const dispatchView = {
           </form>
         </div>
       </div>
-    `;
-  },
+    <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE REMISIÓN -->
+    <div id="deleteDispatchModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="width: min(440px, 94vw);">
+        <div class="modal-header">
+          <h2 style="font-size: 1.2rem; font-weight: 800; color: #ef4444;">Eliminar Remisión</h2>
+          <button type="button" class="btn-close-modal" id="btnCloseDeleteDispatchModal" aria-label="Cerrar modal">✕</button>
+        </div>
 
+        <input type="hidden" id="deleteDispatchId" value="">
+
+        <div id="deleteDispatchError" style="display: none; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #fca5a5; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+        <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+          ¿Estás seguro de que deseas eliminar permanentemente la remisión <strong id="deleteDispatchFolio" style="color: var(--text-primary);">-</strong>? Esta acción no se puede deshacer.
+        </p>
+
+        <div class="modal-actions-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" id="btnCancelDeleteDispatchModal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmDeleteDispatch" style="background: #ef4444; border-color: #ef4444;">Eliminar Permanentemente</button>
+        </div>
+      </div>
+    </div>
+  `;
+},
   onMount: () => {
     dispatchStore.syncWithApi().catch(() => {});
     // Referencias al DOM
@@ -937,7 +957,7 @@ export function renderDispatchSheetHtml(note, order) {
     metaRows: [
       {
         label: 'Proveedor:',
-        value: `Kroma Lab — Miguel Dubois (Despachado en taller por: ${note.dispatchedBy})`,
+        value: 'Kroma Lab — Miguel Dubois',
         highlight: true,
       },
       {
@@ -1024,24 +1044,6 @@ export function renderDispatchSheetHtml(note, order) {
     <div class="kroma-print-sheet" style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: ${P.SPACE_INDIGO}; padding: 1.5rem; background: ${P.WHITE}; border-radius: 8px;">
       ${headerHtml}
       ${tableAndSummaryHtml}
-
-      <!-- Checklist Técnico de Calidad Auditado -->
-      <div style="background: ${P.BG_LIGHT}; border: 1px solid ${P.POWDER_BLUE}; border-left: 4px solid ${P.BALTIC_BLUE}; padding: 0.75rem 1rem; margin-bottom: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-          <strong style="font-size: 0.82rem; text-transform: uppercase; color: ${P.REGAL_NAVY};">
-            ✓ Control de Calidad Técnico en Taller (Auditoría Superada):
-          </strong>
-          <span style="font-size: 0.74rem; font-weight: 800; color: ${P.WHITE}; background: ${P.CERULEAN}; padding: 0.15rem 0.5rem; border-radius: 3px;">
-            100% VERIFICADO
-          </span>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.3rem; font-size: 0.78rem; color: ${P.SPACE_INDIGO};">
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.curadoAdherencia}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.capasBarniz}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.formatoAcabado}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.conteoMedidas}</div>
-          <div>[✓] ${QUALITY_CHECKLIST_LABELS.empaqueProtector}</div>
-        </div>
       </div>
 
       <!-- Términos y Garantía UV DTF -->

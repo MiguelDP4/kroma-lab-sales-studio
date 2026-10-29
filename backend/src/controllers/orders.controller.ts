@@ -3,14 +3,35 @@ import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { AuthenticatedRequest } from '../middlewares/auth';
 import { generateNextPaymentCode } from './receivables.controller';
+import { emailService } from '../services/email.service';
+
+export const orderItemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional().default('Stickers UV DTF'),
+  widthCm: z.number().positive(),
+  heightCm: z.number().positive(),
+  qty: z.number().int().positive(),
+  rotationDeg: z.number().int().optional().default(0),
+  rows: z.number().int().positive().optional().default(1),
+  stickersPerRow: z.number().int().positive().optional().default(1),
+  includeCutting: z.boolean().optional().default(false),
+  fileUrl: z.string().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  fileInfo: z.any().optional(),
+  previewUrl: z.string().nullable().optional(),
+  canvasSnapshot: z.string().nullable().optional(),
+  canvasSnapshotUrl: z.string().nullable().optional(),
+  actualLinearMeters: z.number().optional().default(0.0),
+});
 
 const createOrderSchema = z.object({
-  customerId: z.string().optional(),
+  items: z.array(orderItemSchema).optional(),
+  customerId: z.string().nullable().optional(),
   customerName: z.string().min(2, 'El nombre del cliente es requerido'),
   customerPhone: z.string().min(8, 'El número de teléfono es requerido'),
-  customerEmail: z.string().email().optional().or(z.literal('')),
-  customerTaxId: z.string().optional().or(z.literal('')),
-  customerAddress: z.string().optional().or(z.literal('')),
+  customerEmail: z.string().email().optional().or(z.literal('')).or(z.null()),
+  customerTaxId: z.string().nullable().optional().or(z.literal('')),
+  customerAddress: z.string().nullable().optional().or(z.literal('')),
 
   widthCm: z.number().positive(),
   heightCm: z.number().positive(),
@@ -26,14 +47,14 @@ const createOrderSchema = z.object({
   stickersPerRow: z.number().int().positive().default(1),
   rows: z.number().int().positive().default(1),
 
-  fileUrl: z.string().optional(),
-  fileName: z.string().optional(),
-  fileSizeBytes: z.number().int().optional(),
-  notes: z.string().optional(),
-  canvasSnapshot: z.string().optional(),
-  rotationDeg: z.number().int().optional(),
-  paymentReceiptUrl: z.string().optional(),
-  paymentReceiptFileName: z.string().optional(),
+  fileUrl: z.string().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  fileSizeBytes: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  canvasSnapshot: z.string().nullable().optional(),
+  rotationDeg: z.number().int().nullable().optional(),
+  paymentReceiptUrl: z.string().nullable().optional(),
+  paymentReceiptFileName: z.string().nullable().optional(),
 });
 
 const updateStatusSchema = z.object({
@@ -91,12 +112,20 @@ export async function listOrders(req: AuthenticatedRequest, res: Response, next:
 
     const where: any = {};
 
-    // Si es cliente, solo ve sus propias órdenes
+    // Si es cliente, solo ve sus propias órdenes buscando por customerId o email
     if (req.user && req.user.role === 'CUSTOMER') {
-      where.OR = [
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { customerId: true, email: true },
+      });
+      const orConditions: any[] = [
         { customerEmail: req.user.email },
         { customerPhone: { contains: req.user.email } },
       ];
+      if (dbUser?.customerId) {
+        orConditions.push({ customerId: dbUser.customerId });
+      }
+      where.OR = orConditions;
     }
 
     if (status && typeof status === 'string') {
@@ -120,6 +149,9 @@ export async function listOrders(req: AuthenticatedRequest, res: Response, next:
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
         customer: { select: { id: true, companyName: true, tier: true } },
         dispatchNotes: { select: { id: true, folio: true, status: true } },
         payments: { select: { id: true, paymentCode: true, amountPaidQ: true } },
@@ -139,6 +171,9 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response, nex
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
         customer: true,
         dispatchNotes: true,
         payments: true,
@@ -165,12 +200,60 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
   try {
     const data = createOrderSchema.parse(req.body);
 
+    if (req.user && (!data.customerEmail || data.customerEmail === '')) {
+      data.customerEmail = req.user.email;
+    }
+
     const code = await generateNextOrderCode();
+
+    const { canvasSnapshot, rotationDeg, items, ...orderData } = data;
 
     const order = await prisma.order.create({
       data: {
         code,
-        ...data,
+        ...orderData,
+        items: items && items.length > 0 ? {
+          create: items.map(it => ({
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
+            widthCm: it.widthCm,
+            heightCm: it.heightCm,
+            qty: it.qty,
+            rotationDeg: it.rotationDeg || 0,
+            rows: it.rows || 1,
+            stickersPerRow: it.stickersPerRow || 1,
+            includeCutting: it.includeCutting || false,
+            fileUrl: it.fileUrl || null,
+            fileName: it.fileName || null,
+            fileInfo: it.fileInfo || null,
+            previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshot: it.canvasSnapshot || null,
+            canvasSnapshotUrl: it.canvasSnapshotUrl || null,
+            actualLinearMeters: it.actualLinearMeters || 0.0,
+          }))
+        } : {
+          create: [{
+            title: `Stickers ${orderData.widthCm} × ${orderData.heightCm} cm`,
+            widthCm: orderData.widthCm,
+            heightCm: orderData.heightCm,
+            qty: orderData.qty,
+            rotationDeg: rotationDeg || 0,
+            rows: orderData.rows || 1,
+            stickersPerRow: orderData.stickersPerRow || 1,
+            includeCutting: orderData.withCutting || false,
+            fileUrl: orderData.fileUrl || null,
+            fileName: orderData.fileName || null,
+            canvasSnapshot: canvasSnapshot || null,
+            actualLinearMeters: orderData.linearMeters || 0.0,
+          }]
+        },
+      },
+      include: {
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+        customer: true,
+        dispatchNotes: true,
+        payments: true,
       },
     });
 
@@ -189,10 +272,34 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
     const { id } = req.params;
     const { status } = updateStatusSchema.parse(req.body);
 
+    const existing = await prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { code: id }]
+      }
+    });
+
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Orden no encontrada.' });
+      return;
+    }
+
     const updated = await prisma.order.update({
-      where: { id },
+      where: { id: existing.id },
       data: { status },
     });
+
+    if (status === 'IN_AUDLEY_QUEUE' && updated.customerEmail) {
+      try {
+        await emailService.sendOrderConfirmationEmail(
+          updated.customerEmail,
+          updated.customerName,
+          updated.code,
+          updated
+        );
+      } catch (emailErr) {
+        console.warn('[OrdersController] Error enviando email de confirmación:', emailErr);
+      }
+    }
 
     res.json({
       success: true,

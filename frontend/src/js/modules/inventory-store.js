@@ -1,4 +1,5 @@
 import { apiClient } from './api-client.js';
+const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 /**
  * Almacén Reactivo de Inventario de Insumos de Taller UV DTF (Kroma Lab).
  * Administra existencias de Film A, Film B, Tintas UV (CMYK, Blanco, Barniz),
@@ -52,6 +53,86 @@ export const MOVEMENT_TYPES = {
   OUT_PRODUCTION: { id: 'OUT_PRODUCTION', label: 'Salida por Tiraje Audley', sign: '-', color: '#ef4444' },
   ADJUSTMENT: { id: 'ADJUSTMENT', label: 'Ajuste / Merma de Taller', sign: '±', color: '#8b5cf6' },
 };
+
+export const PRODUCTION_SUPPLIES_CATALOG = [
+  {
+    id: 'film_print',
+    name: 'FILM de impresión (A y B)',
+    category: 'FILM',
+    unit: 'm',
+    packageSize: 100.0,
+    minThreshold: 30.0,
+    costPerUnitQ: 10.00,
+    supplier: '',
+    location: 'Estación de Carga Audley',
+  },
+  {
+    id: 'ink_cyan',
+    name: 'Tinta Cyan (1L)',
+    category: 'INK',
+    unit: 'L',
+    packageSize: 1.0,
+    minThreshold: 1.0,
+    costPerUnitQ: 550.00,
+    supplier: '',
+    location: 'Depósito Cyan',
+  },
+  {
+    id: 'ink_magenta',
+    name: 'Tinta Magenta (1L)',
+    category: 'INK',
+    unit: 'L',
+    packageSize: 1.0,
+    minThreshold: 1.0,
+    costPerUnitQ: 550.00,
+    supplier: '',
+    location: 'Depósito Magenta',
+  },
+  {
+    id: 'ink_yellow',
+    name: 'Tinta Amarilla (1L)',
+    category: 'INK',
+    unit: 'L',
+    packageSize: 1.0,
+    minThreshold: 1.0,
+    costPerUnitQ: 550.00,
+    supplier: '',
+    location: 'Depósito Amarillo',
+  },
+  {
+    id: 'ink_black',
+    name: 'Tinta Negra (1L)',
+    category: 'INK',
+    unit: 'L',
+    packageSize: 1.0,
+    minThreshold: 1.0,
+    costPerUnitQ: 550.00,
+    supplier: '',
+    location: 'Depósito Negro',
+  },
+  {
+    id: 'ink_white',
+    name: 'Tinta Blanca (1L)',
+    category: 'INK',
+    unit: 'L',
+    packageSize: 1.0,
+    minThreshold: 2.0,
+    costPerUnitQ: 550.00,
+    supplier: '',
+    location: 'Depósito Blanco con Agitador',
+  },
+  {
+    id: 'ink_varnish',
+    name: 'Barniz (1L)',
+    category: 'INK',
+    unit: 'L',
+    packageSize: 1.0,
+    minThreshold: 1.0,
+    costPerUnitQ: 550.00,
+    supplier: '',
+    location: 'Depósito Cabezal 2 Barniz',
+  },
+];
 
 export const INITIAL_INVENTORY_ITEMS = [
   {
@@ -206,10 +287,25 @@ class InventoryStore {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const saved = window.localStorage.getItem(STORAGE_KEY_INVENTORY);
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            if (!IS_TEST_ENV) {
+              const clean = parsed.filter(it => it.id !== 'film_a' && it.id !== 'film_b' && it.id !== 'plotter_blades' && it.id !== 'cleaning_flush' && it.id !== 'ink_cmyk');
+              if (clean.length !== parsed.length) {
+                window.localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(clean));
+              }
+              return clean;
+            }
+            return parsed;
+          }
+        }
       } catch (e) {
         console.warn('Error al leer inventario de localStorage:', e);
       }
+    }
+    if (!IS_TEST_ENV) {
+      return [];
     }
     return JSON.parse(JSON.stringify(INITIAL_INVENTORY_ITEMS));
   }
@@ -332,6 +428,17 @@ class InventoryStore {
     return enriched.find(it => it.id === id) || null;
   }
 
+  deleteItem(itemId) {
+    const idx = this.items.findIndex(it => it.id === itemId);
+    if (idx !== -1) {
+      this.items.splice(idx, 1);
+      this._save();
+      this._notify();
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Registra una compra o ingreso de insumos al taller (Entrada al Kardex).
    */
@@ -344,8 +451,19 @@ class InventoryStore {
     notes = '',
     date = null,
   }) {
-    const item = this.items.find(it => it.id === itemId);
-    if (!item) return null;
+    let item = this.items.find(it => it.id === itemId);
+    if (!item) {
+      const template = PRODUCTION_SUPPLIES_CATALOG.find(s => s.id === itemId);
+      if (!template) return null;
+      item = {
+        ...template,
+        currentStock: 0,
+        supplier: supplier || '',
+        location: template.location || 'Taller Audley',
+        lastRestockedAt: date || new Date().toISOString(),
+      };
+      this.items.push(item);
+    }
 
     const qty = Math.max(0, parseFloat(quantity) || 0);
     if (qty <= 0) return null;

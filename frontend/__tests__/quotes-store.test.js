@@ -322,4 +322,59 @@ describe('QuotesStore — Almacén Reactivo de Cotizaciones Guardadas', () => {
     });
     expect(() => quotesStore.saveToStorage()).not.toThrow();
   });
+  it('preserva cotizaciones creadas con código COT-2026-00X al recargar storage sin filtrarlas erróneamente', () => {
+    quotesStore.quotes = [];
+    const created = quotesStore.createQuote({
+      projectName: 'Proyecto Real Cliente',
+      leadName: 'Juan Pérez',
+      leadPhone: '+502 5555-8888',
+      leadEmail: 'juan@cliente.gt',
+      widthCm: 5,
+      heightCm: 5,
+      qty: 100,
+    });
+
+    expect(created.code).toMatch(/^COT-2026-00/);
+
+    // Simular recarga desde storage
+    quotesStore.loadFromStorage();
+    const loaded = quotesStore.getQuoteById(created.id);
+    expect(loaded).toBeDefined();
+    expect(loaded.projectName).toBe('Proyecto Real Cliente');
+  });
+
+  it('preserva cotizaciones locales creadas al sincronizar con API', async () => {
+    quotesStore.quotes = [];
+    const localQuote = quotesStore.createQuote({
+      projectName: 'Cotización Local Pendiente',
+      leadName: 'Cliente Local',
+      leadPhone: '+502 4444-2222',
+      leadEmail: 'local@correo.gt',
+      widthCm: 10,
+      heightCm: 10,
+      qty: 50,
+    });
+
+    // Mock API retornando otra cotización remota
+    vi.spyOn(apiClient.quotes, 'list').mockResolvedValueOnce({
+      success: true,
+      quotes: [{
+        id: 'api_quote_100',
+        code: 'COT-2026-099',
+        projectName: 'Cotización Remota API',
+        leadName: 'Cliente API',
+        leadPhone: '12345678',
+        widthCm: 8,
+        heightCm: 8,
+        qty: 20,
+        linearMeters: 1,
+      }],
+    });
+
+    await quotesStore.syncWithApi();
+
+    const quotes = quotesStore.getQuotes();
+    expect(quotes.some(q => q.id === localQuote.id)).toBe(true);
+    expect(quotes.some(q => q.id === 'api_quote_100')).toBe(true);
+  });
 });

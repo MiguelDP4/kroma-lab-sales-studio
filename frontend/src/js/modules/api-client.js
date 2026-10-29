@@ -183,6 +183,18 @@ export class ApiClient {
         body: JSON.stringify(data),
       });
     },
+    changePassword: async (currentPassword, newPassword) => {
+      return this._request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    },
+    changeEmail: async (currentPassword, newEmail) => {
+      return this._request('/auth/change-email', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newEmail }),
+      });
+    },
     listUsers: async () => {
       return this._request('/auth/users');
     },
@@ -201,6 +213,12 @@ export class ApiClient {
     deleteUser: async (userId) => {
       return this._request(`/auth/users/${userId}`, {
         method: 'DELETE',
+      });
+    },
+    updateUser: async (userId, data) => {
+      return this._request(`/auth/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
       });
     },
   };
@@ -372,13 +390,43 @@ export class ApiClient {
         body: JSON.stringify(data),
       });
     },
-    convertToOrder: async (id) => {
+    convertToOrder: async (id, data = {}) => {
       return this._request(`/quotes/${id}/convert`, {
         method: 'POST',
+        body: JSON.stringify(data),
       });
     },
     delete: async (id) => {
       return this._request(`/quotes/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  // --- Carrito de Compras B2B ---
+  cart = {
+    getCart: async () => {
+      return this._request('/cart');
+    },
+    addItem: async (item) => {
+      return this._request('/cart/items', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+    },
+    syncCart: async (items) => {
+      return this._request('/cart/sync', {
+        method: 'PUT',
+        body: JSON.stringify({ items }),
+      });
+    },
+    removeItem: async (itemId) => {
+      return this._request(`/cart/items/${itemId}`, {
+        method: 'DELETE',
+      });
+    },
+    clearCart: async () => {
+      return this._request('/cart', {
         method: 'DELETE',
       });
     },

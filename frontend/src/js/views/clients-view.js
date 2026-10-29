@@ -212,6 +212,27 @@ export const clientsView = {
           </div>
         </div>
       </div>
+
+      <!-- MODAL 3: CONFIRMACIÓN DE ELIMINACIÓN (Modelo Consistente con Users View) -->
+      <div id="deleteClientModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
+        <div class="modal-card" style="width: min(440px, 94vw);">
+          <div class="modal-header">
+            <h2 style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0;">Eliminar Cliente</h2>
+            <button type="button" class="btn-close-modal" id="btnCloseDeleteClientModal" aria-label="Cerrar modal">✕</button>
+          </div>
+
+          <input type="hidden" id="deleteClientId" value="">
+
+          <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+            ¿Estás seguro de que deseas eliminar permanentemente a <strong id="deleteClientName" style="color: var(--text-primary);">-</strong> de la cartera de clientes? Esta acción no se puede deshacer.
+          </p>
+
+          <div class="modal-actions-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" id="btnCancelDeleteClientModal" style="min-height: 44px;">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="btnConfirmDeleteClient" style="background: #ef4444; border-color: #ef4444; min-height: 44px;">Eliminar Permanentemente</button>
+          </div>
+        </div>
+      </div>
     `;
   },
 
@@ -235,6 +256,25 @@ export const clientsView = {
     const dossierModal = document.getElementById('clientDossierModal');
     const btnCloseDossier = document.getElementById('btnCloseDossierModal');
     const btnOkDossier = document.getElementById('btnOkDossierModal');
+
+    const deleteClientModal = document.getElementById('deleteClientModal');
+    const deleteClientId = document.getElementById('deleteClientId');
+    const deleteClientName = document.getElementById('deleteClientName');
+    const btnCloseDeleteClient = document.getElementById('btnCloseDeleteClientModal');
+    const btnCancelDeleteClient = document.getElementById('btnCancelDeleteClientModal');
+    const btnConfirmDeleteClient = document.getElementById('btnConfirmDeleteClient');
+
+    if (btnCloseDeleteClient) btnCloseDeleteClient.addEventListener('click', () => toggleModal(deleteClientModal, false));
+    if (btnCancelDeleteClient) btnCancelDeleteClient.addEventListener('click', () => toggleModal(deleteClientModal, false));
+    if (btnConfirmDeleteClient) {
+      btnConfirmDeleteClient.addEventListener('click', () => {
+        const id = deleteClientId?.value;
+        if (id) {
+          clientsStore.deleteClient(id);
+        }
+        toggleModal(deleteClientModal, false);
+      });
+    }
 
     function toggleModal(modal, show) {
       if (modal) modal.style.display = show ? 'block' : 'none';
@@ -758,16 +798,16 @@ export const clientsView = {
         });
       });
 
-      // Eliminar cliente
+      // Eliminar cliente con modal consistente
       document.querySelectorAll('.btn-delete-client').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.dataset.clientId;
           const client = clientsStore.getClientById(id);
           if (!client) return;
 
-          if (typeof window !== 'undefined' && window.confirm(`¿Deseas eliminar a "${client.company}" del directorio comercial?`)) {
-            clientsStore.deleteClient(id);
-          }
+          if (deleteClientId) deleteClientId.value = id;
+          if (deleteClientName) deleteClientName.textContent = client.company || client.name;
+          toggleModal(deleteClientModal, true);
         });
       });
     }

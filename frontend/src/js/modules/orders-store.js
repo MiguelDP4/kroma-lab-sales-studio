@@ -6,6 +6,7 @@
 import { ORDER_STATUS } from '../../shared/business-config.js';
 import { inventoryStore } from './inventory-store.js';
 import { apiClient } from './api-client.js';
+import { mapOrderItem, cleanOrderItemForApi } from './order-item.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -240,6 +241,7 @@ class OrdersStore {
   constructor() {
     this.listeners = new Set();
     this.orders = this._loadOrders();
+    this.isLoading = false;
   }
 
   _loadOrders() {
@@ -298,30 +300,31 @@ class OrdersStore {
         address: o.customerAddress || 'Ciudad de Guatemala',
         email: o.customerEmail || '',
       },
-      items: [
-        {
-          title: firstItemTitle,
-          widthCm: Number(o.widthCm),
-          heightCm: Number(o.heightCm),
-          qty: o.qty,
-          actualLinearMeters: Number(o.linearMeters),
-          stickersPerRow: o.stickersPerRow || 1,
-          rows: o.rows || 1,
-          includeCutting: Boolean(o.withCutting),
-          cuttingRateUnit: o.withCutting ? 0.08 : 0,
-          finishType: o.finishType || 'Barniz con Relieve 3D',
-          fileInfo: {
-            name: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.name) || 'diseño.png',
-            fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.fileUrl) || null,
-            sizeFormatted: (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileInfo?.sizeFormatted) || '300 DPI',
-          },
-          fileUrl: o.fileUrl || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileUrl) || null,
-          fileName: o.fileName || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.fileName) || null,
-          canvasSnapshot: o.canvasSnapshot || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshot) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshot) || null,
-          canvasSnapshotUrl: (o.canvasSnapshot && !o.canvasSnapshot.startsWith('data:') ? o.canvasSnapshot : null) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.canvasSnapshotUrl) || (this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.canvasSnapshotUrl) || null,
-          rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : ((this.orders?.find(local => local.id === (o.code || o.id) || local.backendId === o.id || local.id === o.id)?.items?.[0]?.rotationDeg) || 0),
-        },
-      ],
+      items: (() => {
+        if (Array.isArray(o.items) && o.items.length > 0) {
+          return o.items.map(it => mapOrderItem(it));
+        }
+        const local = this.orders?.find(l => l.id === (o.code || o.id) || l.backendId === o.id || l.id === o.id);
+        if (local?.items && Array.isArray(local.items) && local.items.length > 0) {
+          return local.items.map(it => mapOrderItem(it));
+        }
+        return [
+          mapOrderItem({
+            title: firstItemTitle,
+            widthCm: Number(o.widthCm),
+            heightCm: Number(o.heightCm),
+            qty: o.qty,
+            actualLinearMeters: Number(o.linearMeters),
+            stickersPerRow: o.stickersPerRow || 1,
+            rows: o.rows || 1,
+            includeCutting: Boolean(o.withCutting),
+            fileUrl: o.fileUrl || null,
+            fileName: o.fileName || null,
+            canvasSnapshot: o.canvasSnapshot || null,
+            rotationDeg: o.rotationDeg !== undefined && o.rotationDeg !== null ? Number(o.rotationDeg) : 0,
+          })
+        ];
+      })(),
       metrics: {
         totalBillableMeters: Number(o.linearMeters),
         tierRate: Number(o.unitRateQ || 105.0),
@@ -338,23 +341,41 @@ class OrdersStore {
   }
 
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
     try {
       const res = await apiClient.orders.list();
       if (res && res.success && Array.isArray(res.orders)) {
         const apiOrders = res.orders.map(o => this._mapBackendOrder(o));
         const apiCodes = new Set(apiOrders.map(o => o.id));
-        const localOnly = IS_TEST_ENV
-          ? this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId)
-          : [];
+        const localOnly = this.orders.filter(o => !apiCodes.has(o.id) && !o.backendId);
         this.orders = [...apiOrders, ...localOnly];
         this._saveOrders();
-        this._notify();
         return this.orders;
       }
     } catch (err) {
-      console.warn('[OrdersStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[OrdersStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
     return this.orders;
+  }
+
+  clearOrdersCache() {
+    this.orders = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_ORDERS);
+      } catch (_) {}
+    }
+    this._notify();
   }
 
   subscribe(listener) {
@@ -392,6 +413,25 @@ class OrdersStore {
     });
     const newId = String(maxNum + 1).padStart(10, '0');
 
+    const normalizedItems = (items && items.length > 0)
+      ? items.map(it => mapOrderItem(it))
+      : [mapOrderItem({
+          title: `Stickers ${cartTotals.widthCm || 5} × ${cartTotals.heightCm || 5} cm`,
+          widthCm: cartTotals.widthCm || 5,
+          heightCm: cartTotals.heightCm || 5,
+          qty: cartTotals.qty || 50,
+          actualLinearMeters: cartTotals.totalBillableMeters || 1.0,
+          stickersPerRow: cartTotals.stickersPerRow || 5,
+          rows: cartTotals.rows || 10,
+          includeCutting: Boolean(cartTotals.hasCutting),
+          canvasSnapshot: cartTotals.canvasSnapshot || null,
+          canvasSnapshotUrl: cartTotals.canvasSnapshotUrl || null,
+          rotationDeg: cartTotals.rotationDeg || 0,
+        })];
+
+    const firstItem = normalizedItems[0];
+    const totalPieces = normalizedItems.reduce((acc, it) => acc + (it.qty || 0), 0) || firstItem.qty || 50;
+
     const newOrder = {
       id: newId,
       createdAt: new Date().toISOString(),
@@ -406,30 +446,12 @@ class OrdersStore {
       },
       paymentReceiptUrl: paymentReceiptUrl || cartTotals.paymentReceiptUrl || null,
       paymentReceiptFileName: paymentReceiptFileName || cartTotals.paymentReceiptFileName || null,
-      canvasSnapshot: items[0]?.canvasSnapshot || cartTotals.canvasSnapshot || null,
-      canvasSnapshotUrl: items[0]?.canvasSnapshotUrl || (items[0]?.canvasSnapshot && !items[0]?.canvasSnapshot.startsWith('data:') ? items[0]?.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
-      rotationDeg: items[0]?.rotationDeg || cartTotals.rotationDeg || 0,
-      fileUrl: items[0]?.fileUrl || items[0]?.fileInfo?.fileUrl || null,
-      fileName: items[0]?.fileName || items[0]?.fileInfo?.name || null,
-      items: items.map((it, idx) => ({
-        title: it.title || `Diseño #${idx + 1}`,
-        widthCm: parseFloat(it.widthCm) || 5,
-        heightCm: parseFloat(it.heightCm) || 5,
-        qty: parseInt(it.qty, 10) || 50,
-        actualLinearMeters: parseFloat(it.actualLinearMeters) || 1.0,
-        stickersPerRow: it.stickersPerRow || 5,
-        rows: it.rows || 10,
-        includeCutting: Boolean(it.includeCutting),
-        cuttingRateUnit: it.cuttingRateUnit || 0,
-        finishType: it.finishType || 'Barniz con Relieve 3D',
-        fileInfo: it.fileInfo || null,
-        fileUrl: it.fileUrl || it.fileInfo?.fileUrl || null,
-        fileName: it.fileName || it.fileInfo?.name || null,
-        previewUrl: it.previewUrl || null,
-        canvasSnapshot: it.canvasSnapshot || null,
-        canvasSnapshotUrl: it.canvasSnapshotUrl || (it.canvasSnapshot && !it.canvasSnapshot.startsWith('data:') ? it.canvasSnapshot : null) || null,
-        rotationDeg: Number(it.rotationDeg) || 0,
-      })),
+      canvasSnapshot: firstItem.canvasSnapshot || cartTotals.canvasSnapshot || null,
+      canvasSnapshotUrl: firstItem.canvasSnapshotUrl || (firstItem.canvasSnapshot && !firstItem.canvasSnapshot.startsWith('data:') ? firstItem.canvasSnapshot : null) || cartTotals.canvasSnapshotUrl || null,
+      rotationDeg: firstItem.rotationDeg || cartTotals.rotationDeg || 0,
+      fileUrl: firstItem.fileUrl || firstItem.fileInfo?.fileUrl || null,
+      fileName: firstItem.fileName || firstItem.fileInfo?.name || null,
+      items: normalizedItems,
       metrics: {
         totalBillableMeters: parseFloat(cartTotals.totalBillableMeters) || 1.0,
         tierRate: parseFloat(cartTotals.tierRate) || 140.0,
@@ -448,7 +470,6 @@ class OrdersStore {
     this._notify();
 
     if (typeof apiClient !== 'undefined' && apiClient.orders) {
-      const firstItem = newOrder.items[0] || {};
       apiClient.orders.create({
         customerId: newOrder.customer.clientId || undefined,
         customerName: newOrder.customer.name,
@@ -458,7 +479,7 @@ class OrdersStore {
         customerAddress: newOrder.customer.address,
         widthCm: firstItem.widthCm || 5,
         heightCm: firstItem.heightCm || 5,
-        qty: firstItem.qty || 50,
+        qty: totalPieces,
         linearMeters: newOrder.metrics.totalBillableMeters,
         unitRateQ: newOrder.metrics.tierRate,
         materialPriceQ: newOrder.metrics.materialTotalQ,
@@ -474,12 +495,17 @@ class OrdersStore {
         rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
         paymentReceiptUrl: newOrder.paymentReceiptUrl,
         paymentReceiptFileName: newOrder.paymentReceiptFileName,
-        notes: newOrder.workshopNotes,
+        notes: newOrder.workshopNotes || null,
+        items: newOrder.items.map(it => cleanOrderItemForApi(it)),
       }).then(res => {
         if (res && res.order) {
           newOrder.backendId = res.order.id;
           if (res.order.code) newOrder.id = res.order.code;
+          if (Array.isArray(res.order.items) && res.order.items.length > 0) {
+            newOrder.items = res.order.items.map(it => mapOrderItem(it));
+          }
           this._saveOrders();
+          this._notify();
         }
       }).catch(() => {});
     }
@@ -604,3 +630,7 @@ class OrdersStore {
 }
 
 export const ordersStore = new OrdersStore();
+
+if (typeof window !== 'undefined') {
+  window.ordersStore = ordersStore;
+}
