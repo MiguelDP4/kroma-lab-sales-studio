@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { productionView } from '../src/js/views/production-view.js';
 import { productionStore } from '../src/js/modules/production-store.js';
 import { ordersStore } from '../src/js/modules/orders-store.js';
+import { dispatchStore } from '../src/js/modules/dispatch-store.js';
 import { apiClient } from '../src/js/modules/api-client.js';
-import { ORDER_STATUS } from '../src/shared/business-config.js';
+import * as printHelper from '../src/js/modules/print-helper.js';
+import { ORDER_STATUS } from '../../shared/business-config.js';
 
 describe('Production View — Tablero Kanban y Monitor de Bobina', () => {
   let cleanupFn = null;
@@ -275,6 +277,93 @@ describe('Production View — Tablero Kanban y Monitor de Bobina', () => {
 
       updateStatusSpy.mockRestore();
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('Emisión de Guía de Despacho desde el Tablero Kanban', () => {
+    it('abre el modal de emitir guía de despacho al pulsar btn-emit-dispatch cuando no existe remisión previa', () => {
+      // Limpiar remisiones para simular que KL-00040 aún no ha sido despachada
+      dispatchStore.dispatchNotes = [];
+
+      const btnDispatch = document.querySelector('.btn-emit-dispatch[data-order-id="KL-00040"]');
+      expect(btnDispatch).not.toBeNull();
+
+      btnDispatch.click();
+
+      const modal = document.getElementById('kanbanCreateDispatchModal');
+      expect(modal.style.display).toBe('block');
+      expect(document.getElementById('kanbanDispatchOrderId').value).toBe('KL-00040');
+      expect(document.getElementById('inputKanbanClientName').value).toContain('Sport Gym');
+    });
+
+    it('permite cancelar el modal de emisión de despacho', () => {
+      dispatchStore.dispatchNotes = [];
+
+      const btnDispatch = document.querySelector('.btn-emit-dispatch[data-order-id="KL-00040"]');
+      btnDispatch.click();
+
+      const modal = document.getElementById('kanbanCreateDispatchModal');
+      expect(modal.style.display).toBe('block');
+
+      const btnCancel = document.getElementById('btnCancelKanbanDispatchModal');
+      btnCancel.click();
+      expect(modal.style.display).toBe('none');
+    });
+
+    it('emite la remisión oficial, abre la hoja imprimible y permite imprimirla', () => {
+      dispatchStore.dispatchNotes = [];
+      const printSpy = vi.spyOn(printHelper, 'printDocument').mockImplementation(() => {});
+
+      const btnDispatch = document.querySelector('.btn-emit-dispatch[data-order-id="KL-00040"]');
+      btnDispatch.click();
+
+      // Completar datos y enviar
+      document.getElementById('inputKanbanAddress').value = '10 Calle 5-20 Zona 14, Guatemala';
+      document.getElementById('selectKanbanDeliveryMethod').value = 'CARGO_EXPRESO';
+      document.getElementById('inputKanbanCourier').value = 'Cargo Expreso';
+      document.getElementById('inputKanbanTracking').value = 'CX-998877';
+
+      const form = document.getElementById('formKanbanCreateDispatch');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      // Se cierra el modal de formulario
+      expect(document.getElementById('kanbanCreateDispatchModal').style.display).toBe('none');
+
+      // Se abre el modal de la hoja imprimible
+      const sheetModal = document.getElementById('kanbanDispatchSheetModal');
+      expect(sheetModal.style.display).toBe('block');
+      expect(document.getElementById('kanbanDispatchSheetContainer').textContent).toContain('CX-998877');
+
+      // Probar impresión
+      const btnPrint = document.getElementById('btnPrintKanbanDispatchSheet');
+      btnPrint.click();
+      expect(printSpy).toHaveBeenCalled();
+
+      // Cerrar hoja imprimible
+      const btnCloseSheet = document.getElementById('btnCloseKanbanDispatchSheetModal');
+      btnCloseSheet.click();
+      expect(sheetModal.style.display).toBe('none');
+
+      printSpy.mockRestore();
+    });
+
+    it('abre directamente la hoja imprimible si la orden ya contaba con remisión previa', () => {
+      // Restaurar semillas donde KL-00040 ya tiene remisión (REM-2026-003)
+      dispatchStore.resetToInitial();
+
+      const btnDispatch = document.querySelector('.btn-emit-dispatch[data-order-id="KL-00040"]');
+      btnDispatch.click();
+
+      const formModal = document.getElementById('kanbanCreateDispatchModal');
+      const sheetModal = document.getElementById('kanbanDispatchSheetModal');
+
+      // No debe abrir el formulario, debe abrir directamente la hoja
+      expect(formModal.style.display).toBe('none');
+      expect(sheetModal.style.display).toBe('block');
+
+      const btnCancelSheet = document.getElementById('btnCancelKanbanDispatchSheetModal');
+      btnCancelSheet.click();
+      expect(sheetModal.style.display).toBe('none');
     });
   });
 });

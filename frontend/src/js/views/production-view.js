@@ -4,9 +4,11 @@
  */
 
 import { productionStore, KANBAN_STAGES } from '../modules/production-store.js';
-import { dispatchStore } from '../modules/dispatch-store.js';
 import { ordersStore } from '../modules/orders-store.js';
+import { dispatchStore, DELIVERY_METHODS, PACKAGE_TYPES } from '../modules/dispatch-store.js';
 import { ORDER_STATUS } from '../../shared/business-config.js';
+import { renderDispatchSheetHtml } from './dispatch-view.js';
+import { printDocument } from '../modules/print-helper.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -236,6 +238,139 @@ export const productionView = {
         </div>
       </div>
     </div>
+
+    <!-- MODAL: EMITIR GUÍA DE DESPACHO DESDE KANBAN -->
+    <div id="kanbanCreateDispatchModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="width: min(640px, 95vw); max-height: 92vh; overflow-y: auto;">
+        <div class="modal-header">
+          <div>
+            <span class="badge" style="color: var(--cerulean); border-color: var(--cerulean);">Taller & Logística</span>
+            <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 0.35rem;">🚚 Emitir Guía de Despacho</h2>
+          </div>
+          <button type="button" class="btn-close-modal" id="btnCloseKanbanDispatchModal">✕</button>
+        </div>
+
+        <form id="formKanbanCreateDispatch" style="padding: 1rem 0 0.5rem;">
+          <input type="hidden" id="kanbanDispatchOrderId">
+
+          <div style="background: var(--bg-surface-elevated, #f8fafc); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Orden Asociada:</span>
+              <strong id="kanbanDispatchOrderBadge" style="font-family: var(--font-mono); color: var(--cerulean);">#KL-00000</strong>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Metraje / Total:</span>
+              <strong id="kanbanDispatchOrderTotals" style="font-family: var(--font-mono);">0.00 m • Q0.00</strong>
+            </div>
+          </div>
+
+          <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="inputKanbanClientName">Cliente / Destinatario:</label>
+              <input type="text" id="inputKanbanClientName" class="input-control" required style="min-height: 42px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputKanbanClientPhone">Teléfono WhatsApp:</label>
+              <input type="tel" id="inputKanbanClientPhone" class="input-control" required style="min-height: 42px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label class="form-label" for="inputKanbanAddress">Dirección de Entrega:</label>
+            <input type="text" id="inputKanbanAddress" class="input-control" required style="min-height: 42px;">
+          </div>
+
+          <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="selectKanbanDeliveryMethod">Método de Transporte:</label>
+              <select id="selectKanbanDeliveryMethod" class="input-control" style="min-height: 42px;">
+                <option value="MOTO_LOCAL">🛵 Moto Local (Capital / Villa Nueva)</option>
+                <option value="CARGO_EXPRESO">🚚 Cargo Expreso (Nacional)</option>
+                <option value="GUATEX">📦 Guatex</option>
+                <option value="FORZAGRO">⚡ Forza Delivery</option>
+                <option value="PICKUP_TALLER">🏬 Retiro en Taller (San José el Placer)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputKanbanCourier">Mensajero / Courier:</label>
+              <input type="text" id="inputKanbanCourier" class="input-control" placeholder="Ej. Cargo Expreso..." style="min-height: 42px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputKanbanTracking">No. Guía / Tracking (opcional):</label>
+              <input type="text" id="inputKanbanTracking" class="input-control" placeholder="Ej. CX-12345" style="min-height: 42px;">
+            </div>
+          </div>
+
+          <div class="input-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="selectKanbanPackageType">Tipo de Empaque:</label>
+              <select id="selectKanbanPackageType" class="input-control" style="min-height: 42px;">
+                <option value="RIGID_TUBE">📜 Tubo Rígido (Bobina Enrollada)</option>
+                <option value="FLAT_PACK">📁 Sobre Plano (Stickers Cortados)</option>
+                <option value="BOX">📦 Caja Reforzada (Volumen)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputKanbanPackagesCount">Bultos:</label>
+              <input type="number" id="inputKanbanPackagesCount" class="input-control" value="1" min="1" max="50" style="min-height: 42px;" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputKanbanShippingCost">Costo Envío (Q):</label>
+              <input type="number" id="inputKanbanShippingCost" class="input-control" value="0.00" min="0" step="0.5" style="min-height: 42px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="selectKanbanShippingPaidBy">Pago del Flete:</label>
+              <select id="selectKanbanShippingPaidBy" class="input-control" style="min-height: 42px;">
+                <option value="CLIENT">Cobro en Destino (Paga Cliente)</option>
+                <option value="INCLUDED">Flete Incluido / Retiro Taller</option>
+                <option value="PREPAID">Prepagado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="inputKanbanDispatchNotes">Notas de Despacho:</label>
+            <textarea id="inputKanbanDispatchNotes" class="input-control" rows="2" placeholder="Instrucciones para entrega..."></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <button type="button" class="btn btn-secondary" id="btnCancelKanbanDispatchModal" style="min-height: 42px;">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitKanbanDispatch" style="min-height: 42px;">
+              <span>📋 Emitir Remisión Oficial</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: HOJA OFICIAL DE DESPACHO IMPRIMIBLE DESDE KANBAN -->
+    <div id="kanbanDispatchSheetModal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="width: min(840px, 96vw); max-height: 94vh; overflow-y: auto;">
+        <div class="modal-header btn-print-hide">
+          <div>
+            <span class="badge" style="color: var(--cerulean); border-color: var(--cerulean);">Remisión Oficial de Entrega</span>
+            <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 0.35rem;">Hoja de Despacho UV DTF</h2>
+          </div>
+          <button type="button" class="btn-close-modal" id="btnCloseKanbanDispatchSheetModal">✕</button>
+        </div>
+
+        <div id="kanbanDispatchSheetContainer" class="dispatch-sheet-card">
+          <!-- Documento oficial inyectado dinámicamente -->
+        </div>
+
+        <div class="btn-print-hide" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">
+            🖨️ Documento listo para imprimir o guardar en PDF (formato carta/oficio).
+          </span>
+          <div style="display: flex; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" id="btnCancelKanbanDispatchSheetModal" style="min-height: 42px;">Cerrar</button>
+            <button type="button" class="btn btn-primary" id="btnPrintKanbanDispatchSheet" style="min-height: 42px;">
+              <span>🖨️ Imprimir Guía</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   `,
 
   onMount: () => {
@@ -264,6 +399,18 @@ export const productionView = {
     const btnCloseDetailModal = document.getElementById('btnCloseDetailModal');
     const btnOkDetailModal = document.getElementById('btnOkDetailModal');
 
+    // Modales de Despacho
+    const createDispatchModal = document.getElementById('kanbanCreateDispatchModal');
+    const btnCloseKanbanDispatchModal = document.getElementById('btnCloseKanbanDispatchModal');
+    const btnCancelKanbanDispatchModal = document.getElementById('btnCancelKanbanDispatchModal');
+    const formKanbanCreateDispatch = document.getElementById('formKanbanCreateDispatch');
+
+    const dispatchSheetModal = document.getElementById('kanbanDispatchSheetModal');
+    const btnCloseKanbanDispatchSheetModal = document.getElementById('btnCloseKanbanDispatchSheetModal');
+    const btnCancelKanbanDispatchSheetModal = document.getElementById('btnCancelKanbanDispatchSheetModal');
+    const btnPrintKanbanDispatchSheet = document.getElementById('btnPrintKanbanDispatchSheet');
+    const kanbanDispatchSheetContainer = document.getElementById('kanbanDispatchSheetContainer');
+
     // Apertura y cierre de modales
     function toggleModal(modal, show) {
       if (modal) modal.style.display = show ? 'block' : 'none';
@@ -283,6 +430,136 @@ export const productionView = {
 
     if (btnCloseDetailModal) btnCloseDetailModal.addEventListener('click', () => toggleModal(detailModal, false));
     if (btnOkDetailModal) btnOkDetailModal.addEventListener('click', () => toggleModal(detailModal, false));
+
+    if (btnCloseKanbanDispatchModal) btnCloseKanbanDispatchModal.addEventListener('click', () => toggleModal(createDispatchModal, false));
+    if (btnCancelKanbanDispatchModal) btnCancelKanbanDispatchModal.addEventListener('click', () => toggleModal(createDispatchModal, false));
+
+    if (btnCloseKanbanDispatchSheetModal) btnCloseKanbanDispatchSheetModal.addEventListener('click', () => toggleModal(dispatchSheetModal, false));
+    if (btnCancelKanbanDispatchSheetModal) btnCancelKanbanDispatchSheetModal.addEventListener('click', () => toggleModal(dispatchSheetModal, false));
+
+    if (btnPrintKanbanDispatchSheet) {
+      btnPrintKanbanDispatchSheet.addEventListener('click', () => {
+        if (kanbanDispatchSheetContainer && kanbanDispatchSheetContainer.innerHTML.trim()) {
+          printDocument(kanbanDispatchSheetContainer.innerHTML, 'Remisión de Despacho UV DTF - Kroma Lab');
+        } else if (typeof window !== 'undefined' && window.print) {
+          window.print();
+        }
+      });
+    }
+
+    function openDispatchFlowForOrder(orderId) {
+      const existingNote = typeof dispatchStore.getDispatchNoteByOrderId === 'function' ? dispatchStore.getDispatchNoteByOrderId(orderId) : null;
+      let order = ordersStore.getOrderById(orderId);
+
+      if (!order) {
+        const prodOrder = productionStore.getState().orders.find(o => o.id === orderId);
+        if (prodOrder) {
+          order = ordersStore.createOrder({
+            id: prodOrder.id,
+            customer: {
+              name: prodOrder.clientName,
+              phone: prodOrder.contactPhone,
+              address: 'Entrega en Taller / San José el Placer',
+            },
+            items: [{
+              title: prodOrder.title,
+              widthCm: prodOrder.widthCm,
+              heightCm: prodOrder.heightCm,
+              qty: prodOrder.qty,
+              actualLinearMeters: prodOrder.meters,
+              includeCutting: prodOrder.includeCutting,
+              finishType: prodOrder.finishType,
+            }],
+            cartTotals: {
+              totalBillableMeters: prodOrder.meters,
+              grandTotalQ: (prodOrder.meters || 1) * 115,
+            },
+            workshopNotes: prodOrder.notes,
+          });
+        }
+      }
+
+      if (existingNote) {
+        if (kanbanDispatchSheetContainer) {
+          kanbanDispatchSheetContainer.innerHTML = renderDispatchSheetHtml(existingNote, order);
+        }
+        toggleModal(dispatchSheetModal, true);
+        return;
+      }
+
+      const prodOrder = productionStore.getState().orders.find(o => o.id === orderId) || {};
+      const clientName = order?.customer?.company || order?.customer?.name || prodOrder.clientName || 'Cliente General';
+      const clientPhone = order?.customer?.phone || prodOrder.contactPhone || '';
+      const clientAddress = order?.customer?.address || 'Entrega en Taller / San José el Placer';
+      const meters = order?.metrics?.totalBillableMeters || prodOrder.meters || 1.0;
+      const totalQ = order?.metrics?.grandTotalQ || (meters * 115.0);
+      const hasCutting = order?.metrics?.hasCutting || prodOrder.includeCutting;
+
+      const inputOrderId = document.getElementById('kanbanDispatchOrderId');
+      const orderBadge = document.getElementById('kanbanDispatchOrderBadge');
+      const orderTotals = document.getElementById('kanbanDispatchOrderTotals');
+      const inputClientName = document.getElementById('inputKanbanClientName');
+      const inputClientPhone = document.getElementById('inputKanbanClientPhone');
+      const inputAddress = document.getElementById('inputKanbanAddress');
+      const selectPkg = document.getElementById('selectKanbanPackageType');
+      const inputNotes = document.getElementById('inputKanbanDispatchNotes');
+
+      if (inputOrderId) inputOrderId.value = orderId;
+      if (orderBadge) orderBadge.textContent = `#${orderId}`;
+      if (orderTotals) orderTotals.textContent = `${Number(meters).toFixed(2)} m • Q${Number(totalQ).toFixed(2)}`;
+      if (inputClientName) inputClientName.value = clientName;
+      if (inputClientPhone) inputClientPhone.value = clientPhone;
+      if (inputAddress) inputAddress.value = clientAddress;
+      if (selectPkg) selectPkg.value = hasCutting ? 'FLAT_PACK' : 'RIGID_TUBE';
+      if (inputNotes) inputNotes.value = order?.workshopNotes || prodOrder.notes || '';
+
+      toggleModal(createDispatchModal, true);
+    }
+
+    if (formKanbanCreateDispatch) {
+      formKanbanCreateDispatch.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const orderId = document.getElementById('kanbanDispatchOrderId')?.value;
+        const clientName = document.getElementById('inputKanbanClientName')?.value;
+        const clientPhone = document.getElementById('inputKanbanClientPhone')?.value;
+        const deliveryAddress = document.getElementById('inputKanbanAddress')?.value;
+        const deliveryMethod = document.getElementById('selectKanbanDeliveryMethod')?.value || 'MOTO_LOCAL';
+        const courierName = document.getElementById('inputKanbanCourier')?.value;
+        const trackingNumber = document.getElementById('inputKanbanTracking')?.value;
+        const packageType = document.getElementById('selectKanbanPackageType')?.value || 'RIGID_TUBE';
+        const packagesCount = parseInt(document.getElementById('inputKanbanPackagesCount')?.value, 10) || 1;
+        const shippingCostQ = parseFloat(document.getElementById('inputKanbanShippingCost')?.value) || 0;
+        const shippingPaidBy = document.getElementById('selectKanbanShippingPaidBy')?.value || 'CLIENT';
+        const notes = document.getElementById('inputKanbanDispatchNotes')?.value || '';
+
+        try {
+          const newNote = dispatchStore.createDispatchNote({
+            orderId,
+            clientName,
+            clientPhone,
+            deliveryAddress,
+            deliveryMethod,
+            courierName,
+            trackingNumber,
+            packageType,
+            packagesCount,
+            shippingCostQ,
+            shippingPaidBy,
+            notes,
+          });
+
+          toggleModal(createDispatchModal, false);
+
+          const order = ordersStore.getOrderById(orderId);
+          if (kanbanDispatchSheetContainer) {
+            kanbanDispatchSheetContainer.innerHTML = renderDispatchSheetHtml(newNote, order);
+          }
+          toggleModal(dispatchSheetModal, true);
+        } catch (err) {
+          console.warn('[ProductionView] Error al emitir remisión:', err);
+        }
+      });
+    }
 
     // Submit de Montar Bobina
     if (formMountRoll) {
@@ -521,6 +798,15 @@ export const productionView = {
           e.stopPropagation();
           const orderId = btn.dataset.orderId;
           showOrderDetails(orderId);
+        });
+      });
+
+      // Emitir o Ver Guía de Despacho
+      document.querySelectorAll('.btn-emit-dispatch').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const orderId = btn.dataset.orderId;
+          openDispatchFlowForOrder(orderId);
         });
       });
     }
