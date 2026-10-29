@@ -791,3 +791,22 @@ El repositorio opera bajo el estándar **GitFlow**:
 | **`fix/*`** | Corrección de bugs | Local | Creadas desde `development`. Requieren pruebas de regresión. |
 | **`docs/*`** | Documentación y reglas | Local | Creadas desde `development`. |
 
+
+
+---
+
+## 11. Registro de Correcciones de Calidad y Auditoría QA (Octubre 2026)
+
+Tras la auditoría E2E automatizada en producción con Playwright sobre `https://kroma-lab.pages.dev`, se implementaron las siguientes correcciones de estabilidad y experiencia de usuario:
+
+### 1. Sincronización Reactiva de Contrato en `production-store.js` (BUG-01)
+* **Problema:** Invocación de método inexistente `ordersStore.getState()?.orders` provocaba `TypeError: ordersStore.getState is not a function` en la consola al montar el tablero Kanban Audley o sincronizar pedidos.
+* **Solución:** Se estandarizó el acceso a órdenes mediante el contrato oficial `(typeof ordersStore.getOrders === 'function' ? ordersStore.getOrders() : ordersStore.orders) || []`, tanto en `syncWithOrdersStore()` como en la búsqueda correlativa de orden en `setOrderStatus()`.
+
+### 2. Eliminación de Desbordamiento Horizontal en `/inventario` (BUG-02 / Mobile-First)
+* **Problema:** En dispositivos móviles con viewport de 375px (iPhone SE, etc.), la tabla de 9 columnas de kardex e insumos expandía el ancho desplazable total de la página hasta **883px** (508px fuera de pantalla).
+* **Solución:**
+  1. Se envolvió la tabla del Kardex dentro de la clase `.orders-table-container.inventory-table-wrapper` con `width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;`.
+  2. Los campos de filtro (`#kardexSearchInput` y `#kardexTypeFilter`) se adaptaron con `min-width: 140px; flex: 1 1 auto;` para responder fluidamente al ancho móvil.
+  3. Se incorporó `visibility: hidden;` en `.cart-drawer` en estado cerrado (`transform: translateX(100%)`) y `visibility: visible;` en `.cart-drawer.open`, evitando que los motores de renderizado móvil sumen el panel lateral offscreen al `scrollWidth` del documento.
+  4. La vista `/inventario` cumple estrictamente con `scrollWidth = 375px` y `hasOverflow = false`.

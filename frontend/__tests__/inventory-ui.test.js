@@ -386,4 +386,10 @@ describe('Inventory View — Interfaz de Control de Inventario y Stock de Taller
 
     expect(modal.style.display).toBe('none');
   });
+  it('renderiza la tabla Kardex dentro de un contenedor responsivo con clase inventory-table-wrapper', () => {
+    const wrapper = document.querySelector('.inventory-table-wrapper');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper.className).toContain('orders-table-container');
+    expect(wrapper.style.overflowX).toBe('auto');
+  });
 });

@@ -972,7 +972,8 @@
   border-left: 1px solid var(--border-color);
   z-index: 1001;
   transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  visibility: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
   display: flex;
   flex-direction: column;
   box-shadow: -10px 0 35px rgba(0, 0, 0, 0.5);
@@ -980,6 +981,7 @@
 
 .cart-drawer.open {
   transform: translateX(0);
+  visibility: visible;
 }
 
 .cart-header {
@@ -3138,4 +3140,13 @@
   background: rgba(239, 68, 68, 0.15) !important;
   border-color: #ef4444 !important;
   color: #ef4444 !important;
+}
+
+
+.orders-table-container,
+.inventory-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
