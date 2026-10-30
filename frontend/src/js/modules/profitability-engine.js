@@ -89,8 +89,9 @@ export function resetCostsConfig() {
  */
 export function getSuggestedPricePerMeter(meters = 1.0) {
   const m = Math.max(0.1, parseFloat(meters) || 1.0);
-  const tier = PRICING_TIERS.find(t => m > t.minMeters && m <= t.maxMeters);
-  return tier ? tier.ratePerMeterQ : 115.0;
+  if (m < 2.0) return 140.0;
+  const tier = PRICING_TIERS.find(t => m >= t.minMeters && m < t.maxMeters);
+  return tier ? tier.ratePerMeterQ : 85.0;
 }
 
 /**

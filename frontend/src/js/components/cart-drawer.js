@@ -9,6 +9,8 @@ import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { openCheckoutModal } from './checkout-modal.js';
 import { openSaveQuoteModal } from './save-quote-modal.js';
 import { uploadCanvasSnapshotToStorage } from '../modules/file-uploader.js';
+import { ordersStore } from '../modules/orders-store.js';
+import { store } from '../store.js';
 
 export function initCartDrawer() {
   let drawerContainer = document.getElementById('cartDrawerContainer');
@@ -322,8 +324,28 @@ function attachCartEventListeners(items, totals) {
           }
         }
       }
-      const text = formatWhatsAppCartOrder(totals);
+      const user = store?.state?.user || {};
+      const customer = {
+        name: user.name || 'Cliente Web / WhatsApp',
+        company: user.company || '',
+        phone: user.phone || '+502 5555-0000',
+        email: user.email || '',
+        address: user.address || 'Consultar por WhatsApp',
+        notes: 'Pedido multidiseño enviado por WhatsApp desde el carrito',
+      };
+
+      const createdOrder = ordersStore.createOrder({
+        customer,
+        cartTotals: totals,
+        items: totals.items || items,
+        workshopNotes: 'Pedido multidiseño enviado por WhatsApp desde el carrito',
+      });
+
+      const orderCode = createdOrder?.id || null;
+      const text = formatWhatsAppCartOrder(totals, { ...customer, orderId: orderCode });
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
+      cartStore.clearCart();
+      closeCartDrawer();
       window.open(url, '_blank');
     });
   }

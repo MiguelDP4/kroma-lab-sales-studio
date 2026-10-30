@@ -20,13 +20,22 @@ export function getApiBaseUrl() {
       // Ignorar quota o storage error
     }
   }
+  if (typeof window !== 'undefined' && window.__KROMA_API_URL__) {
+    return window.__KROMA_API_URL__;
+  }
   if (typeof window !== 'undefined' && window.location) {
-    const isLocal = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === '';
-    if (!isLocal) {
-      return 'https://kroma-lab-backend-216908488828.us-central1.run.app/api';
+    const hostname = window.location.hostname;
+    if (window.location.port === '3000') {
+      const targetHost = (hostname && hostname !== '') ? hostname : 'localhost';
+      return `${window.location.protocol}//${targetHost}:4000/api`;
     }
+    const isLocal = hostname === 'localhost' || 
+                    hostname === '127.0.0.1' || 
+                    hostname === '';
+    if (isLocal) {
+      return 'http://localhost:4000/api';
+    }
+    return 'https://kroma-lab-backend-216908488828.us-central1.run.app/api';
   }
   return 'http://localhost:4000/api';
 }

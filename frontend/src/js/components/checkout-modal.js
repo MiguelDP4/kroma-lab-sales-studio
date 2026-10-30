@@ -138,7 +138,7 @@ export function openCheckoutModal(cartTotals) {
             Adjuntar Boleta o Comprobante de Pago (Opcional):
           </label>
           <div class="checkout-receipt-dropzone" id="checkoutReceiptDropzone" style="border: 1px dashed var(--border-color); border-radius: 4px; padding: 0.65rem; text-align: center; cursor: pointer; background: rgba(28, 114, 147, 0.04); min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: border-color 0.2s;">
-            <input type="file" id="checkoutReceiptInput" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+            <input type="file" id="checkoutReceiptInput" accept="image/*,.jpg,.jpeg,.png,.pdf" style="display: none;">
             <div id="checkoutReceiptPrompt" style="font-size: 0.82rem; color: var(--text-secondary);">
               <span>📎 Clic para seleccionar comprobante (JPG, PNG o PDF)</span>
             </div>
@@ -347,6 +347,19 @@ export function openCheckoutModal(cartTotals) {
     });
   }
 
+  const btnVisitorWa = document.getElementById('btnVisitorWhatsApp');
+  if (btnVisitorWa) {
+    btnVisitorWa.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (form) {
+        if (form.reportValidity && !form.reportValidity()) {
+          return;
+        }
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    });
+  }
+
   if (btnClearAutofill) {
     btnClearAutofill.addEventListener('click', () => {
       selectedClientId = null;
@@ -372,16 +385,11 @@ export function openCheckoutModal(cartTotals) {
       const addressVal = addressInput?.value?.trim() || '';
       const notesVal = notesInput?.value?.trim() || '';
 
-      if (isVisitor) {
-        const text = formatWhatsAppCartOrder(cartTotals, { name: nameVal, phone: phoneVal, address: addressVal, notes: notesVal });
-        const waUrl = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
-        window.open(waUrl, '_blank');
-        return;
-      }
-      const shouldSync = Boolean(document.getElementById('checkSaveToClients')?.checked);
+      const shouldSync = !isVisitor && Boolean(document.getElementById('checkSaveToClients')?.checked);
 
-      let linkedClientId = selectedClientId;
+      let linkedClientId = isVisitor ? null : selectedClientId;
 
+      
       if (shouldSync) {
         if (linkedClientId) {
           // Si ya está vinculado, sincronizamos posibles actualizaciones
@@ -479,8 +487,11 @@ export function openCheckoutModal(cartTotals) {
       });
       cartStore.clearCart();
 
-      const text = formatWhatsAppCartOrder(cartTotals, customer);
+      const text = formatWhatsAppCartOrder(cartTotals, { ...customer, orderId: createdOrder?.id });
       const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
+      if (isVisitor) {
+        window.open(url, '_blank');
+      }
 
       // Mostrar modal de confirmación informando al usuario que su pedido será revisado por el equipo
       const modalHeader = document.querySelector('#checkoutModal .modal-header');
@@ -500,9 +511,11 @@ export function openCheckoutModal(cartTotals) {
               Tu pedido será revisado y confirmado por nuestro equipo a la brevedad. Puedes consultar el avance en tiempo real desde tu panel de pedidos.
             </p>
             <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+              ${!isVisitor ? `
               <button type="button" class="btn btn-primary" id="btnGoToOrdersConfirm" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <span>📋 Ver mis Pedidos</span>
               </button>
+              ` : ''}
               <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" id="btnWhatsAppConfirm" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <span>💬 Notificar por WhatsApp</span>
               </a>

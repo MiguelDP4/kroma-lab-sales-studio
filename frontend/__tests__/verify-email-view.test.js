@@ -124,4 +124,68 @@ describe('VerifyEmailView — Vista de Verificación de Correo Electrónico (/ve
 
     resendSpy.mockRestore();
   });
+  it('cubre rama cuando la cuenta ya está verificada en el store tras error', async () => {
+    store.state.user = { id: 'U1', isVerified: true };
+    window.location = new URL('http://localhost:3000/verificar-correo?token=already-done');
+    container.innerHTML = verifyEmailView.render();
+
+    vi.spyOn(apiClient.auth, 'verifyEmail').mockRejectedValue(new Error('Enlace expirado'));
+    await verifyEmailView.onMount(container);
+
+    const successMsg = container.querySelector('#verifySuccessMsg');
+    expect(successMsg.textContent).toContain('Tu cuenta ya se encuentra verificada');
+  });
+
+  it('maneja error cuando falla el reenvío de correo', async () => {
+    window.location = new URL('http://localhost:3000/verificar-correo?token=fail-token');
+    container.innerHTML = verifyEmailView.render();
+
+    vi.spyOn(apiClient.auth, 'verifyEmail').mockRejectedValue(new Error('Invalido'));
+    vi.spyOn(apiClient.auth, 'resendVerification').mockRejectedValue(new Error('Error de conexión'));
+
+    await verifyEmailView.onMount(container);
+
+    const emailInput = container.querySelector('#resendEmailInput');
+    const form = container.querySelector('#formResendVerification');
+    const feedback = container.querySelector('#resendFeedbackMsg');
+
+    // Sin correo no envía
+    emailInput.value = '';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    // Con correo pero falla
+    emailInput.value = 'correo@test.gt';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      expect(feedback.style.display).toBe('block');
+      expect(feedback.textContent).toContain('Error de conexión');
+    });
+  });
+
+  it('asigna permisos según el rol del usuario (ADMIN vs EMPLOYEE)', async () => {
+    window.location = new URL('http://localhost:3000/verificar-correo?token=role-admin-token');
+    container.innerHTML = verifyEmailView.render();
+
+    vi.spyOn(apiClient.auth, 'verifyEmail').mockResolvedValue({
+      success: true,
+      token: 'jwt-adm',
+      user: { id: 'ADM', role: 'ADMIN' },
+      message: 'Bienvenido Admin',
+    });
+
+    await verifyEmailView.onMount(container);
+    expect(store.state.permissions).toEqual(['*']);
+
+    // Probar EMPLOYEE
+    window.location = new URL('http://localhost:3000/verificar-correo?token=role-emp-token');
+    container.innerHTML = verifyEmailView.render();
+    vi.spyOn(apiClient.auth, 'verifyEmail').mockResolvedValue({
+      success: true,
+      token: 'jwt-emp',
+      user: { id: 'EMP', role: 'EMPLOYEE' },
+    });
+    await verifyEmailView.onMount(container);
+    expect(store.state.permissions).toEqual(['ORDERS', 'WORKSHOP']);
+  });
 });

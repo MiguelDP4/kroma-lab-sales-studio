@@ -73,8 +73,8 @@ describe('Profitability View — Interfaz de Costos Industriales y Rentabilidad 
 
     expect(metersInput.value).toBe('5.0');
     expect(metersDisplay.textContent).toContain('5.00 m');
-    // 5m en escala es Q115/m -> Q575.00
-    expect(sellingPriceEl.textContent).toBe('Q575.00');
+    // 5m en escala es Q105/m -> Q525.00
+    expect(sellingPriceEl.textContent).toBe('Q525.00');
 
     // Cambiar input manual a 10 metros
     metersInput.value = '10.0';
@@ -82,8 +82,8 @@ describe('Profitability View — Interfaz de Costos Industriales y Rentabilidad 
 
     expect(metersSlider.value).toBe('10.0');
     expect(metersDisplay.textContent).toContain('10.00 m');
-    // 10m en escala es Q105/m -> Q1050.00
-    expect(sellingPriceEl.textContent).toBe('Q1050.00');
+    // 10m en escala es Q95/m -> Q950.00
+    expect(sellingPriceEl.textContent).toBe('Q950.00');
   });
 
   it('recalcula costos al alternar acabado con barniz vs sin barniz (mate)', () => {
@@ -362,8 +362,8 @@ describe('Profitability View — Interfaz de Costos Industriales y Rentabilidad 
       offeredInput.value = '100';
       offeredInput.dispatchEvent(new Event('input'));
 
-      expect(discountNotice.textContent).toContain('Descuento aplicado: Q40.00 (-28.6%)');
-      expect(discountBadge.textContent).toContain('Desc: -28.6%');
+      expect(discountNotice.textContent).toContain('Descuento aplicado: Q47.98 (-32.4%)');
+      expect(discountBadge.textContent).toContain('Desc: -32.4%');
       expect(netProfitEl.textContent).not.toBe('Q0.00');
       expect(adviceBox.textContent).toContain('Descuento seguro');
 

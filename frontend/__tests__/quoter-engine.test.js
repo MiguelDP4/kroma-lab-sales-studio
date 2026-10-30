@@ -29,15 +29,21 @@ describe('Quoter Engine — Dimensiones y Validación', () => {
 });
 
 describe('Quoter Engine — Tarifas por Escala', () => {
-  it('retorna Q140.00 para 1 metro o menos', () => {
+  it('retorna Q140.00 para menos de 2 metros exactos (incluyendo 1.05m y 1.99m)', () => {
     expect(getTierRate(0.5)).toBe(140.0);
     expect(getTierRate(1.0)).toBe(140.0);
+    expect(getTierRate(1.05)).toBe(140.0);
+    expect(getTierRate(1.5)).toBe(140.0);
+    expect(getTierRate(1.99)).toBe(140.0);
   });
 
-  it('retorna Q115.00 para el rango de 1 a 5 metros', () => {
+  it('retorna Q115.00 a partir de 2.0 metros exactos hasta 4.99m', () => {
+    expect(getTierRate(2.0)).toBe(115.0);
     expect(getTierRate(2.5)).toBe(115.0);
     expect(getTierRate(4.99)).toBe(115.0);
   });
+
+  
 
   it('retorna Q105.00 para el rango de 5 a 10 metros', () => {
     expect(getTierRate(5.5)).toBe(105.0);
@@ -90,11 +96,18 @@ describe('Quoter Engine — Cálculo Integral de Pedido', () => {
     expect(quote.totalPriceQ).toBe(quote.materialPriceQ);
   });
 
-  it('asegura que materialPrice nunca sea menor al mínimo de Q140 si está entre 1.0 y 1.21 metros', () => {
-    // 6x6 cm, 4 por fila. 18 filas * 6.3cm = ~113.4cm = 1.13m -> 1.134 * 115 = Q130.41 (< 140)
+  it('aplica tarifa de Q140/m entre 1.0 y 1.99 metros y respeta piso mínimo de Q140 si es menor a 1.0m', () => {
+    // 0.5 metros -> piso mínimo de Q140.00
+    const quoteMin = calculateQuote({ widthCm: 5, heightCm: 5, qty: 10, includeCutting: false });
+    expect(quoteMin.actualLinearMeters).toBeLessThan(1.0);
+    expect(quoteMin.materialPriceQ).toBe(140.0);
+
+    // 1.13m (6x6 cm, 72 piezas) -> 1.13m * 140 = Q158.34
     const quote = calculateQuote({ widthCm: 6, heightCm: 6, qty: 72, includeCutting: false });
     expect(quote.actualLinearMeters).toBeGreaterThan(1.0);
-    expect(quote.materialPriceQ).toBe(140.0);
+    expect(quote.actualLinearMeters).toBeLessThan(2.0);
+    expect(quote.tierRate).toBe(140.0);
+    expect(quote.materialPriceQ).toBe(158.34);
   });
 
 

@@ -6,7 +6,7 @@
 
 import { apiClient as defaultApiClient } from './api-client.js';
 
-export const ALLOWED_EXTENSIONS = ['.png', '.tif', '.tiff', '.pdf', '.svg', '.ai', '.psd'];
+export const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.tif', '.tiff', '.pdf', '.svg', '.ai', '.psd'];
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 Megabytes
 
 export const ALLOWED_RECEIPT_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf'];
@@ -34,12 +34,18 @@ export function validatePrintFile(file) {
 
   const name = file.name || 'archivo_desconocido';
   const size = file.size || 0;
-  const ext = getFileExtension(name);
+  let ext = getFileExtension(name);
+  if (!ext && file.type) {
+    if (file.type === 'image/jpeg' || file.type === 'image/jpg') ext = '.jpg';
+    else if (file.type === 'image/png') ext = '.png';
+    else if (file.type === 'image/tiff') ext = '.tif';
+    else if (file.type === 'application/pdf') ext = '.pdf';
+  }
 
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return {
       valid: false,
-      error: `Formato no soportado (${ext || 'desconocido'}). Usa archivos PNG (fondo transparente), TIFF, PDF, SVG, AI o PSD.`,
+      error: `Formato no soportado (${ext || 'desconocido'}). Usa archivos PNG, JPG, TIFF, PDF, SVG, AI o PSD.`,
     };
   }
 

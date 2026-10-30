@@ -1444,7 +1444,7 @@ export const ordersView = {
                   <button type="button" class="btn btn-secondary btn-trigger-replace-receipt" data-order-id="${order.id}" style="font-size: 0.78rem; padding: 0.35rem 0.65rem; min-height: 38px;">
                     <span>🔄 Cambiar</span>
                   </button>
-                  <input type="file" id="modalReceiptFileInput_${order.id}" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" class="modal-receipt-input" data-order-id="${order.id}">
+                  <input type="file" id="modalReceiptFileInput_${order.id}" accept="image/*,.jpg,.jpeg,.png,.pdf" style="display: none;" class="modal-receipt-input" data-order-id="${order.id}">
                 </div>
               </div>
             ` : `
@@ -1456,7 +1456,7 @@ export const ordersView = {
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <input type="file" id="modalReceiptFileInput_${order.id}" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" class="modal-receipt-input" data-order-id="${order.id}">
+                <input type="file" id="modalReceiptFileInput_${order.id}" accept="image/*,.jpg,.jpeg,.png,.pdf" style="display: none;" class="modal-receipt-input" data-order-id="${order.id}">
                 <button type="button" class="btn btn-primary btn-trigger-upload-receipt" data-order-id="${order.id}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; min-height: 40px;">
                   <span>📎 Adjuntar Boleta (JPG, PNG, PDF)</span>
                 </button>

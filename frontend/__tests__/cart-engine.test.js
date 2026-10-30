@@ -10,17 +10,24 @@ import { BUSINESS_CONFIG } from '../src/shared/business-config.js';
 
 describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
   describe('Escala de tarifas por metros lineales (getTierForMeters)', () => {
-    it('asigna tarifa mínima para metros <= 1m', () => {
+    it('mantiene tarifa base de Q140/m hasta alcanzar 2 metros exactos', () => {
       expect(getTierForMeters(0).ratePerMeterQ).toBe(140);
       expect(getTierForMeters(0.8).ratePerMeterQ).toBe(140);
       expect(getTierForMeters(1.0).ratePerMeterQ).toBe(140);
-      expect(getTierForMeters(1.5).ratePerMeterQ).toBe(115);
+      expect(getTierForMeters(1.05).ratePerMeterQ).toBe(140);
+      expect(getTierForMeters(1.5).ratePerMeterQ).toBe(140);
+      expect(getTierForMeters(1.99).ratePerMeterQ).toBe(140);
     });
 
-    it('asigna escalas por volumen de 1 a 20+ metros', () => {
+    it('asigna escalas por volumen de 2 a 20+ metros exactos', () => {
+      expect(getTierForMeters(2.0).ratePerMeterQ).toBe(115);
       expect(getTierForMeters(3.5).ratePerMeterQ).toBe(115);
+      expect(getTierForMeters(4.99).ratePerMeterQ).toBe(115);
+      expect(getTierForMeters(5.0).ratePerMeterQ).toBe(105);
       expect(getTierForMeters(5.5).ratePerMeterQ).toBe(105);
+      expect(getTierForMeters(10.0).ratePerMeterQ).toBe(95);
       expect(getTierForMeters(12.0).ratePerMeterQ).toBe(95);
+      expect(getTierForMeters(20.0).ratePerMeterQ).toBe(85);
       expect(getTierForMeters(25.0).ratePerMeterQ).toBe(85);
     });
   });

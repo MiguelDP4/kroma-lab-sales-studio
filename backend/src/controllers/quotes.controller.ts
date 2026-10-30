@@ -322,8 +322,8 @@ export async function convertToOrder(req: AuthenticatedRequest, res: Response, n
     const orderCode = await generateNextOrderCode();
 
     // Buscar si existe cliente vinculado por email
-    let customerId: string | null = null;
-    if (quote.leadEmail) {
+    let customerId: string | null = req.body?.customerId || null;
+    if (!customerId && quote.leadEmail) {
       const customer = await prisma.customer.findUnique({
         where: { email: quote.leadEmail },
       });
