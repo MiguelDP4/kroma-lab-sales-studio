@@ -21,12 +21,19 @@ export function getApiBaseUrl() {
     }
   }
   if (typeof window !== 'undefined' && window.location) {
-    const isLocal = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === '';
-    if (!isLocal) {
-      return 'https://kroma-lab-backend-216908488828.us-central1.run.app/api';
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || 
+                    hostname === '127.0.0.1' || 
+                    hostname === '' ||
+                    hostname.startsWith('192.168.') ||
+                    hostname.startsWith('10.') ||
+                    hostname.startsWith('172.') ||
+                    hostname.endsWith('.local');
+    if (isLocal) {
+      const targetHost = (hostname && hostname !== '') ? hostname : 'localhost';
+      return `http://${targetHost}:4000/api`;
     }
+    return 'https://kroma-lab-backend-216908488828.us-central1.run.app/api';
   }
   return 'http://localhost:4000/api';
 }
