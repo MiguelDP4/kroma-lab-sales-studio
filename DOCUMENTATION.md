@@ -27,7 +27,7 @@
    * Experiencia pública ultra veloz y sin barreras: landing page informativa y cotizador interactivo en tiempo real con simulación gráfica sobre la bobina de la impresora Audley.
    * Cierre comercial fluido: generación de cotización formal y enlace directo a WhatsApp/Lead con datos del cliente sin requerir registro previo obligatorio.
 2. **Operación Interna y Fidelización B2B:**
-   * Portal de autoservicio para clientes registrados recurrentes (reórdenes de pliegos, historial, subida de archivos TIFF/PNG a 300 DPI, saldo y estados).
+   * Portal de autoservicio para clientes registrados recurrentes (reórdenes de pliegos, historial, subida de archivos TIFF/PNG/JPG a 600 DPI, saldo y estados).
    * Tablero de control de producción para empleados (seguimiento del flujo de la Audley: cola de impresión, impresión, laminado, corte de precisión y despacho).
    * Ventas de mostrador: registro manual de pedidos y altas rápidas de clientes no registrados para compras asistidas.
    * Escalabilidad a catálogo e-commerce para personalización de artículos promocionales terminados (termos, tazas, pachones).
@@ -130,8 +130,8 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
 ### Escala de Precios de Impresión por Volumen
 | Rango de Metros | Tarifa por Metro | Descripción Comercial |
 | :--- | :--- | :--- |
-| `0.01 m – 1.00 m` | **Q140.00 / m** (Tarifa Plana Base) | Pedido mínimo de entrada |
-| `1.01 m – 4.99 m` | **Q115.00 / m** | Tiraje corto / emprendedor |
+| `0.01 m – 1.99 m` | **Q140.00 / m** (Tarifa Plana Base) | Pedido mínimo y tiraje inicial (mínimo facturable 1.0 m = Q140.00) |
+| `2.00 m – 4.99 m` | **Q115.00 / m** | Tiraje corto / emprendedor |
 | `5.00 m – 9.99 m` | **Q105.00 / m** | Tiraje medio comercial |
 | `10.00 m – 19.99 m` | **Q95.00 / m** | Mayorista frecuente |
 | `20.00 m o más` | **Q85.00 / m** | Maquila industrial / Alto volumen |
@@ -280,6 +280,7 @@ kroma-lab-sales-studio/
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
   * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
   * **Drawer Lateral Interactivo:** Permite modificar cantidades en tiempo real (+ / -), eliminar ítems, ver el desglose financiero consolidado y despachar el pedido completo estructurado directamente hacia WhatsApp o hacia el modal de checkout.
+  * **Creación Automática de Pedido al Enviar por WhatsApp:** Al enviar una cotización o carrito por WhatsApp (desde el cotizador, el drawer o checkout para visitantes), el sistema crea automáticamente el pedido formal en `ordersStore` / base de datos con estado `PENDING_REVIEW` y folio correlativo oficial (ej. `#0000000043` o `KL-XXXXX`). El mensaje de WhatsApp incluye dicho folio para confirmación y seguimiento inmediato en `/pedidos` y en el tablero de taller.
   * **Persistencia:** Almacenado en `localStorage['kromalab_cart']` para no perder los ítems al recargar o navegar entre vistas.
 * **Autocompletado Inteligente en Checkout y Pedidos con Cartera B2B (`checkout-modal.js` + `clients-store.js` + `orders-view.js`):**
   * **Conexión Directa Cartera ↔ Pedidos:** Resuelve la fricción en ventas de mostrador y compras recurrentes en línea permitiendo seleccionar clientes registrados directamente desde la Cartera B2B (`clientsStore.getClients()`).
@@ -487,9 +488,10 @@ kroma-lab-sales-studio/
   * **Navegación y Acceso:** Enlace accesible universalmente desde el navbar principal y el menú móvil, además de un banner promocional informativo dentro de la vista del Cotizador (`quoter-view.js`).
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
-  * Formatos permitidos: `.png` (fondo transparente), `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
+  * Formatos permitidos: `.png` (fondo transparente), `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
+  * Resolución de impresión: **600 DPI** para máxima nitidez en impresora UV DTF Audley.
   * Límite de tamaño: 50 MB por archivo.
-  * Genera vista previa visual inmediata (thumbnail) para archivos PNG/SVG/WebP.
+  * Genera vista previa visual inmediata (thumbnail) para archivos PNG/JPG/JPEG/SVG/WebP.
 * **Arquitectura de Diseño y Experiencia Mobile-First:**
   * **Norma UX/UI Obligatoria:** Toda la interfaz está concebida y desarrollada para una experiencia táctil fluida desde smartphones compactos (320px - 375px) hasta pantallas 4K.
   * **Menú Lateral Colapsable / Sidebar Drawer (`#appSidebar` + `#sidebarBackdrop`):**

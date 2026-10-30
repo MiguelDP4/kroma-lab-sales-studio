@@ -43,6 +43,19 @@ describe('File Uploader — Validación y Subida de Archivos Gráficos UV DTF', 
       expect(res.error).toContain('No se seleccionó ningún archivo');
     });
 
+    it('acepta archivos JPG y JPEG para impresión y genera vista previa', () => {
+      const jpgFile = { name: 'foto_cliente.jpg', size: 1024 * 500, type: 'image/jpeg' };
+      const jpegFile = { name: 'arte_completo.jpeg', size: 1024 * 800, type: 'image/jpeg' };
+      
+      const resJpg = validatePrintFile(jpgFile);
+      expect(resJpg.valid).toBe(true);
+      expect(resJpg.fileData.extension).toBe('.jpg');
+
+      const resJpeg = validatePrintFile(jpegFile);
+      expect(resJpeg.valid).toBe(true);
+      expect(resJpeg.fileData.extension).toBe('.jpeg');
+    });
+
     it('acepta formatos válidos de producción industrial (.png, .tif, .pdf, .svg, .ai, .psd)', () => {
       ALLOWED_EXTENSIONS.forEach(ext => {
         const mockFile = { name: `diseño${ext}`, size: 1024 * 100, type: 'image/png' };

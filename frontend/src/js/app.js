@@ -762,7 +762,7 @@ export function initQuoter() {
   let currentRawFile = null;
   let currentPreviewUrl = null;
 
-  // Botón de WhatsApp
+  // Botón de WhatsApp — Registra el pedido en el sistema antes de abrir WhatsApp para que nunca quede perdido
   const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
   if (btnWhatsApp) {
     btnWhatsApp.addEventListener('click', async () => {
@@ -780,11 +780,18 @@ export function initQuoter() {
       }
 
       const rollCanvas = document.getElementById('rollCanvas');
-      const calculated = store.state.activeQuote;
+      const calculated = store.state.activeQuote || calculateQuote({
+        widthCm: parseFloat(widthInput.value) || 5,
+        heightCm: parseFloat(heightInput.value) || 5,
+        qty: parseInt(qtyInput.value, 10) || 50,
+        includeCutting: cuttingCheckbox ? cuttingCheckbox.checked : false,
+      });
+
       let canvasSnapshotUrl = null;
+      let snapshotBase64 = null;
       if (rollCanvas && calculated) {
         try {
-          const snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
+          snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
           if (snapshotBase64) {
             canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
               snapshotBase64,
@@ -797,12 +804,59 @@ export function initQuoter() {
         }
       }
 
+      const user = store.state.user || {};
+      const items = [{
+        title: `Stickers ${calculated.widthCm} × ${calculated.heightCm} cm`,
+        widthCm: calculated.widthCm,
+        heightCm: calculated.heightCm,
+        qty: calculated.qty,
+        actualLinearMeters: calculated.actualLinearMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        includeCutting: calculated.includeCutting,
+        cuttingRateUnit: calculated.cuttingRateUnit,
+        fileUrl: fileUrl || null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        canvasSnapshot: snapshotBase64 || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
+        rotationDeg: currentRotation || 0,
+      }];
+
+      const cartTotals = {
+        totalBillableMeters: calculated.billableMeters,
+        tierRate: calculated.tierRate,
+        materialTotalQ: calculated.materialPriceQ,
+        cuttingTotalQ: calculated.cuttingTotalQ,
+        grandTotalQ: calculated.totalPriceQ,
+        hasCutting: calculated.includeCutting,
+        items,
+      };
+
+      const customer = {
+        name: user.name || 'Cliente Web / WhatsApp',
+        company: user.company || '',
+        phone: user.phone || '+502 5555-0000',
+        email: user.email || '',
+        address: user.address || 'Consultar por WhatsApp',
+        notes: 'Pedido generado desde el cotizador web vía WhatsApp',
+      };
+
+      const createdOrder = ordersStore.createOrder({
+        customer,
+        cartTotals,
+        items,
+        workshopNotes: 'Pedido generado desde el cotizador web vía WhatsApp',
+      });
+
       const quoteToSend = {
-        ...store.state.activeQuote,
+        ...calculated,
         fileUrl,
         canvasSnapshotUrl,
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        orderId: createdOrder?.id || null,
       };
+
+      showQuoterToast(`Pedido #${createdOrder?.id || ''} registrado y listo en WhatsApp`);
       sendWhatsAppQuote(quoteToSend);
     });
   }
@@ -1245,9 +1299,11 @@ export function sendWhatsAppQuote(quote) {
 
   const snapUrl = quote.canvasSnapshotUrl || (quote.canvasSnapshot && !quote.canvasSnapshot.startsWith('data:') ? quote.canvasSnapshot : null);
   const snapText = snapUrl ? `• 📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+  const orderFolioText = quote.orderId ? `• *Folio de Pedido:* #${quote.orderId}\n` : '';
 
-  const text = `*KROMA LAB — Cotización UV DTF*\n\n` +
-    `Hola, deseo consultar la siguiente cotización:\n` +
+  const text = `*KROMA LAB — Pedido de Impresión UV DTF*\n\n` +
+    `Hola, deseo confirmar el siguiente pedido registrado en su plataforma:\n` +
+    orderFolioText +
     `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
     `• *Cantidad:* ${quote.qty} stickers\n` +
     `• *Acomodo:* ${quote.stickersPerRow} stickers por fila (28 cm útiles)\n` +

@@ -90,16 +90,16 @@ export const quoterView = {
           <div class="form-group" style="margin-top: 1.5rem;">
             <label class="form-label">
               Diseño de Impresión
-              <span class="tip">PNG, TIFF, PDF a 300 DPI</span>
+              <span class="tip">PNG, JPG, TIFF, PDF a 600 DPI</span>
             </label>
             <div class="upload-dropzone" id="quoterDropzone">
-              <input type="file" id="quoterFileInput" accept=".png,.tif,.tiff,.pdf,.svg,.ai,.psd" style="display: none;">
+              <input type="file" id="quoterFileInput" accept=".png,.jpg,.jpeg,.tif,.tiff,.pdf,.svg,.ai,.psd" style="display: none;">
               <div id="dropzoneEmptyState" class="dropzone-empty">
                 <div class="dropzone-icon">📁</div>
                 <div class="dropzone-text">
                   <strong>Arrastra tu archivo aquí</strong> o <span class="dropzone-link">haz clic para explorar</span>
                 </div>
-                <span class="dropzone-hint">Formatos: PNG transparente, TIFF, PDF, SVG, AI (Máx. 100 MB)</span>
+                <span class="dropzone-hint">Formatos: PNG, JPG, TIFF, PDF, SVG, AI (Máx. 100 MB)</span>
               </div>
 
               <div id="dropzoneFileSelected" class="dropzone-selected" style="display: none; flex-direction: column; align-items: stretch; gap: 0.5rem;">
