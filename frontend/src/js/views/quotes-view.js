@@ -5,6 +5,7 @@
  */
 
 import { quotesStore } from '../modules/quotes-store.js';
+import { clientsStore } from '../modules/clients-store.js';
 import { cartStore } from '../modules/cart-store.js';
 import { openCartDrawer } from '../components/cart-drawer.js';
 import { store } from '../store.js';
@@ -152,6 +153,81 @@ export const quotesView = {
           </div>
         </div>
       </div>
+        <!-- Modal para Asignar Cotización a Cuenta de Cliente -->
+        <div id="assignQuoteModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="assignQuoteModalTitle">
+          <div class="modal-card" style="max-width: 520px; width: 92%; padding: 1.5rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+              <h3 id="assignQuoteModalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                <span>👤 Asignar Cotización a Cuenta</span>
+              </h3>
+              <button type="button" class="btn-close-modal btn-close-assign-modal" aria-label="Cerrar modal" style="min-width: 44px; min-height: 44px; font-size: 1.2rem; background: none; border: none; color: var(--text-muted); cursor: pointer;">✕</button>
+            </div>
+            <div id="assignQuoteInfo" style="margin-bottom: 1rem; font-size: 0.88rem; background: var(--bg-surface-elevated); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);"></div>
+            <form id="formAssignQuote" style="display: flex; flex-direction: column; gap: 0.85rem;">
+              <input type="hidden" id="assignQuoteId" value="">
+              <div>
+                <label for="assignClientSelect" class="form-label" style="font-weight: 700; font-size: 0.85rem;">Vincular con Cartera B2B:</label>
+                <select id="assignClientSelect" class="input-control" style="min-height: 44px;">
+                  <option value="">-- Seleccionar cliente existente o ingresar manualmente --</option>
+                </select>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div>
+                  <label for="assignLeadName" class="form-label" style="font-weight: 600; font-size: 0.82rem;">Nombre del Cliente *</label>
+                  <input type="text" id="assignLeadName" class="input-control" required style="min-height: 44px;" placeholder="Ej. Juan Pérez">
+                </div>
+                <div>
+                  <label for="assignCompanyName" class="form-label" style="font-weight: 600; font-size: 0.82rem;">Empresa / Negocio</label>
+                  <input type="text" id="assignCompanyName" class="input-control" style="min-height: 44px;" placeholder="Ej. Impresiones San José">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div>
+                  <label for="assignLeadPhone" class="form-label" style="font-weight: 600; font-size: 0.82rem;">Teléfono / WhatsApp *</label>
+                  <input type="tel" id="assignLeadPhone" class="input-control" required style="min-height: 44px;" placeholder="+502 5555-1234">
+                </div>
+                <div>
+                  <label for="assignLeadEmail" class="form-label" style="font-weight: 600; font-size: 0.82rem;">Correo Electrónico (Cuenta)</label>
+                  <input type="email" id="assignLeadEmail" class="input-control" style="min-height: 44px;" placeholder="cliente@correo.gt">
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                <input type="checkbox" id="assignSyncClient" checked style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="assignSyncClient" style="font-size: 0.82rem; color: var(--text-secondary); cursor: pointer;">Guardar / actualizar en la Cartera B2B de clientes</label>
+              </div>
+              <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 0.85rem;">
+                <button type="button" class="btn btn-secondary btn-close-assign-modal" style="min-height: 44px; padding: 0.5rem 1rem;">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSubmitAssignQuote" style="min-height: 44px; padding: 0.5rem 1.25rem; font-weight: 700;">Guardar y Asignar Cuenta</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Modal para Conversión de Cotización Sin Cuenta -->
+        <div id="unassignedConvertModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="unassignedConvertTitle">
+          <div class="modal-card" style="max-width: 480px; width: 92%; padding: 1.5rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+              <h3 id="unassignedConvertTitle" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                <span>⚡ Convertir Cotización en Orden</span>
+              </h3>
+              <button type="button" class="btn-close-modal btn-close-unassigned-modal" aria-label="Cerrar modal" style="min-width: 44px; min-height: 44px; font-size: 1.2rem; background: none; border: none; color: var(--text-muted); cursor: pointer;">✕</button>
+            </div>
+            <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">
+              Esta cotización actualmente <strong>no tiene una cuenta de usuario vinculada</strong>. Puedes crear la orden de producción directamente (venta mostrador / cliente rápido) o asignarla a una cuenta de cliente primero.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <button type="button" id="btnConvertDirectUnassigned" class="btn btn-primary" style="min-height: 48px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #059669, #10b981);">
+                <span>⚡ Crear Pedido Sin Cuenta Asignada</span>
+              </button>
+              <button type="button" id="btnAssignFirstThenConvert" class="btn btn-secondary" style="min-height: 48px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <span>👤 Asignar Cuenta de Cliente Primero</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-close-unassigned-modal" style="min-height: 40px; font-size: 0.85rem; color: var(--text-muted);">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
     `;
   },
 
@@ -227,6 +303,11 @@ function renderQuotesCards(quotes) {
                 ${q.code}
               </span>
               ${statusBadge}
+              ${(q.leadEmail && q.leadEmail.trim() !== '') ? `
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.72rem;">✅ Cuenta vinculada</span>
+              ` : `
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; font-size: 0.72rem;">👤 Sin cuenta asignada</span>
+              `}
             </div>
             <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--text-primary);">
               ${q.projectName}
@@ -334,6 +415,11 @@ function renderQuotesCards(quotes) {
 
           <!-- Lado Derecho: Acciones Secundarias (WhatsApp, Cotizador, Eliminar) -->
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            ${(isStaff && !isConverted) ? `
+              <button type="button" class="btn btn-secondary btn-assign-quote" data-quote-id="${q.id}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Asignar cotización a un cliente o cuenta">
+                <span>👤 ${(q.leadEmail && q.leadEmail.trim() !== '') ? 'Reasignar Cuenta' : 'Asignar a Cuenta'}</span>
+              </button>
+            ` : ''}
             <button type="button" class="btn btn-primary btn-add-quote-to-cart" data-quote-id="${q.id}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Agregar esta cotización al carrito">
               <span>🛒 Agregar al Carrito</span>
             </button>
@@ -392,6 +478,14 @@ function attachQuotesViewEvents() {
       }
 
       // 1. Convertir a Orden en 1 Clic
+      // Asignar Cotización a Cuenta de Cliente
+      const btnAssign = e.target.closest('.btn-assign-quote');
+      if (btnAssign) {
+        const quoteId = btnAssign.dataset.quoteId;
+        openAssignQuoteModal(quoteId);
+        return;
+      }
+
       const btnConvert = e.target.closest('.btn-convert-quote');
       if (btnConvert) {
         const quoteId = btnConvert.dataset.quoteId;
@@ -426,6 +520,86 @@ function attachQuotesViewEvents() {
       }
     });
   }
+
+  // Modal Asignar Cotización a Cuenta
+  const formAssign = document.getElementById('formAssignQuote');
+  if (formAssign) {
+    formAssign.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const quoteId = document.getElementById('assignQuoteId')?.value;
+      const leadName = document.getElementById('assignLeadName')?.value.trim();
+      const companyName = document.getElementById('assignCompanyName')?.value.trim();
+      const leadPhone = document.getElementById('assignLeadPhone')?.value.trim();
+      const leadEmail = document.getElementById('assignLeadEmail')?.value.trim();
+      const syncClient = document.getElementById('assignSyncClient')?.checked;
+
+      if (!quoteId || !leadName) return;
+
+      try {
+        quotesStore.updateQuote(quoteId, {
+          leadName,
+          companyName: companyName || null,
+          leadPhone,
+          leadEmail: leadEmail || null,
+        });
+
+        if (syncClient) {
+          const existing = clientsStore.getClients().find(c => (leadEmail && c.email === leadEmail) || (leadPhone && c.phone === leadPhone));
+          if (!existing) {
+            clientsStore.createClient({
+              name: leadName,
+              company: companyName || leadName,
+              phone: leadPhone,
+              email: leadEmail || '',
+              address: 'Ciudad de Guatemala',
+            });
+          }
+        }
+
+        const autoConvert = pendingAssignOptions.autoConvertAfter;
+        closeAssignQuoteModal();
+        showQuotesFeedback(`✅ Cotización actualizada y asignada exitosamente a ${leadName}.`, 'success');
+        refreshQuotesList();
+
+        if (autoConvert) {
+          await executeConvertToOrder(quoteId);
+        }
+      } catch (err) {
+        showQuotesFeedback(err?.message || 'Error al asignar cotización.', 'error');
+      }
+    });
+  }
+
+  document.querySelectorAll('.btn-close-assign-modal').forEach(btn => {
+    btn.addEventListener('click', closeAssignQuoteModal);
+  });
+
+  // Modal Conversión Sin Cuenta
+  const btnDirectUnassigned = document.getElementById('btnConvertDirectUnassigned');
+  if (btnDirectUnassigned) {
+    btnDirectUnassigned.addEventListener('click', async () => {
+      const qId = pendingConvertQuoteId;
+      closeUnassignedConvertModal();
+      if (qId) {
+        await executeConvertToOrder(qId);
+      }
+    });
+  }
+
+  const btnAssignThenConvert = document.getElementById('btnAssignFirstThenConvert');
+  if (btnAssignThenConvert) {
+    btnAssignThenConvert.addEventListener('click', () => {
+      const qId = pendingConvertQuoteId;
+      closeUnassignedConvertModal();
+      if (qId) {
+        openAssignQuoteModal(qId, { autoConvertAfter: true });
+      }
+    });
+  }
+
+  document.querySelectorAll('.btn-close-unassigned-modal').forEach(btn => {
+    btn.addEventListener('click', closeUnassignedConvertModal);
+  });
 
   // Escuchas para cerrar el Lightbox del Snapshot
   const modalLightbox = document.getElementById('snapshotLightboxModal');
@@ -463,7 +637,10 @@ export function closeSnapshotLightbox() {
   }
 }
 
-async function handleConvertQuote(quoteId) {
+let pendingConvertQuoteId = null;
+let pendingAssignOptions = {};
+
+async function executeConvertToOrder(quoteId) {
   try {
     showQuotesFeedback('Procesando conversión a orden de producción en taller...', 'info');
     const result = await quotesStore.convertToOrder(quoteId);
@@ -478,6 +655,90 @@ async function handleConvertQuote(quoteId) {
   } catch (err) {
     showQuotesFeedback(err?.message || 'Error al convertir cotización.', 'error');
   }
+}
+
+async function handleConvertQuote(quoteId) {
+  const quote = quotesStore.getQuoteById(quoteId);
+  if (!quote) return;
+
+  const hasAccount = !!(quote.leadEmail && quote.leadEmail.trim() !== '');
+  if (!hasAccount) {
+    pendingConvertQuoteId = quoteId;
+    const modal = document.getElementById('unassignedConvertModal');
+    if (modal) {
+      modal.style.display = 'block';
+      return;
+    }
+  }
+
+  await executeConvertToOrder(quoteId);
+}
+
+export function openAssignQuoteModal(quoteId, options = {}) {
+  const quote = quotesStore.getQuoteById(quoteId);
+  if (!quote) return;
+
+  pendingAssignOptions = options;
+  const modal = document.getElementById('assignQuoteModal');
+  const infoEl = document.getElementById('assignQuoteInfo');
+  const quoteIdInput = document.getElementById('assignQuoteId');
+  const clientSelect = document.getElementById('assignClientSelect');
+  const nameInput = document.getElementById('assignLeadName');
+  const companyInput = document.getElementById('assignCompanyName');
+  const phoneInput = document.getElementById('assignLeadPhone');
+  const emailInput = document.getElementById('assignLeadEmail');
+
+  if (quoteIdInput) quoteIdInput.value = quoteId;
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <strong>Cotización:</strong> ${quote.code} • <strong>Total:</strong> Q${Number(quote.totalPriceQ).toFixed(2)}<br>
+      <span style="color: var(--text-muted); font-size: 0.8rem;">Proyecto: ${quote.projectName || 'Sin título'}</span>
+    `;
+  }
+
+  if (nameInput) nameInput.value = (quote.leadName && quote.leadName !== 'Cliente WhatsApp') ? quote.leadName : '';
+  if (companyInput) companyInput.value = quote.companyName || "";
+  if (phoneInput) phoneInput.value = (quote.leadPhone && quote.leadPhone !== '+502 0000-0000') ? quote.leadPhone : '';
+  if (emailInput) emailInput.value = quote.leadEmail || "";
+
+  if (clientSelect) {
+    clientSelect.innerHTML = '<option value="">-- Seleccionar cliente existente de Cartera B2B --</option>';
+    const clients = clientsStore.getClients();
+    clients.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.company ? `${c.company} (${c.name})` : c.name} - ${c.phone || ''}`;
+      opt.dataset.name = c.name || "";
+      opt.dataset.company = c.company || "";
+      opt.dataset.phone = c.phone || "";
+      opt.dataset.email = c.email || "";
+      clientSelect.appendChild(opt);
+    });
+
+    clientSelect.onchange = () => {
+      const selected = clientSelect.selectedOptions[0];
+      if (selected && selected.value) {
+        if (nameInput) nameInput.value = selected.dataset.name || "";
+        if (companyInput) companyInput.value = selected.dataset.company || "";
+        if (phoneInput) phoneInput.value = selected.dataset.phone || "";
+        if (emailInput) emailInput.value = selected.dataset.email || "";
+      }
+    };
+  }
+
+  if (modal) modal.style.display = 'block';
+}
+
+export function closeAssignQuoteModal() {
+  const modal = document.getElementById('assignQuoteModal');
+  if (modal) modal.style.display = 'none';
+  pendingAssignOptions = {};
+}
+
+export function closeUnassignedConvertModal() {
+  const modal = document.getElementById('unassignedConvertModal');
+  if (modal) modal.style.display = 'none';
+  pendingConvertQuoteId = null;
 }
 
 function handleAddQuoteToCart(quoteId) {

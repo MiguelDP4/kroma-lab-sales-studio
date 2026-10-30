@@ -74,7 +74,7 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       expect(getSuggestedPricePerMeter(0.5)).toBe(140.0);
       expect(getSuggestedPricePerMeter(1.0)).toBe(140.0);
       expect(getSuggestedPricePerMeter(2.5)).toBe(115.0);
-      expect(getSuggestedPricePerMeter(5.0)).toBe(115.0);
+      expect(getSuggestedPricePerMeter(5.0)).toBe(105.0);
       expect(getSuggestedPricePerMeter(7.0)).toBe(105.0);
       expect(getSuggestedPricePerMeter(12.0)).toBe(95.0);
       expect(getSuggestedPricePerMeter(25.0)).toBe(85.0);
@@ -293,7 +293,7 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       expect(res.quote.actualLinearMeters).toBeCloseTo(1.06, 2);
       expect(res.quote.stickersPerRow).toBe(5);
       expect(res.quote.rows).toBe(20);
-      expect(res.pricingComparison.listPriceTotalQ).toBe(140.0);
+      expect(res.pricingComparison.listPriceTotalQ).toBe(147.98);
       expect(res.pricingComparison.isDiscountApplied).toBe(false);
       expect(res.pricingComparison.discountAmountQ).toBe(0);
       expect(res.pricingComparison.discountAdvice).toContain('Precio de lista oficial');
@@ -307,12 +307,12 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
         heightCm: 5.0,
         qty: 100,
         includeCutting: true,
-        customSellingPriceQ: 140.0, // Lista: 140 + 30 = 170. Descuento: Q30 (-17.6%)
+        customSellingPriceQ: 140.0,
       });
 
       expect(res.pricingComparison.isDiscountApplied).toBe(true);
-      expect(res.pricingComparison.discountAmountQ).toBe(30.0);
-      expect(res.pricingComparison.discountPercent).toBeCloseTo(17.6, 1);
+      expect(res.pricingComparison.discountAmountQ).toBeCloseTo(37.98, 1);
+      expect(res.pricingComparison.discountPercent).toBeCloseTo(21.3, 1);
       expect(res.profitMarginPercent).toBeGreaterThanOrEqual(70.0);
       expect(res.pricingComparison.discountAdvice).toContain('Descuento seguro');
     });

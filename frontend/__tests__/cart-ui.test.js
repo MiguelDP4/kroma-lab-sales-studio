@@ -708,7 +708,7 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('api.whatsapp.com'), '_blank');
-      expect(ordersStore.getOrders().length).toBe(initialOrdersCount);
+      expect(ordersStore.getOrders().length).toBe(initialOrdersCount + 1);
     });
 
     it('guarda todos los ítems del carrito en la cotización como modelo unificado (Task 18)', () => {
@@ -787,6 +787,49 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(latestOrder.items.length).toBe(2);
       expect(latestOrder.items[0].title).toBe('Logo 1');
       expect(latestOrder.items[1].title).toBe('Logo 2');
+    });
+    it('crea orden en el sistema y abre WhatsApp con folio al pulsar btnCartWhatsApp en cart drawer', async () => {
+      cartStore.clearCart();
+      cartStore.addItem({
+        title: 'Diseño para WhatsApp',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 50,
+      });
+
+      renderCartDrawer(cartStore.getItems(), cartStore.getTotals());
+      const btnWa = document.getElementById('btnCartWhatsApp');
+      expect(btnWa).not.toBeNull();
+
+      window.open = vi.fn();
+      const initialOrders = ordersStore.getOrders().length;
+      btnWa.click();
+
+      expect(ordersStore.getOrders().length).toBe(initialOrders + 1);
+      const newOrder = ordersStore.getOrders()[0];
+      expect(newOrder.productionStatus).toBe('PENDING_REVIEW');
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining(newOrder.id), '_blank');
+      expect(cartStore.getItems().length).toBe(0);
+    });
+
+    it('ejecuta validación y submit del formulario al pulsar btnVisitorWhatsApp directamente', () => {
+      store.clearUser();
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      document.getElementById('custName').value = 'Visitante Juan';
+      document.getElementById('custPhone').value = '5555-1234';
+      document.getElementById('custAddress').value = 'San José el Placer';
+
+      const btnWa = document.getElementById('btnVisitorWhatsApp');
+      expect(btnWa).not.toBeNull();
+
+      window.open = vi.fn();
+      const initialOrders = ordersStore.getOrders().length;
+      btnWa.click();
+
+      expect(ordersStore.getOrders().length).toBe(initialOrders + 1);
+      expect(window.open).toHaveBeenCalledWith(expect.stringContaining('api.whatsapp.com'), '_blank');
     });
   });
 });

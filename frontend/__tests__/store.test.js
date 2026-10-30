@@ -122,4 +122,25 @@ describe('Store — Manejo Reactivo de Estado Global', () => {
     store.setActiveQuote({ totalPriceQ: 280.0 });
     expect(listener).toHaveBeenCalledTimes(1); // No vuelve a llamarse tras desuscribir
   });
+  it('cubre toggleTheme desde light hacia dark y manejo seguro de excepciones en storage', () => {
+    store.setTheme('light');
+    store.toggleTheme();
+    expect(store.state.theme).toBe('dark');
+
+    // Excepciones en Storage
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Storage full');
+    });
+
+    store.setTheme('light');
+    store.setUser({ id: '1' }, 'tok', [], true);
+    store.setUser({ id: '2' }, 'tok', [], false);
+    spy.mockRestore();
+
+    const spyRemove = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('Storage error');
+    });
+    store.clearUser();
+    spyRemove.mockRestore();
+  });
 });

@@ -31,7 +31,7 @@ La arquitectura está diseñada para mantener los costos fijos en **$0.00 / Q0.0
 | **Frontend Web** | Vanilla HTML5, CSS3 moderno (Custom Properties, Nesting, Grid/Flexbox), JavaScript nativo (ES Modules, SPA Router, Reactive Store) | **Cloudflare Pages** | **Free Tier ($0)** (Ancho de banda ilimitado, SSL automático, routing SPA nativo vía `_redirects`) |
 | **Backend API** | Node.js + Express + TypeScript + Prisma ORM + Zod | **Render** | **Free Tier ($0)** (Web Service) |
 | **Base de Datos** | PostgreSQL relacional | **Neon Serverless PostgreSQL** | **Free Tier ($0)** (0.5 GB almacenamiento, escalado automático) |
-| **Almacenamiento de Archivos** | Archivos de impresión de alta resolución (TIFF, PNG 300 DPI, PDF) y vistas previas | **Cloudflare R2** | **Free Tier ($0)** (10 GB/mes gratis, **cero costo por ancho de banda / egress fees**) |
+| **Almacenamiento de Archivos** | Archivos de impresión de alta resolución (TIFF, PNG 600 DPI, PDF) y vistas previas | **Cloudflare R2** | **Free Tier ($0)** (10 GB/mes gratis, **cero costo por ancho de banda / egress fees**) |
 
 ---
 

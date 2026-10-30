@@ -6,8 +6,8 @@
 import { BUSINESS_CONFIG, PRICING_TIERS, CUTTING_TIERS } from '../../shared/business-config.js';
 
 export function getTierForMeters(meters) {
-  if (meters <= 1.0) return PRICING_TIERS[0];
-  const tier = PRICING_TIERS.find(t => meters > t.minMeters && meters <= t.maxMeters);
+  if (meters < 2.0) return PRICING_TIERS[0];
+  const tier = PRICING_TIERS.find(t => meters >= t.minMeters && meters < t.maxMeters);
   return tier || PRICING_TIERS[PRICING_TIERS.length - 1];
 }
 
@@ -123,8 +123,13 @@ export function calculateCartTotals(items = []) {
 export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
   const { items, totalBillableMeters, tierRate, grandTotalQ, hasCutting, cuttingTotalQ, isUnderMin } = cartTotals;
 
-  let msg = `*KROMA LAB — Pedido de Impresión UV DTF*\n\n`;
+  const orderFolioHeader = customer.orderId ? ` (#${customer.orderId})` : '';
+  let msg = `*KROMA LAB — Pedido de Impresión UV DTF${orderFolioHeader}*\n\n`;
   msg += `Deseo confirmar el siguiente pedido:\n\n`;
+
+  if (customer.orderId) {
+    msg += `• *Folio de Pedido:* #${customer.orderId}\n`;
+  }
 
   if (customer.name || customer.company) {
     msg += `• *Cliente:* ${customer.name || customer.company}\n`;

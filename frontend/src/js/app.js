@@ -762,7 +762,7 @@ export function initQuoter() {
   let currentRawFile = null;
   let currentPreviewUrl = null;
 
-  // Botón de WhatsApp
+  // Botón de WhatsApp — Registra el pedido en el sistema antes de abrir WhatsApp para que nunca quede perdido
   const btnWhatsApp = document.getElementById('btnQuoteWhatsApp');
   if (btnWhatsApp) {
     btnWhatsApp.addEventListener('click', async () => {
@@ -780,11 +780,18 @@ export function initQuoter() {
       }
 
       const rollCanvas = document.getElementById('rollCanvas');
-      const calculated = store.state.activeQuote;
+      const calculated = store.state.activeQuote || calculateQuote({
+        widthCm: parseFloat(widthInput.value) || 5,
+        heightCm: parseFloat(heightInput.value) || 5,
+        qty: parseInt(qtyInput.value, 10) || 50,
+        includeCutting: cuttingCheckbox ? cuttingCheckbox.checked : false,
+      });
+
       let canvasSnapshotUrl = null;
+      let snapshotBase64 = null;
       if (rollCanvas && calculated) {
         try {
-          const snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
+          snapshotBase64 = generateCanvasSnapshot(rollCanvas, calculated);
           if (snapshotBase64) {
             canvasSnapshotUrl = await uploadCanvasSnapshotToStorage(
               snapshotBase64,
@@ -797,12 +804,75 @@ export function initQuoter() {
         }
       }
 
+      const user = store.state.user || {};
+      const items = [{
+        title: `Stickers ${calculated.widthCm} × ${calculated.heightCm} cm`,
+        widthCm: calculated.widthCm,
+        heightCm: calculated.heightCm,
+        qty: calculated.qty,
+        actualLinearMeters: calculated.actualLinearMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        includeCutting: calculated.includeCutting,
+        cuttingRateUnit: calculated.cuttingRateUnit,
+        fileUrl: fileUrl || null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        canvasSnapshot: snapshotBase64 || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
+        rotationDeg: currentRotation || 0,
+      }];
+
+      const cartTotals = {
+        totalBillableMeters: calculated.billableMeters,
+        tierRate: calculated.tierRate,
+        materialTotalQ: calculated.materialPriceQ,
+        cuttingTotalQ: calculated.cuttingTotalQ,
+        grandTotalQ: calculated.totalPriceQ,
+        hasCutting: calculated.includeCutting,
+        items,
+      };
+
+      const isRegistered = !!user.email;
+
+      const savedQuote = quotesStore.createQuote({
+        projectName: `Stickers ${calculated.widthCm} × ${calculated.heightCm} cm (${calculated.qty} pcs)`,
+        leadName: isRegistered ? (user.name || 'Cliente Registrado') : 'Cliente WhatsApp',
+        leadPhone: isRegistered ? (user.phone || '+502 0000-0000') : '+502 0000-0000',
+        leadEmail: isRegistered ? user.email : null,
+        companyName: isRegistered ? (user.company || null) : null,
+        widthCm: calculated.widthCm,
+        heightCm: calculated.heightCm,
+        qty: calculated.qty,
+        linearMeters: calculated.billableMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        unitRateQ: calculated.tierRate,
+        materialPriceQ: calculated.materialPriceQ,
+        cuttingPriceQ: calculated.cuttingTotalQ,
+        totalPriceQ: calculated.totalPriceQ,
+        withCutting: calculated.includeCutting,
+        finishType: 'GLOSSY_VARNISH',
+        source: 'whatsapp',
+        notes: isRegistered 
+          ? `Cotización consultada vía WhatsApp por ${user.name || user.email}` 
+          : 'Cotización consultada vía WhatsApp (Cliente sin cuenta)',
+        fileUrl: fileUrl || null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        canvasSnapshot: snapshotBase64 || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
+        rotationDeg: currentRotation || 0,
+      });
+
       const quoteToSend = {
-        ...store.state.activeQuote,
+        ...calculated,
         fileUrl,
         canvasSnapshotUrl,
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        quoteCode: savedQuote?.code || null,
+        quoteId: savedQuote?.id || null,
       };
+
+      showQuoterToast(`Cotización ${savedQuote?.code || ''} guardada y lista en WhatsApp`);
       sendWhatsAppQuote(quoteToSend);
     });
   }
@@ -1245,9 +1315,11 @@ export function sendWhatsAppQuote(quote) {
 
   const snapUrl = quote.canvasSnapshotUrl || (quote.canvasSnapshot && !quote.canvasSnapshot.startsWith('data:') ? quote.canvasSnapshot : null);
   const snapText = snapUrl ? `• 📐 *Montaje en bobina:* ${snapUrl}\n` : '';
+  const quoteFolioText = quote.quoteCode ? `• *Folio de Cotización:* ${quote.quoteCode}\n` : (quote.orderId ? `• *Folio de Pedido:* #${quote.orderId}\n` : '');
 
-  const text = `*KROMA LAB — Cotización UV DTF*\n\n` +
-    `Hola, deseo consultar la siguiente cotización:\n` +
+  const text = `*KROMA LAB — Cotización de Impresión UV DTF*\n\n` +
+    `Hola, deseo consultar la siguiente cotización realizada en su plataforma:\n` +
+    quoteFolioText +
     `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
     `• *Cantidad:* ${quote.qty} stickers\n` +
     `• *Acomodo:* ${quote.stickersPerRow} stickers por fila (28 cm útiles)\n` +
