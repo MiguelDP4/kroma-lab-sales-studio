@@ -24,6 +24,12 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   const urlPath = req.url.split('?')[0];
+  if (urlPath.endsWith('favicon.ico') || urlPath.endsWith('favicon.svg')) {
+    const iconPath = path.join(FRONTEND_DIR, 'favicon.svg');
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Access-Control-Allow-Origin': '*' });
+    fs.createReadStream(iconPath).pipe(res);
+    return;
+  }
   let filePath = path.join(FRONTEND_DIR, urlPath === '/' ? 'index.html' : urlPath);
 
   fs.stat(filePath, (err, stats) => {
