@@ -320,4 +320,118 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     // 5. La cotización NO se eliminó de quotesStore
     expect(quotesStore.getQuoteById('q-cart-test')).not.toBeNull();
   });
+  it('muestra badge "Sin cuenta asignada" para cotizaciones anónimas y permite a Admin asignarla a una cuenta', () => {
+    quotesStore.quotes = [{
+      id: 'qt_unassigned_01',
+      code: 'COT-2026-901',
+      projectName: 'Proyecto Sin Cuenta',
+      leadName: 'Cliente WhatsApp',
+      leadPhone: '+502 5555-0000',
+      leadEmail: null,
+      companyName: null,
+      widthCm: 10,
+      heightCm: 10,
+      qty: 50,
+      linearMeters: 1.5,
+      stickersPerRow: 2,
+      rows: 25,
+      unitRateQ: 140,
+      materialPriceQ: 210,
+      cuttingPriceQ: 0,
+      totalPriceQ: 210,
+      withCutting: false,
+      status: 'SAVED',
+      createdAt: new Date().toISOString(),
+    }];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    // 1. Verificar badge de sin cuenta
+    expect(document.body.innerHTML).toContain('Sin cuenta asignada');
+
+    // 2. Abrir modal de asignación
+    const btnAssign = document.querySelector('.btn-assign-quote[data-quote-id="qt_unassigned_01"]');
+    expect(btnAssign).not.toBeNull();
+    btnAssign.click();
+
+    const assignModal = document.getElementById('assignQuoteModal');
+    expect(assignModal.style.display).toBe('block');
+
+    // 3. Completar formulario de asignación
+    const nameInput = document.getElementById('assignLeadName');
+    const compInput = document.getElementById('assignCompanyName');
+    const emailInput = document.getElementById('assignLeadEmail');
+    const phoneInput = document.getElementById('assignLeadPhone');
+
+    nameInput.value = 'Carlos Gómez';
+    compInput.value = 'Publicidad Express';
+    emailInput.value = 'carlos@express.gt';
+    phoneInput.value = '+502 5555-9876';
+
+    const formAssign = document.getElementById('formAssignQuote');
+    formAssign.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    // 4. Verificar que se actualizó en quotesStore
+    const updated = quotesStore.getQuoteById('qt_unassigned_01');
+    expect(updated.leadName).toBe('Carlos Gómez');
+    expect(updated.companyName).toBe('Publicidad Express');
+    expect(updated.leadEmail).toBe('carlos@express.gt');
+    expect(updated.leadPhone).toBe('+502 5555-9876');
+
+    // 5. Verificar feedback de éxito
+    const feedback = document.getElementById('quotesViewFeedback');
+    expect(feedback.textContent).toContain('asignada exitosamente a Carlos Gómez');
+  });
+
+  it('muestra modal de conversión para cotizaciones sin cuenta y permite crear pedido sin cuenta asignada en 1 clic', async () => {
+    vi.spyOn(quotesStore, 'convertToOrder').mockResolvedValue({
+      success: true,
+      order: { id: 'ord_unassigned_001', code: 'KL-2026-888' },
+    });
+
+    quotesStore.quotes = [{
+      id: 'qt_unassigned_02',
+      code: 'COT-2026-902',
+      projectName: 'Proyecto Mostrador Directo',
+      leadName: 'Cliente Mostrador',
+      leadPhone: '+502 5555-1111',
+      leadEmail: null,
+      companyName: null,
+      widthCm: 5,
+      heightCm: 5,
+      qty: 100,
+      linearMeters: 1.0,
+      stickersPerRow: 5,
+      rows: 20,
+      unitRateQ: 140,
+      materialPriceQ: 140,
+      cuttingPriceQ: 0,
+      totalPriceQ: 140,
+      withCutting: false,
+      status: 'SAVED',
+      createdAt: new Date().toISOString(),
+    }];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    // 1. Clic en botón convertir
+    const btnConvert = document.querySelector('.btn-convert-quote[data-quote-id="qt_unassigned_02"]');
+    expect(btnConvert).not.toBeNull();
+    btnConvert.click();
+
+    // 2. Verificar que se abrió el modal de advertencia de sin cuenta
+    const modal = document.getElementById('unassignedConvertModal');
+    expect(modal.style.display).toBe('block');
+
+    // 3. Clic en crear pedido sin cuenta asignada
+    const btnDirect = document.getElementById('btnConvertDirectUnassigned');
+    expect(btnDirect).not.toBeNull();
+    btnDirect.click();
+
+    await vi.waitFor(() => {
+      expect(quotesStore.convertToOrder).toHaveBeenCalledWith('qt_unassigned_02');
+    });
+  });
 });

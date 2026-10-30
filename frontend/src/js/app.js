@@ -832,20 +832,35 @@ export function initQuoter() {
         items,
       };
 
-      const customer = {
-        name: user.name || 'Cliente Web / WhatsApp',
-        company: user.company || '',
-        phone: user.phone || '+502 5555-0000',
-        email: user.email || '',
-        address: user.address || 'Consultar por WhatsApp',
-        notes: 'Pedido generado desde el cotizador web vía WhatsApp',
-      };
+      const isRegistered = !!user.email;
 
-      const createdOrder = ordersStore.createOrder({
-        customer,
-        cartTotals,
-        items,
-        workshopNotes: 'Pedido generado desde el cotizador web vía WhatsApp',
+      const savedQuote = quotesStore.createQuote({
+        projectName: `Stickers ${calculated.widthCm} × ${calculated.heightCm} cm (${calculated.qty} pcs)`,
+        leadName: isRegistered ? (user.name || 'Cliente Registrado') : 'Cliente WhatsApp',
+        leadPhone: isRegistered ? (user.phone || '+502 0000-0000') : '+502 0000-0000',
+        leadEmail: isRegistered ? user.email : null,
+        companyName: isRegistered ? (user.company || null) : null,
+        widthCm: calculated.widthCm,
+        heightCm: calculated.heightCm,
+        qty: calculated.qty,
+        linearMeters: calculated.billableMeters,
+        stickersPerRow: calculated.stickersPerRow,
+        rows: calculated.rows,
+        unitRateQ: calculated.tierRate,
+        materialPriceQ: calculated.materialPriceQ,
+        cuttingPriceQ: calculated.cuttingTotalQ,
+        totalPriceQ: calculated.totalPriceQ,
+        withCutting: calculated.includeCutting,
+        finishType: 'GLOSSY_VARNISH',
+        source: 'whatsapp',
+        notes: isRegistered 
+          ? `Cotización consultada vía WhatsApp por ${user.name || user.email}` 
+          : 'Cotización consultada vía WhatsApp (Cliente sin cuenta)',
+        fileUrl: fileUrl || null,
+        fileName: currentAttachedFile ? currentAttachedFile.name : null,
+        canvasSnapshot: snapshotBase64 || null,
+        canvasSnapshotUrl: canvasSnapshotUrl || null,
+        rotationDeg: currentRotation || 0,
       });
 
       const quoteToSend = {
@@ -853,10 +868,11 @@ export function initQuoter() {
         fileUrl,
         canvasSnapshotUrl,
         fileName: currentAttachedFile ? currentAttachedFile.name : null,
-        orderId: createdOrder?.id || null,
+        quoteCode: savedQuote?.code || null,
+        quoteId: savedQuote?.id || null,
       };
 
-      showQuoterToast(`Pedido #${createdOrder?.id || ''} registrado y listo en WhatsApp`);
+      showQuoterToast(`Cotización ${savedQuote?.code || ''} guardada y lista en WhatsApp`);
       sendWhatsAppQuote(quoteToSend);
     });
   }
@@ -1299,11 +1315,11 @@ export function sendWhatsAppQuote(quote) {
 
   const snapUrl = quote.canvasSnapshotUrl || (quote.canvasSnapshot && !quote.canvasSnapshot.startsWith('data:') ? quote.canvasSnapshot : null);
   const snapText = snapUrl ? `• 📐 *Montaje en bobina:* ${snapUrl}\n` : '';
-  const orderFolioText = quote.orderId ? `• *Folio de Pedido:* #${quote.orderId}\n` : '';
+  const quoteFolioText = quote.quoteCode ? `• *Folio de Cotización:* ${quote.quoteCode}\n` : (quote.orderId ? `• *Folio de Pedido:* #${quote.orderId}\n` : '');
 
-  const text = `*KROMA LAB — Pedido de Impresión UV DTF*\n\n` +
-    `Hola, deseo confirmar el siguiente pedido registrado en su plataforma:\n` +
-    orderFolioText +
+  const text = `*KROMA LAB — Cotización de Impresión UV DTF*\n\n` +
+    `Hola, deseo consultar la siguiente cotización realizada en su plataforma:\n` +
+    quoteFolioText +
     `• *Medida de sticker:* ${quote.widthCm} × ${quote.heightCm} cm\n` +
     `• *Cantidad:* ${quote.qty} stickers\n` +
     `• *Acomodo:* ${quote.stickersPerRow} stickers por fila (28 cm útiles)\n` +

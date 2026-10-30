@@ -93,7 +93,7 @@ export const quoterView = {
               <span class="tip">PNG, JPG, TIFF, PDF a 600 DPI</span>
             </label>
             <div class="upload-dropzone" id="quoterDropzone">
-              <input type="file" id="quoterFileInput" accept=".png,.jpg,.jpeg,.tif,.tiff,.pdf,.svg,.ai,.psd" style="display: none;">
+              <input type="file" id="quoterFileInput" accept="image/*,.png,.jpg,.jpeg,.tif,.tiff,.pdf,.svg,.ai,.psd" style="display: none;">
               <div id="dropzoneEmptyState" class="dropzone-empty">
                 <div class="dropzone-icon">📁</div>
                 <div class="dropzone-text">

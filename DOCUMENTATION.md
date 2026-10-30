@@ -32,6 +32,10 @@
    * Ventas de mostrador: registro manual de pedidos y altas rápidas de clientes no registrados para compras asistidas.
    * Escalabilidad a catálogo e-commerce para personalización de artículos promocionales terminados (termos, tazas, pachones).
 
+### Detección Dinámica de Backend en Red Local y Cero IPs en Repo
+* **Arquitectura de Conexión Local sin Exposición de IPs:** El frontend detecta automáticamente las solicitudes servidas en el puerto de desarrollo local (`:3000`) y enruta las llamadas API al backend local en el puerto `:4000` de la misma máquina (`http://${hostname}:4000/api`), sin necesidad de quemar direcciones IP privadas en el repositorio.
+* **Soporte para `.env.local` / `.env`:** Cualquier sobreescritura personalizada de variables (`API_URL`, `window.__KROMA_API_URL__`) se gestiona a través de archivos ignorados por Git (`.gitignore`).
+
 ### Topología de Infraestructura (Costo $0 / Q0)
 ```mermaid
 flowchart LR
@@ -280,7 +284,13 @@ kroma-lab-sales-studio/
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
   * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
   * **Drawer Lateral Interactivo:** Permite modificar cantidades en tiempo real (+ / -), eliminar ítems, ver el desglose financiero consolidado y despachar el pedido completo estructurado directamente hacia WhatsApp o hacia el modal de checkout.
-  * **Creación Automática de Pedido al Enviar por WhatsApp:** Al enviar una cotización o carrito por WhatsApp (desde el cotizador, el drawer o checkout para visitantes), el sistema crea automáticamente el pedido formal en `ordersStore` / base de datos con estado `PENDING_REVIEW` y folio correlativo oficial (ej. `#0000000043` o `KL-XXXXX`). El mensaje de WhatsApp incluye dicho folio para confirmación y seguimiento inmediato en `/pedidos` y en el tablero de taller.
+  * **Flujo Híbrido de Cotizaciones y Pedidos por WhatsApp:**
+    * **Cotizador Rápido ("Consultar por WhatsApp"):** Al presionar el botón de WhatsApp desde el cotizador interactivo, el sistema guarda de inmediato la cotización en `quotesStore` y en el backend (`/api/quotes`) con estado `SAVED` y folio correlativo oficial (ej. `COT-2026-001`). Si el visitante no ha iniciado sesión, se conserva de forma segura como *Cotización sin cuenta asignada* (`leadEmail: null`). El mensaje preformateado de WhatsApp incluye el folio oficial (`• *Folio de Cotización:* COT-2026-XXX`) para referencia unificada del cliente y del taller.
+    * **Asignación Posterior a Cuentas o Venta Sin Cuenta en 1 Clic:** Desde el panel de Cotizaciones (`/cotizaciones`), el Administrador y empleados (Staff) disponen de:
+      * **Distintivo Visual:** Badges claros entre `✅ Cuenta vinculada` y `👤 Sin cuenta asignada`.
+      * **Asignación Granular a Cuentas (`btn-assign-quote`):** Modal interactivo para vincular la cotización con cualquier cliente de la Cartera B2B existente o registrar un nuevo prospecto.
+      * **Conversión Flexible a Producción:** Permite convertir cotizaciones directamente en Órdenes de Producción sin necesidad de forzar la creación de una cuenta de usuario, facilitando ventas ágiles a clientes de mostrador y mensajes directos de WhatsApp.
+    * **Carrito y Checkout:** Al enviar un pedido desde el drawer del carrito o el modal de checkout para visitantes, se crea el pedido formal con folio numérico de orden (`#0000000043`).
   * **Persistencia:** Almacenado en `localStorage['kromalab_cart']` para no perder los ítems al recargar o navegar entre vistas.
 * **Autocompletado Inteligente en Checkout y Pedidos con Cartera B2B (`checkout-modal.js` + `clients-store.js` + `orders-view.js`):**
   * **Conexión Directa Cartera ↔ Pedidos:** Resuelve la fricción en ventas de mostrador y compras recurrentes en línea permitiendo seleccionar clientes registrados directamente desde la Cartera B2B (`clientsStore.getClients()`).
@@ -489,6 +499,7 @@ kroma-lab-sales-studio/
 * **Carga y Validación de Archivos Gráficos (`file-uploader.js`):**
   * Valida archivos en el navegador antes de procesarlos.
   * Formatos permitidos: `.png` (fondo transparente), `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.pdf`, `.svg`, `.ai`, `.psd`.
+  * **Soporte Nativo de Galería en Móviles:** Atributo `accept="image/*,..."` para activar el selector nativo de Galería / Fotos / Multimedia en smartphones Android y iOS Safari (además de la cámara y explorador de archivos). Inferencia automática de extensión a partir del MIME type en capturas móviles.
   * Resolución de impresión: **600 DPI** para máxima nitidez en impresora UV DTF Audley.
   * Límite de tamaño: 50 MB por archivo.
   * Genera vista previa visual inmediata (thumbnail) para archivos PNG/JPG/JPEG/SVG/WebP.

@@ -34,7 +34,13 @@ export function validatePrintFile(file) {
 
   const name = file.name || 'archivo_desconocido';
   const size = file.size || 0;
-  const ext = getFileExtension(name);
+  let ext = getFileExtension(name);
+  if (!ext && file.type) {
+    if (file.type === 'image/jpeg' || file.type === 'image/jpg') ext = '.jpg';
+    else if (file.type === 'image/png') ext = '.png';
+    else if (file.type === 'image/tiff') ext = '.tif';
+    else if (file.type === 'application/pdf') ext = '.pdf';
+  }
 
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return {

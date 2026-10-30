@@ -138,7 +138,7 @@ export function openCheckoutModal(cartTotals) {
             Adjuntar Boleta o Comprobante de Pago (Opcional):
           </label>
           <div class="checkout-receipt-dropzone" id="checkoutReceiptDropzone" style="border: 1px dashed var(--border-color); border-radius: 4px; padding: 0.65rem; text-align: center; cursor: pointer; background: rgba(28, 114, 147, 0.04); min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: border-color 0.2s;">
-            <input type="file" id="checkoutReceiptInput" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+            <input type="file" id="checkoutReceiptInput" accept="image/*,.jpg,.jpeg,.png,.pdf" style="display: none;">
             <div id="checkoutReceiptPrompt" style="font-size: 0.82rem; color: var(--text-secondary);">
               <span>📎 Clic para seleccionar comprobante (JPG, PNG o PDF)</span>
             </div>

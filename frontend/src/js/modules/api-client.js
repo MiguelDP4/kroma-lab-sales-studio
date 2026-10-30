@@ -20,18 +20,20 @@ export function getApiBaseUrl() {
       // Ignorar quota o storage error
     }
   }
+  if (typeof window !== 'undefined' && window.__KROMA_API_URL__) {
+    return window.__KROMA_API_URL__;
+  }
   if (typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
+    if (window.location.port === '3000') {
+      const targetHost = (hostname && hostname !== '') ? hostname : 'localhost';
+      return `${window.location.protocol}//${targetHost}:4000/api`;
+    }
     const isLocal = hostname === 'localhost' || 
                     hostname === '127.0.0.1' || 
-                    hostname === '' ||
-                    hostname.startsWith('192.168.') ||
-                    hostname.startsWith('10.') ||
-                    hostname.startsWith('172.') ||
-                    hostname.endsWith('.local');
+                    hostname === '';
     if (isLocal) {
-      const targetHost = (hostname && hostname !== '') ? hostname : 'localhost';
-      return `http://${targetHost}:4000/api`;
+      return 'http://localhost:4000/api';
     }
     return 'https://kroma-lab-backend-216908488828.us-central1.run.app/api';
   }
