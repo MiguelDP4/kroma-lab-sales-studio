@@ -71,20 +71,20 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
 
   describe('Tarifas de Referencia Comercial', () => {
     it('determina correctamente el precio de venta sugerido por metro según escala', () => {
-      expect(getSuggestedPricePerMeter(0.5)).toBe(140.0);
-      expect(getSuggestedPricePerMeter(1.0)).toBe(140.0);
-      expect(getSuggestedPricePerMeter(2.5)).toBe(115.0);
-      expect(getSuggestedPricePerMeter(5.0)).toBe(105.0);
-      expect(getSuggestedPricePerMeter(7.0)).toBe(105.0);
-      expect(getSuggestedPricePerMeter(12.0)).toBe(95.0);
-      expect(getSuggestedPricePerMeter(25.0)).toBe(85.0);
+      expect(getSuggestedPricePerMeter(0.5)).toBe(150.0);
+      expect(getSuggestedPricePerMeter(1.0)).toBe(150.0);
+      expect(getSuggestedPricePerMeter(2.5)).toBe(125.0);
+      expect(getSuggestedPricePerMeter(5.0)).toBe(115.0);
+      expect(getSuggestedPricePerMeter(7.0)).toBe(115.0);
+      expect(getSuggestedPricePerMeter(12.0)).toBe(105.0);
+      expect(getSuggestedPricePerMeter(25.0)).toBe(95.0);
     });
 
     it('aplica valor de escala para metros altos o inválidos', () => {
-      expect(getSuggestedPricePerMeter(0)).toBe(140.0);
-      expect(getSuggestedPricePerMeter(-5)).toBe(140.0);
-      expect(getSuggestedPricePerMeter(NaN)).toBe(140.0);
-      expect(getSuggestedPricePerMeter(500)).toBe(85.0);
+      expect(getSuggestedPricePerMeter(0)).toBe(150.0);
+      expect(getSuggestedPricePerMeter(-5)).toBe(150.0);
+      expect(getSuggestedPricePerMeter(NaN)).toBe(150.0);
+      expect(getSuggestedPricePerMeter(500)).toBe(95.0);
     });
 
     it('determina la tarifa de corte sugerida por pieza según volumen', () => {
@@ -129,10 +129,10 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       expect(run.costs.costPerStickerQ).toBeCloseTo(25.83 / 50, 2);
 
       // Precio venta escala para 1m = Q140.00
-      expect(run.pricing.sellingPriceTotalQ).toBe(140.0);
+      expect(run.pricing.sellingPriceTotalQ).toBe(150.0);
       // Margen neto: 140 - 25.83 = Q114.17 (~81.55%)
-      expect(run.profitability.netProfitQ).toBeCloseTo(114.17, 2);
-      expect(run.profitability.profitMarginPercent).toBeCloseTo(81.55, 1);
+      expect(run.profitability.netProfitQ).toBeCloseTo(124.17, 2);
+      expect(run.profitability.profitMarginPercent).toBeCloseTo(82.78, 1);
       expect(run.profitability.profitabilityTier).toBe('EXCELLENT');
     });
 
@@ -164,7 +164,7 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       // Precio venta corte: 100 * Q0.30 = Q30.00 (supera el mínimo de Q25)
       expect(run.pricing.cuttingSellingQ).toBe(30.0);
       // Material: 2m a Q115 = Q230. Total venta: 230 + 30 = Q260
-      expect(run.pricing.sellingPriceTotalQ).toBe(260.0);
+      expect(run.pricing.sellingPriceTotalQ).toBe(280.0);
     });
 
     it('aplica la tarifa mínima de corte de Q25 cuando el despiece unitario es bajo', () => {
@@ -176,7 +176,7 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
 
       // 10 piezas * Q0.35 = Q3.50 -> aplica mínimo de Q25.00
       expect(run.pricing.cuttingSellingQ).toBe(25.0);
-      expect(run.pricing.sellingPriceTotalQ).toBe(140.0 + 25.0);
+      expect(run.pricing.sellingPriceTotalQ).toBe(150.0 + 25.0);
     });
 
     it('permite sobrescribir el precio de venta con un precio manual personalizado', () => {
@@ -262,7 +262,7 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
     it('provee valores por defecto seguros cuando el pedido es nulo o carece de métricas', () => {
       const resultNull = calculateOrderProfitability(null);
       expect(resultNull.meters).toBe(1.0);
-      expect(resultNull.pricing.sellingPriceTotalQ).toBe(140.0);
+      expect(resultNull.pricing.sellingPriceTotalQ).toBe(150.0);
 
       const resultEmpty = calculateOrderProfitability({});
       expect(resultEmpty.meters).toBe(1.0);
@@ -293,7 +293,7 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       expect(res.quote.actualLinearMeters).toBeCloseTo(1.06, 2);
       expect(res.quote.stickersPerRow).toBe(5);
       expect(res.quote.rows).toBe(20);
-      expect(res.pricingComparison.listPriceTotalQ).toBe(147.98);
+      expect(res.pricingComparison.listPriceTotalQ).toBe(158.55);
       expect(res.pricingComparison.isDiscountApplied).toBe(false);
       expect(res.pricingComparison.discountAmountQ).toBe(0);
       expect(res.pricingComparison.discountAdvice).toContain('Precio de lista oficial');
@@ -311,8 +311,8 @@ describe('Profitability Engine — Motor de Costos Industriales UV DTF', () => {
       });
 
       expect(res.pricingComparison.isDiscountApplied).toBe(true);
-      expect(res.pricingComparison.discountAmountQ).toBeCloseTo(37.98, 1);
-      expect(res.pricingComparison.discountPercent).toBeCloseTo(21.3, 1);
+      expect(res.pricingComparison.discountAmountQ).toBeCloseTo(48.55, 1);
+      expect(res.pricingComparison.discountPercent).toBeCloseTo(25.7, 1);
       expect(res.profitMarginPercent).toBeGreaterThanOrEqual(70.0);
       expect(res.pricingComparison.discountAdvice).toContain('Descuento seguro');
     });

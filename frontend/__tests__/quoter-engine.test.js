@@ -29,39 +29,39 @@ describe('Quoter Engine — Dimensiones y Validación', () => {
 });
 
 describe('Quoter Engine — Tarifas por Escala', () => {
-  it('retorna Q140.00 para menos de 2 metros exactos (incluyendo 1.05m y 1.99m)', () => {
-    expect(getTierRate(0.5)).toBe(140.0);
-    expect(getTierRate(1.0)).toBe(140.0);
-    expect(getTierRate(1.05)).toBe(140.0);
-    expect(getTierRate(1.5)).toBe(140.0);
-    expect(getTierRate(1.99)).toBe(140.0);
+  it('retorna Q150.00 para menos de 2 metros exactos (incluyendo 1.05m y 1.99m)', () => {
+    expect(getTierRate(0.5)).toBe(150.0);
+    expect(getTierRate(1.0)).toBe(150.0);
+    expect(getTierRate(1.05)).toBe(150.0);
+    expect(getTierRate(1.5)).toBe(150.0);
+    expect(getTierRate(1.99)).toBe(150.0);
   });
 
-  it('retorna Q115.00 a partir de 2.0 metros exactos hasta 4.99m', () => {
-    expect(getTierRate(2.0)).toBe(115.0);
-    expect(getTierRate(2.5)).toBe(115.0);
-    expect(getTierRate(4.99)).toBe(115.0);
+  it('retorna Q125.00 a partir de 2.0 metros exactos hasta 4.99m', () => {
+    expect(getTierRate(2.0)).toBe(125.0);
+    expect(getTierRate(2.5)).toBe(125.0);
+    expect(getTierRate(4.99)).toBe(125.0);
   });
 
   
 
-  it('retorna Q105.00 para el rango de 5 a 10 metros', () => {
-    expect(getTierRate(5.5)).toBe(105.0);
-    expect(getTierRate(9.99)).toBe(105.0);
+  it('retorna Q115.00 para el rango de 5 a 10 metros', () => {
+    expect(getTierRate(5.5)).toBe(115.0);
+    expect(getTierRate(9.99)).toBe(115.0);
   });
 
-  it('retorna Q95.00 para el rango de 10 a 20 metros', () => {
-    expect(getTierRate(12.0)).toBe(95.0);
-    expect(getTierRate(19.9)).toBe(95.0);
+  it('retorna Q105.00 para el rango de 10 a 20 metros', () => {
+    expect(getTierRate(12.0)).toBe(105.0);
+    expect(getTierRate(19.9)).toBe(105.0);
   });
 
-  it('retorna Q85.00 para pedidos mayores a 20 metros (mayoreo)', () => {
-    expect(getTierRate(20.1)).toBe(85.0);
-    expect(getTierRate(100.0)).toBe(85.0);
+  it('retorna Q95.00 para pedidos mayores a 20 metros (mayoreo)', () => {
+    expect(getTierRate(20.1)).toBe(95.0);
+    expect(getTierRate(100.0)).toBe(95.0);
   });
 
   it('retorna fallback cuando el valor es NaN o inválido', () => {
-    expect(getTierRate(NaN)).toBe(85.0);
+    expect(getTierRate(NaN)).toBe(95.0);
     expect(getCuttingRate(NaN)).toBe(0.25);
   });
 
@@ -73,15 +73,15 @@ describe('Quoter Engine — Tarifas por Escala', () => {
 });
 
 describe('Quoter Engine — Cálculo Integral de Pedido', () => {
-  it('aplica el piso mínimo de 1 metro (Q140.00) cuando el trabajo ocupa menos de 1m', () => {
+  it('aplica el piso mínimo de 1 metro (Q150.00) cuando el trabajo ocupa menos de 1m', () => {
     // 5x5 cm, 10 piezas caben en menos de 20 cm
     const quote = calculateQuote({ widthCm: 5, heightCm: 5, qty: 10, includeCutting: false });
 
     expect(quote.isUnderMin).toBe(true);
     expect(quote.billableMeters).toBe(1.0);
-    expect(quote.materialPriceQ).toBe(140.0);
+    expect(quote.materialPriceQ).toBe(150.0);
     expect(quote.cuttingTotalQ).toBe(0.0);
-    expect(quote.totalPriceQ).toBe(140.0);
+    expect(quote.totalPriceQ).toBe(150.0);
     expect(quote.stickersPerRow).toBe(5); // (28 + 0.3) / (5 + 0.3) = 5
   });
 
@@ -91,23 +91,23 @@ describe('Quoter Engine — Cálculo Integral de Pedido', () => {
     const quote = calculateQuote({ widthCm: 10, heightCm: 10, qty: 60, includeCutting: false });
 
     expect(quote.actualLinearMeters).toBeGreaterThan(3.0);
-    expect(quote.tierRate).toBe(115.0);
+    expect(quote.tierRate).toBe(125.0);
     expect(quote.isUnderMin).toBe(false);
     expect(quote.totalPriceQ).toBe(quote.materialPriceQ);
   });
 
-  it('aplica tarifa de Q140/m entre 1.0 y 1.99 metros y respeta piso mínimo de Q140 si es menor a 1.0m', () => {
-    // 0.5 metros -> piso mínimo de Q140.00
+  it('aplica tarifa de Q150/m entre 1.0 y 1.99 metros y respeta piso mínimo de Q150 si es menor a 1.0m', () => {
+    // 0.5 metros -> piso mínimo de Q150.00
     const quoteMin = calculateQuote({ widthCm: 5, heightCm: 5, qty: 10, includeCutting: false });
     expect(quoteMin.actualLinearMeters).toBeLessThan(1.0);
-    expect(quoteMin.materialPriceQ).toBe(140.0);
+    expect(quoteMin.materialPriceQ).toBe(150.0);
 
-    // 1.13m (6x6 cm, 72 piezas) -> 1.13m * 140 = Q158.34
+    // 1.13m (6x6 cm, 72 piezas) -> 1.13m * 150 = Q169.5
     const quote = calculateQuote({ widthCm: 6, heightCm: 6, qty: 72, includeCutting: false });
     expect(quote.actualLinearMeters).toBeGreaterThan(1.0);
     expect(quote.actualLinearMeters).toBeLessThan(2.0);
-    expect(quote.tierRate).toBe(140.0);
-    expect(quote.materialPriceQ).toBe(158.34);
+    expect(quote.tierRate).toBe(150.0);
+    expect(quote.materialPriceQ).toBe(169.65);
   });
 
 

@@ -52,7 +52,7 @@ export function initSaveQuoteModal() {
               5 × 5 cm • 50 piezas • 1.00 m
             </div>
             <div id="saveQuoteTotalSummary" style="font-size: 1.2rem; font-weight: 900; color: var(--cerulean);">
-              Q140.00
+              Q150.00
             </div>
           </div>
           <div id="saveQuoteCuttingSummary" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
@@ -176,7 +176,7 @@ export function openSaveQuoteModal(quoteData = null) {
   const height = currentQuoteData.heightCm || 5;
   const qty = currentQuoteData.qty || 50;
   const meters = (currentQuoteData.linearMeters !== undefined) ? currentQuoteData.linearMeters : 1.0;
-  const total = currentQuoteData.totalPriceQ || 140.0;
+  const total = currentQuoteData.totalPriceQ || 150.0;
   const cutPrice = currentQuoteData.cuttingPriceQ || 0.0;
 
   if (specsEl) {
@@ -338,14 +338,14 @@ export function getCurrentQuoterSpecs() {
   const metersEl = document.getElementById('resBillableMeters');
   const cutCostEl = document.getElementById('resCuttingCost');
 
-  let totalPriceQ = 140.0;
+  let totalPriceQ = 150.0;
   if (priceEl) {
     const rawText = priceEl.textContent.replace(/[^0-9.]/g, '');
     const parsed = parseFloat(rawText);
     if (!isNaN(parsed) && parsed > 0) totalPriceQ = parsed;
   }
 
-  let unitRateQ = 140.0;
+  let unitRateQ = 150.0;
   if (rateEl) {
     const rawRate = rateEl.textContent.replace(/[^0-9.]/g, '');
     const parsed = parseFloat(rawRate);
