@@ -700,6 +700,7 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
 8. **Interfaz Mobile-First de Cotizaciones Guardadas y Estructura Canónica (`quotes-view.js`, `save-quote-modal.js` & `order-item.js`):**
    * **Normalización Canónica (`order-item.js`):** Módulo Single Source of Truth para homogeneizar la estructura de `OrderItem` entre Cotizaciones (`Quote`), Pedidos (`Order`) y Carrito (`Cart`). Provee `mapOrderItem()` y `cleanOrderItemForApi()`.
    * **Persistencia Real de Imágenes en Cloudflare R2:** `SaveQuoteModal` sube los archivos de arte del cliente (`fileUrl`) y los snapshots de bobina (`canvasSnapshotUrl`) a Cloudflare R2 / API storage antes de persistir la cotización, almacenando las URLs en PostgreSQL. Si el usuario cierra el navegador o recarga, las imágenes permanecen seguras sin depender de `localStorage` ni blobs base64 efímeros.
+   * **Miniatura del Diseño Enviado y Visor Lightbox Modal:** Cada tarjeta de cotización en `#/quotes` renderiza una miniatura táctil interactiva (`78×78px`, área de toque > 44px) del diseño del cliente con badge zoom 🔍. Al pulsar la miniatura, se despliega el modal interactivo `#quoteArtLightboxModal` para inspección en alta resolución (`max-height: 68vh`, `object-fit: contain`), con soporte para documentos PDF, botón de descarga directa del arte original y cierre por botón ✕, botón "Cerrar", clic en backdrop y tecla Escape.
    * Vista de tarjetas Mobile-First en `#/quotes` con filtros reactivos (`Todas`, `Pendientes`, `Convertidas`), búsqueda en vivo y botón `⚡ Convertir en Orden de Producción` de 1 clic.
    * Modal accesible y táctil `SaveQuoteModal` enlazado directamente al cotizador principal (`#/`) para guardar especificaciones de bobina con datos pre-rellenados.
    * Integración con WhatsApp para compartir cotizaciones con formato comercial detallado en Quetzales (Q).
@@ -716,7 +717,7 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
    * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
 11. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **799 pruebas unitarias pasando al 100% en 39 suites** de Vitest.
+   * **830 pruebas unitarias pasando al 100% en 39 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
      * Declaraciones (Statements): **99.35%**
      * Ramas (Branches): **85.13%**

@@ -518,4 +518,121 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     vi.advanceTimersByTime(200);
     vi.useRealTimers();
   });
+  it('renderiza la miniatura del diseño enviado y abre el lightbox ampliado al hacer clic', () => {
+    quotesStore.quotes = [{
+      id: 'qt_thumb_01',
+      code: 'COT-2026-088',
+      projectName: 'Stickers Chocobos',
+      leadName: 'Miguel Dubois',
+      leadPhone: '+502 5406-6217',
+      widthCm: 5,
+      heightCm: 5,
+      qty: 50,
+      linearMeters: 1.0,
+      totalPriceQ: 150,
+      fileUrl: 'https://pub-282c106ae2384714b00c0ebb9ab6b95e.r2.dev/assets/quotes/chocobos.png',
+      fileName: 'chocobos.png',
+      status: 'SAVED',
+    }];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    // 1. Verificar que existe la miniatura
+    const thumbBtn = document.querySelector('.btn-preview-quote-art');
+    expect(thumbBtn).not.toBeNull();
+    expect(thumbBtn.dataset.artUrl).toBe('https://pub-282c106ae2384714b00c0ebb9ab6b95e.r2.dev/assets/quotes/chocobos.png');
+    const thumbImg = thumbBtn.querySelector('img');
+    expect(thumbImg.src).toContain('chocobos.png');
+
+    // 2. Hacer clic en la miniatura para abrir el Lightbox
+    const modal = document.getElementById('quoteArtLightboxModal');
+    const lightboxImg = document.getElementById('quoteArtLightboxImg');
+    const titleEl = document.getElementById('quoteArtLightboxTitle');
+    const btnOpenOrig = document.getElementById('btnDownloadQuoteArt');
+
+    expect(modal.style.display).toBe('none');
+    thumbBtn.click();
+
+    expect(modal.style.display).toBe('block');
+    expect(lightboxImg.src).toContain('chocobos.png');
+    expect(titleEl.textContent).toContain('chocobos.png');
+    expect(btnOpenOrig.href).toContain('chocobos.png');
+
+    // 3. Cerrar el Lightbox con la '✕'
+    const btnClose = document.getElementById('btnCloseQuoteArtLightbox');
+    btnClose.click();
+    expect(modal.style.display).toBe('none');
+
+    // 4. Reabrir y cerrar con el botón secundario 'Cerrar'
+    thumbBtn.click();
+    expect(modal.style.display).toBe('block');
+    const btnDismiss = document.getElementById('btnDismissQuoteArtLightbox');
+    btnDismiss.click();
+    expect(modal.style.display).toBe('none');
+
+    // 5. Reabrir y cerrar haciendo clic en el backdrop
+    thumbBtn.click();
+    expect(modal.style.display).toBe('block');
+    modal.click();
+    expect(modal.style.display).toBe('none');
+
+    // 6. Reabrir y cerrar con la tecla Escape
+    thumbBtn.click();
+    expect(modal.style.display).toBe('block');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(modal.style.display).toBe('none');
+  });
+
+  it('soporta visualización de PDF adjunto en el lightbox y muestra fallback sin miniatura para cotizaciones sin diseño', () => {
+    quotesStore.quotes = [
+      {
+        id: 'qt_pdf_01',
+        code: 'COT-2026-089',
+        projectName: 'Proyecto Manual PDF',
+        leadName: 'Cliente PDF',
+        widthCm: 10,
+        heightCm: 10,
+        qty: 100,
+        linearMeters: 2.0,
+        totalPriceQ: 280,
+        fileUrl: 'https://pub-282c106ae2384714b00c0ebb9ab6b95e.r2.dev/assets/quotes/arte_vectorial.pdf',
+        fileName: 'arte_vectorial.pdf',
+        status: 'SAVED',
+      },
+      {
+        id: 'qt_no_art_02',
+        code: 'COT-2026-090',
+        projectName: 'Proyecto Sin Diseño',
+        leadName: 'Cliente Mostrador',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 20,
+        linearMeters: 0.5,
+        totalPriceQ: 75,
+        fileUrl: null,
+        status: 'SAVED',
+      }
+    ];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    // 1. Cotización con PDF: abre lightbox en modo documento PDF
+    const thumbPdf = document.querySelector('.btn-preview-quote-art[data-art-file="arte_vectorial.pdf"]');
+    expect(thumbPdf).not.toBeNull();
+    thumbPdf.click();
+
+    const pdfView = document.getElementById('quoteArtLightboxPdf');
+    const pdfLink = document.getElementById('quoteArtLightboxPdfLink');
+    const imgView = document.getElementById('quoteArtLightboxImg');
+
+    expect(pdfView.style.display).toBe('block');
+    expect(imgView.style.display).toBe('none');
+    expect(pdfLink.href).toContain('arte_vectorial.pdf');
+
+    // 2. Cotización sin diseño: no renderiza miniatura en su tarjeta
+    const cardNoArt = document.querySelector('.quote-item-card[data-quote-id="qt_no_art_02"]');
+    expect(cardNoArt.querySelector('.btn-preview-quote-art')).toBeNull();
+  });
 });
