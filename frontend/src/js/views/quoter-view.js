@@ -195,7 +195,7 @@ export const quoterView = {
               </div>
               <div class="breakdown-row">
                 <span>Tarifa por metro lineal:</span>
-                <strong id="resTierRate">Q140.00 / m</strong>
+                <strong id="resTierRate">Q150.00 / m</strong>
               </div>
               <div class="breakdown-row">
                 <span>Corte individual:</span>
@@ -212,8 +212,8 @@ export const quoterView = {
             <!-- Caja de Total en Quetzales -->
             <div class="total-box">
               <div class="total-label">Total Estimado en Quetzales</div>
-              <div class="total-price" id="resTotalPrice">Q140.00</div>
-              <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q2.80 por sticker</div>
+              <div class="total-price" id="resTotalPrice">Q150.00</div>
+              <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q3.00 por sticker</div>
             </div>
           </div>
 

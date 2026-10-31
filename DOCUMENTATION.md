@@ -117,7 +117,7 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
 * **Ancho de Bobina:** 30 cm nominal.
 * **Ancho Útil Imprimible (`printableWidthCm`):** `28.0 cm` (margen técnico de 1 cm por lado para tracción del film).
 * **Separación entre Stickers (`marginBetweenCm`):** `0.3 cm` (3 mm).
-* **Mínimo de Facturación:** `1.0 metro lineal` (`Q140.00`).
+* **Mínimo de Facturación:** `1.0 metro lineal` (`Q150.00`).
 
 ### Fórmulas del Motor Matemático
 1. **Stickers por fila:**
@@ -134,11 +134,11 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
 ### Escala de Precios de Impresión por Volumen
 | Rango de Metros | Tarifa por Metro | Descripción Comercial |
 | :--- | :--- | :--- |
-| `0.01 m – 1.99 m` | **Q140.00 / m** (Tarifa Plana Base) | Pedido mínimo y tiraje inicial (mínimo facturable 1.0 m = Q140.00) |
-| `2.00 m – 4.99 m` | **Q115.00 / m** | Tiraje corto / emprendedor |
-| `5.00 m – 9.99 m` | **Q105.00 / m** | Tiraje medio comercial |
-| `10.00 m – 19.99 m` | **Q95.00 / m** | Mayorista frecuente |
-| `20.00 m o más` | **Q85.00 / m** | Maquila industrial / Alto volumen |
+| `0.01 m – 1.99 m` | **Q150.00 / m** (Tarifa Plana Base) | Pedido mínimo y tiraje inicial (mínimo facturable 1.0 m = Q150.00) |
+| `2.00 m – 4.99 m` | **Q125.00 / m** | Tiraje corto / emprendedor |
+| `5.00 m – 9.99 m` | **Q115.00 / m** | Tiraje medio comercial |
+| `10.00 m – 19.99 m` | **Q105.00 / m** | Mayorista frecuente |
+| `20.00 m o más` | **Q95.00 / m** | Maquila industrial / Alto volumen |
 
 ### Servicio Opcional de Corte Recto de Precisión
 * Si `includeCutting == true`:
@@ -282,7 +282,7 @@ kroma-lab-sales-studio/
     * `/software`, `/spot-studio`, `/preprensa`: `softwareView` (`VISITOR`, `CUSTOMER`, `EMPLOYEE`, `ADMIN`)
 * **Carrito de Compras Multidiseño (`cart-store.js` + `cart-engine.js` + `cart-drawer.js`):**
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
-  * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q105.00/metro en vez de pagar mínimos separados).
+  * **Cálculo Consolidado de Metros:** En lugar de cobrar mínimos individuales por cada diseño, suma el largo lineal de todos los diseños sobre la bobina de 28 cm útiles y aplica la escala de mayoreo sobre el gran total (ej. si el cliente suma 5.5 metros entre 3 diseños, se factura todo a la tarifa preferencial de Q115.00/metro en vez de pagar mínimos separados).
   * **Drawer Lateral Interactivo:** Permite modificar cantidades en tiempo real (+ / -), eliminar ítems, ver el desglose financiero consolidado y despachar el pedido completo estructurado directamente hacia WhatsApp o hacia el modal de checkout.
   * **Flujo Híbrido de Cotizaciones y Pedidos por WhatsApp:**
     * **Cotizador Rápido ("Consultar por WhatsApp"):** Al presionar el botón de WhatsApp desde el cotizador interactivo, el sistema guarda de inmediato la cotización en `quotesStore` y en el backend (`/api/quotes`) con estado `SAVED` y folio correlativo oficial (ej. `COT-2026-001`). Si el visitante no ha iniciado sesión, se conserva de forma segura como *Cotización sin cuenta asignada* (`leadEmail: null`). El mensaje preformateado de WhatsApp incluye el folio oficial (`• *Folio de Cotización:* COT-2026-XXX`) para referencia unificada del cliente y del taller.

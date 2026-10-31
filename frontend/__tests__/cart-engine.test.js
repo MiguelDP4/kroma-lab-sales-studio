@@ -10,25 +10,25 @@ import { BUSINESS_CONFIG } from '../src/shared/business-config.js';
 
 describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
   describe('Escala de tarifas por metros lineales (getTierForMeters)', () => {
-    it('mantiene tarifa base de Q140/m hasta alcanzar 2 metros exactos', () => {
-      expect(getTierForMeters(0).ratePerMeterQ).toBe(140);
-      expect(getTierForMeters(0.8).ratePerMeterQ).toBe(140);
-      expect(getTierForMeters(1.0).ratePerMeterQ).toBe(140);
-      expect(getTierForMeters(1.05).ratePerMeterQ).toBe(140);
-      expect(getTierForMeters(1.5).ratePerMeterQ).toBe(140);
-      expect(getTierForMeters(1.99).ratePerMeterQ).toBe(140);
+    it('mantiene tarifa base de Q150/m hasta alcanzar 2 metros exactos', () => {
+      expect(getTierForMeters(0).ratePerMeterQ).toBe(150);
+      expect(getTierForMeters(0.8).ratePerMeterQ).toBe(150);
+      expect(getTierForMeters(1.0).ratePerMeterQ).toBe(150);
+      expect(getTierForMeters(1.05).ratePerMeterQ).toBe(150);
+      expect(getTierForMeters(1.5).ratePerMeterQ).toBe(150);
+      expect(getTierForMeters(1.99).ratePerMeterQ).toBe(150);
     });
 
     it('asigna escalas por volumen de 2 a 20+ metros exactos', () => {
-      expect(getTierForMeters(2.0).ratePerMeterQ).toBe(115);
-      expect(getTierForMeters(3.5).ratePerMeterQ).toBe(115);
-      expect(getTierForMeters(4.99).ratePerMeterQ).toBe(115);
-      expect(getTierForMeters(5.0).ratePerMeterQ).toBe(105);
-      expect(getTierForMeters(5.5).ratePerMeterQ).toBe(105);
-      expect(getTierForMeters(10.0).ratePerMeterQ).toBe(95);
-      expect(getTierForMeters(12.0).ratePerMeterQ).toBe(95);
-      expect(getTierForMeters(20.0).ratePerMeterQ).toBe(85);
-      expect(getTierForMeters(25.0).ratePerMeterQ).toBe(85);
+      expect(getTierForMeters(2.0).ratePerMeterQ).toBe(125);
+      expect(getTierForMeters(3.5).ratePerMeterQ).toBe(125);
+      expect(getTierForMeters(4.99).ratePerMeterQ).toBe(125);
+      expect(getTierForMeters(5.0).ratePerMeterQ).toBe(115);
+      expect(getTierForMeters(5.5).ratePerMeterQ).toBe(115);
+      expect(getTierForMeters(10.0).ratePerMeterQ).toBe(105);
+      expect(getTierForMeters(12.0).ratePerMeterQ).toBe(105);
+      expect(getTierForMeters(20.0).ratePerMeterQ).toBe(95);
+      expect(getTierForMeters(25.0).ratePerMeterQ).toBe(95);
     });
   });
 
@@ -94,15 +94,15 @@ describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
 
       expect(totals.isUnderMin).toBe(true);
       expect(totals.totalBillableMeters).toBe(1.0);
-      expect(totals.tierRate).toBe(140.0);
-      expect(totals.materialTotalQ).toBe(140.0);
-      expect(totals.grandTotalQ).toBe(140.0);
+      expect(totals.tierRate).toBe(150.0);
+      expect(totals.materialTotalQ).toBe(150.0);
+      expect(totals.grandTotalQ).toBe(150.0);
     });
 
     it('combina múltiples diseños y otorga escala de mayoreo al superar 5 metros', () => {
       // Ítem 1: 5x5 cm x 300 uds (~3.16m)
       // Ítem 2: 8x5 cm x 150 uds (~2.63m)
-      // Total metros > 5.5m -> Tarifa Q105/m
+      // Total metros > 5.5m -> Tarifa Q115/m
       const items = [
         { widthCm: 5, heightCm: 5, qty: 300, includeCutting: false },
         { widthCm: 8, heightCm: 5, qty: 150, includeCutting: false },
@@ -112,7 +112,7 @@ describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
       expect(totals.totalItemsCount).toBe(2);
       expect(totals.totalStickers).toBe(450);
       expect(totals.totalBillableMeters).toBeGreaterThan(5.0);
-      expect(totals.tierRate).toBe(105.0);
+      expect(totals.tierRate).toBe(115.0);
       expect(totals.grandTotalQ).toBe(totals.materialTotalQ);
     });
 
