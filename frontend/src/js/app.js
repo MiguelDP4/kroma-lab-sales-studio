@@ -98,7 +98,17 @@ export function purgeLegacyMockStorage(force = false) {
         raw.includes('Sport Gym') ||
         raw.includes('rodrigo@promoguate.gt') ||
         raw.includes('carlos.taller@kromalab.gt') ||
-        raw.includes('sofia.ventas@kromalab.gt')
+        raw.includes('sofia.ventas@kromalab.gt') ||
+        raw.includes('maria@mielgt.com') ||
+        raw.includes('carlos@rivera.gt') ||
+        raw.includes('admin@kromalab.gt') ||
+        raw.includes('testadmin@kromalab.gt') ||
+        raw.includes('Administrador QA') ||
+        raw.includes('Carlos Test') ||
+        raw.includes('Juanito unpajote menchaca') ||
+        raw.includes('asdf') ||
+        raw.includes('Cliente Bobina') ||
+        raw.includes('Cliente WhatsApp')
       ) {
         localStorage.removeItem(key);
       }

@@ -195,7 +195,9 @@ describe('Controller Error Handlers & Catch Blocks', () => {
 
   it('captura error de base de datos en listQuotes', async () => {
     vi.spyOn(prisma.quote, 'findMany').mockRejectedValueOnce(new Error('DB Error'));
-    const res = await request(app).get('/api/quotes');
+    const res = await request(app)
+      .get('/api/quotes')
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(500);
   });
 
@@ -227,6 +229,7 @@ describe('Controller Error Handlers & Catch Blocks', () => {
     vi.spyOn(prisma.quote, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
     const res = await request(app)
       .put('/api/quotes/cot_test')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ projectName: 'Error' });
     expect(res.status).toBe(500);
   });
@@ -241,7 +244,9 @@ describe('Controller Error Handlers & Catch Blocks', () => {
 
   it('captura error de base de datos en deleteQuote', async () => {
     vi.spyOn(prisma.quote, 'findUnique').mockRejectedValueOnce(new Error('DB Error'));
-    const res = await request(app).delete('/api/quotes/cot_test');
+    const res = await request(app)
+      .delete('/api/quotes/cot_test')
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(500);
   });
 
