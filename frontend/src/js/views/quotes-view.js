@@ -171,6 +171,50 @@ export const quotesView = {
           </div>
         </div>
       </div>
+        <!-- Modal Lightbox para Ampliar Diseño del Cliente -->
+        <div id="quoteArtLightboxModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="quoteArtLightboxTitle">
+          <div class="modal-card" style="width: min(850px, 95vw); max-height: 94vh; padding: 1.25rem; display: flex; flex-direction: column;">
+            
+            <!-- Encabezado del Lightbox -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 0.5rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0;">
+                <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: var(--cerulean); border-color: var(--cerulean); font-size: 0.75rem;">
+                  🎨 Diseño Enviado
+                </span>
+                <h3 id="quoteArtLightboxTitle" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  Diseño de Cotización
+                </h3>
+              </div>
+              <button type="button" id="btnCloseQuoteArtLightbox" class="btn-close-modal" style="min-width: 44px; min-height: 44px;" aria-label="Cerrar vista grande">✕</button>
+            </div>
+
+            <!-- Contenedor de la Imagen Grande -->
+            <div id="quoteArtLightboxContent" style="text-align: center; background: #090e1c; border-radius: var(--radius-sm); padding: 0.75rem; overflow: auto; border: 1px solid var(--border-color); flex: 1; min-height: 240px; max-height: 70vh; display: flex; align-items: center; justify-content: center;">
+              <img id="quoteArtLightboxImg" src="" alt="Diseño del cliente" style="max-width: 100%; max-height: 68vh; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+              
+              <!-- Vista para documentos PDF si aplica -->
+              <div id="quoteArtLightboxPdf" style="display: none; padding: 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">📄</div>
+                <p style="color: var(--text-primary); font-weight: 700; margin-bottom: 0.75rem;">Documento PDF adjunto</p>
+                <a id="quoteArtLightboxPdfLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.5rem;">
+                  <span>📥 Abrir / Descargar PDF</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Pie del Lightbox con botón de descarga y cerrar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; gap: 0.5rem; flex-wrap: wrap;">
+              <a id="btnDownloadQuoteArt" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.85rem;">
+                <span>💾 Abrir archivo original</span>
+              </a>
+              <button type="button" id="btnDismissQuoteArtLightbox" class="btn btn-secondary" style="min-height: 44px; font-weight: 700;">
+                Cerrar
+              </button>
+            </div>
+
+          </div>
+        </div>
+
         <!-- Modal para Asignar Cotización a Cuenta de Cliente -->
         <div id="assignQuoteModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="assignQuoteModalTitle">
           <div class="modal-card" style="max-width: 520px; width: 92%; padding: 1.5rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
@@ -304,8 +348,18 @@ function renderQuotesCards(quotes) {
     }) : 'Reciente';
 
     // Identificar recursos gráficos del primer ítem o nivel raíz
-    const clientArtUrl = q.fileUrl || q.previewUrl || q.items?.[0]?.previewUrl || q.items?.[0]?.fileUrl || null;
-    const clientFileName = q.fileName || q.items?.[0]?.fileName || (clientArtUrl ? 'diseño.png' : null);
+    const clientArtUrl = q.fileUrl || 
+                         q.previewUrl || 
+                         q.items?.[0]?.fileUrl || 
+                         q.items?.[0]?.previewUrl || 
+                         q.fileInfo?.fileUrl || 
+                         q.items?.[0]?.fileInfo?.fileUrl || 
+                         null;
+    const clientFileName = q.fileName || 
+                           q.items?.[0]?.fileName || 
+                           q.fileInfo?.name || 
+                           q.items?.[0]?.fileInfo?.name || 
+                           (clientArtUrl ? 'diseño.png' : null);
     const clientFileSize = q.fileSizeBytes || q.items?.[0]?.fileSizeBytes || null;
 
     const snapUrl = q.canvasSnapshotUrl || (q.canvasSnapshot && !q.canvasSnapshot.startsWith('data:') ? q.canvasSnapshot : null) || q.items?.[0]?.canvasSnapshotUrl || (q.items?.[0]?.canvasSnapshot && !q.items[0].canvasSnapshot.startsWith('data:') ? q.items[0].canvasSnapshot : null) || null;
@@ -313,33 +367,65 @@ function renderQuotesCards(quotes) {
     return `
       <div class="calc-card quote-item-card" data-quote-id="${q.id}" style="padding: 1.25rem; border-left: 4px solid ${isConverted ? '#10b981' : 'var(--cerulean)'};">
         
-        <!-- Cabecera de la Tarjeta -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
-              <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: var(--text-primary); background: var(--bg-surface-elevated); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                ${q.code}
-              </span>
-              ${statusBadge}
-              ${(q.leadEmail && q.leadEmail.trim() !== '') ? `
-                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.72rem;">✅ Cuenta vinculada</span>
-              ` : `
-                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; font-size: 0.72rem;">👤 Sin cuenta asignada</span>
-              `}
+        <!-- Cabecera de la Tarjeta con Badges -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.65rem;">
+          <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: var(--text-primary); background: var(--bg-surface-elevated); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            ${q.code}
+          </span>
+          ${statusBadge}
+          ${(q.leadEmail && q.leadEmail.trim() !== '') ? `
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-size: 0.72rem;">✅ Cuenta vinculada</span>
+          ` : `
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; font-size: 0.72rem;">👤 Sin cuenta asignada</span>
+          `}
+        </div>
+
+        <!-- Fila Principal: Miniatura del Diseño + Datos del Proyecto + Total en Quetzales -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.85rem;">
+          
+          <div style="display: flex; align-items: flex-start; gap: 0.85rem; flex: 1; min-width: min(100%, 280px);">
+            
+            <!-- Miniatura del diseño del cliente si existe -->
+            ${clientArtUrl ? `
+              <div class="quote-design-thumb-wrap" style="flex-shrink: 0;">
+                <button type="button" 
+                  class="btn-preview-quote-art quote-thumbnail-btn" 
+                  data-art-url="${clientArtUrl}" 
+                  data-art-title="${q.projectName || q.code}"
+                  data-art-file="${clientFileName || 'diseño.png'}"
+                  style="background: #090e1c; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 78px; min-height: 78px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.15s ease, border-color 0.15s ease;"
+                  title="Haz clic para ver la imagen en grande"
+                  aria-label="Ver imagen ampliada del diseño">
+                  <img src="${clientArtUrl}" alt="${clientFileName || 'Diseño'}" style="width: 68px; height: 68px; object-fit: contain; border-radius: 4px; display: block;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.classList.add('is-fallback');">
+                  <span class="quote-thumb-badge" style="position: absolute; bottom: 3px; right: 3px; background: rgba(2, 132, 199, 0.95); color: #ffffff; border-radius: 3px; font-size: 0.65rem; padding: 1px 4px; font-weight: 800; display: flex; align-items: center; gap: 2px;">
+                    🔍
+                  </span>
+                </button>
+              </div>
+            ` : ''}
+
+            <!-- Información del Proyecto y Contacto -->
+            <div style="flex: 1; min-width: min(100%, 200px);">
+              <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--text-primary); line-height: 1.3;">
+                ${q.projectName}
+              </h2>
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.35rem;">
+                <strong>👤 ${q.leadName}</strong>
+                ${q.companyName ? `• 🏢 ${q.companyName}` : ''}
+                ${q.leadPhone ? `• 📞 ${q.leadPhone}` : ''}
+                • 🕒 ${formattedDate}
+              </div>
+              ${clientFileName ? `
+                <div style="font-size: 0.74rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.35rem; background: var(--bg-surface-elevated); padding: 0.15rem 0.45rem; border-radius: 3px; border: 1px solid var(--border-color); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <span>📁 Archivo: <strong>${clientFileName}</strong></span>
+                </div>
+              ` : ''}
             </div>
-            <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--text-primary);">
-              ${q.projectName}
-            </h2>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-              <strong>👤 ${q.leadName}</strong>
-              ${q.companyName ? `• 🏢 ${q.companyName}` : ''}
-              ${q.leadPhone ? `• 📞 ${q.leadPhone}` : ''}
-              • 🕒 ${formattedDate}
-            </div>
+
           </div>
 
           <!-- Total en Quetzales -->
-          <div style="text-align: right; background: rgba(28, 114, 147, 0.08); padding: 0.6rem 0.9rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div style="text-align: right; background: rgba(28, 114, 147, 0.08); padding: 0.6rem 0.9rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); flex-shrink: 0; min-width: 140px;">
             <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
               Total Presupuesto
             </div>
@@ -350,6 +436,7 @@ function renderQuotesCards(quotes) {
               Tarifa: Q${Number(q.unitRateQ).toFixed(2)}/m
             </div>
           </div>
+
         </div>
 
         <!-- Chips de Especificaciones Técnicas Generales -->
@@ -487,6 +574,17 @@ function attachQuotesViewEvents() {
   const container = document.getElementById('quotesListContainer');
   if (container) {
     container.addEventListener('click', async (e) => {
+      // 0. Previsualizar diseño del cliente en Lightbox
+      const btnPreviewArt = e.target.closest('.btn-preview-quote-art');
+      if (btnPreviewArt) {
+        const artUrl = btnPreviewArt.dataset.artUrl;
+        const artTitle = btnPreviewArt.dataset.artTitle || 'Diseño de Cotización';
+        const artFile = btnPreviewArt.dataset.artFile || '';
+        if (artUrl) {
+          openQuoteArtLightbox(artUrl, artTitle, artFile);
+        }
+        return;
+      }
       // Agregar al Carrito
       const btnAddToCart = e.target.closest('.btn-add-quote-to-cart');
       if (btnAddToCart) {
@@ -637,6 +735,32 @@ function attachQuotesViewEvents() {
       }
     });
   }
+  // Escuchas para cerrar el Lightbox del Diseño de Cliente
+  const modalArtLightbox = document.getElementById('quoteArtLightboxModal');
+  const btnCloseArtLightbox = document.getElementById('btnCloseQuoteArtLightbox');
+  const btnDismissArtLightbox = document.getElementById('btnDismissQuoteArtLightbox');
+
+  if (btnCloseArtLightbox) {
+    btnCloseArtLightbox.addEventListener('click', closeQuoteArtLightbox);
+  }
+  if (btnDismissArtLightbox) {
+    btnDismissArtLightbox.addEventListener('click', closeQuoteArtLightbox);
+  }
+  if (modalArtLightbox) {
+    modalArtLightbox.addEventListener('click', (e) => {
+      if (e.target === modalArtLightbox) {
+        closeQuoteArtLightbox();
+      }
+    });
+  }
+
+  // Listener para cerrar modales con la tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeQuoteArtLightbox();
+      closeSnapshotLightbox();
+    }
+  });
 }
 
 export function openSnapshotLightbox(imgUrl) {
@@ -652,6 +776,51 @@ export function closeSnapshotLightbox() {
   const modal = document.getElementById('snapshotLightboxModal');
   if (modal) {
     modal.style.display = 'none';
+  }
+}
+
+export function openQuoteArtLightbox(imgUrl, title = 'Diseño de Cotización', fileName = '') {
+  const modal = document.getElementById('quoteArtLightboxModal');
+  const img = document.getElementById('quoteArtLightboxImg');
+  const titleEl = document.getElementById('quoteArtLightboxTitle');
+  const btnOpen = document.getElementById('btnDownloadQuoteArt');
+  const pdfView = document.getElementById('quoteArtLightboxPdf');
+  const pdfLink = document.getElementById('quoteArtLightboxPdfLink');
+
+  if (!modal || !imgUrl) return;
+
+  if (titleEl) {
+    titleEl.textContent = fileName ? `${title} — ${fileName}` : title;
+  }
+  if (btnOpen) {
+    btnOpen.href = imgUrl;
+    btnOpen.style.display = 'inline-flex';
+  }
+
+  const isPdf = typeof imgUrl === 'string' && imgUrl.toLowerCase().includes('.pdf');
+  if (isPdf) {
+    if (img) img.style.display = 'none';
+    if (pdfView) pdfView.style.display = 'block';
+    if (pdfLink) pdfLink.href = imgUrl;
+  } else {
+    if (pdfView) pdfView.style.display = 'none';
+    if (img) {
+      img.src = imgUrl;
+      img.style.display = 'block';
+    }
+  }
+
+  modal.style.display = 'block';
+}
+
+export function closeQuoteArtLightbox() {
+  const modal = document.getElementById('quoteArtLightboxModal');
+  const img = document.getElementById('quoteArtLightboxImg');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  if (img) {
+    img.src = '';
   }
 }
 
