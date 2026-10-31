@@ -1288,7 +1288,7 @@ export function renderQuoteResults(quote) {
   if (noticeBox) {
     if (quote.isUnderMin) {
       noticeBox.style.display = 'block';
-      noticeBox.innerHTML = `💡 <strong>Aprovecha tu metro:</strong> El pedido mínimo es 1 metro lineal (Q140.00). Tus ${quote.qty} stickers ocupan aprox. ${(quote.actualLinearMeters).toFixed(2)} m. ¡Puedes pedir hasta <strong>${quote.maxInOneMeter} piezas</strong> por el mismo precio exacto de Q140.00!`;
+      noticeBox.innerHTML = `💡 <strong>Aprovecha tu metro:</strong> El pedido mínimo es 1 metro lineal (Q150.00). Tus ${quote.qty} stickers ocupan aprox. ${(quote.actualLinearMeters).toFixed(2)} m. ¡Puedes pedir hasta <strong>${quote.maxInOneMeter} piezas</strong> por el mismo precio exacto de Q150.00!`;
     } else {
       noticeBox.style.display = 'none';
     }

@@ -921,9 +921,9 @@ describe('App — Inicialización y DOM', () => {
         qty: 50,
         stickersPerRow: 5,
         billableMeters: 1.0,
-        tierRate: 140.0,
+        tierRate: 150.0,
         includeCutting: false,
-        totalPriceQ: 140.0,
+        totalPriceQ: 150.0,
       };
 
       sendWhatsAppQuote(mockQuote);
