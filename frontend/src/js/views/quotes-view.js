@@ -8,6 +8,7 @@ import { quotesStore } from '../modules/quotes-store.js';
 import { clientsStore } from '../modules/clients-store.js';
 import { cartStore } from '../modules/cart-store.js';
 import { openCartDrawer } from '../components/cart-drawer.js';
+import { openUserProfileModal } from '../components/user-profile-modal.js';
 import { store } from '../store.js';
 import { mapOrderItem } from '../modules/order-item.js';
 
@@ -24,6 +25,9 @@ export const quotesView = {
   name: 'quotes',
   allowedRoles: ['VISITOR', 'CUSTOMER', 'EMPLOYEE', 'ADMIN'],
   render: () => {
+    const role = store.state.user?.role || 'VISITOR';
+    const isVisitor = role === 'VISITOR' || !store.state.user;
+    const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
     const metrics = quotesStore.getMetrics();
     const quotes = quotesStore.filterQuotes(currentSearch, currentFilter);
 
@@ -42,7 +46,11 @@ export const quotesView = {
               Cotizaciones Guardadas
             </h1>
             <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
-              Consulta presupuestos de clientes y convierte proyectos a órdenes de producción en la Audley con un solo clic.
+              ${isVisitor
+                ? 'Consulta tus presupuestos guardados en este dispositivo o envíalos a WhatsApp para iniciar producción.'
+                : (isStaff
+                  ? 'Consulta presupuestos de clientes y convierte proyectos a órdenes de producción en la Audley con un solo clic.'
+                  : 'Consulta tus presupuestos UV DTF guardados y conviértelos a órdenes de taller o compártelos por WhatsApp.')}
             </p>
           </div>
 
@@ -51,6 +59,16 @@ export const quotesView = {
             <span>📐</span>
           </a>
         </div>
+
+        ${isVisitor ? `
+          <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary);">
+              <span>🔒</span>
+              <span>Estás viendo tus cotizaciones guardadas en este dispositivo. Inicia sesión para sincronizar y respaldar tus cotizaciones.</span>
+            </div>
+            <button type="button" class="btn btn-secondary" id="btnQuotesLoginBanner" style="min-height: 38px; font-size: 0.8rem; padding: 0.35rem 0.85rem;">Iniciar Sesión 🔑</button>
+          </div>
+        ` : ''}
 
         <!-- Tarjetas de Métricas KPI -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem;">
@@ -268,7 +286,7 @@ function renderQuotesCards(quotes) {
     `;
   }
 
-  const role = store.state.user?.role || 'CUSTOMER';
+  const role = store.state.user?.role || 'VISITOR';
   const isStaff = role === 'ADMIN' || role === 'EMPLOYEE';
 
   return quotes.map((q) => {

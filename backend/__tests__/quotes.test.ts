@@ -147,6 +147,12 @@ describe('Quotes API (/api/quotes)', () => {
     expect(res.body.success).toBe(false);
   });
 
+  it('rechaza con 401 si un usuario sin token intenta listar cotizaciones en /api/quotes', async () => {
+    const res = await request(app).get('/api/quotes');
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
   it('lista las cotizaciones registradas con sus orderItems y permite filtrar por status y búsqueda', async () => {
     const resAll = await request(app)
       .get('/api/quotes')
@@ -179,28 +185,78 @@ describe('Quotes API (/api/quotes)', () => {
   });
 
   it('obtiene el detalle de una cotización por ID y por código correlativo con items de orden', async () => {
-    const resById = await request(app).get(`/api/quotes/${createdQuoteId}`);
+    const resById = await request(app)
+      .get(`/api/quotes/${createdQuoteId}`)
+      .set('Authorization', `Bearer ${customerToken}`);
     expect(resById.status).toBe(200);
     expect(resById.body.quote.id).toBe(createdQuoteId);
     expect(Array.isArray(resById.body.quote.items)).toBe(true);
     expect(resById.body.quote.items.length).toBe(1);
     expect(resById.body.quote.items[0].fileUrl).toBe('https://pub-r2.dev/assets/logo_sancristobal.png');
 
-    const resByCode = await request(app).get(`/api/quotes/${createdQuoteCode}`);
+    const resByCode = await request(app)
+      .get(`/api/quotes/${createdQuoteCode}`)
+      .set('Authorization', `Bearer ${customerToken}`);
     expect(resByCode.status).toBe(200);
     expect(resByCode.body.quote.code).toBe(createdQuoteCode);
     expect(Array.isArray(resByCode.body.quote.items)).toBe(true);
   });
 
+  it('rechaza con 401 si un usuario no autenticado intenta consultar cotización privada con email', async () => {
+    const res = await request(app).get(`/api/quotes/${createdQuoteId}`);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('permite consultar cotización anónima (sin email) por ID o código sin token', async () => {
+    const anonRes = await request(app)
+      .post('/api/quotes')
+      .send({
+        projectName: 'Cotización Anónima Tracking',
+        leadName: 'Visitante Anónimo',
+        leadPhone: '+502 5555-3333',
+        leadEmail: null,
+        widthCm: 5,
+        heightCm: 5,
+        qty: 50,
+        linearMeters: 1.0,
+        unitRateQ: 140,
+        materialPriceQ: 140,
+        totalPriceQ: 140,
+      });
+
+    expect(anonRes.status).toBe(201);
+    const anonId = anonRes.body.quote.id;
+    const anonCode = anonRes.body.quote.code;
+
+    const getAnonById = await request(app).get(`/api/quotes/${anonId}`);
+    expect(getAnonById.status).toBe(200);
+    expect(getAnonById.body.quote.id).toBe(anonId);
+
+    const getAnonByCode = await request(app).get(`/api/quotes/${anonCode}`);
+    expect(getAnonByCode.status).toBe(200);
+    expect(getAnonByCode.body.quote.code).toBe(anonCode);
+  });
+
   it('retorna 404 al consultar una cotización inexistente', async () => {
-    const res = await request(app).get('/api/quotes/cot_inexistente_999');
+    const res = await request(app)
+      .get('/api/quotes/cot_inexistente_999')
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
+  });
+
+  it('rechaza con 401 si un usuario sin token intenta actualizar una cotización', async () => {
+    const res = await request(app)
+      .put(`/api/quotes/${createdQuoteId}`)
+      .send({ projectName: 'Hacked Sin Token' });
+    expect(res.status).toBe(401);
   });
 
   it('actualiza datos de una cotización guardada y sincroniza items', async () => {
     const res = await request(app)
       .put(`/api/quotes/${createdQuoteId}`)
+      .set('Authorization', `Bearer ${customerToken}`)
       .send({
         projectName: 'Stickers Café San Cristóbal 5x5cm - Edición Actualizada',
         notes: 'Se requiere corte circular especial',
@@ -234,6 +290,7 @@ describe('Quotes API (/api/quotes)', () => {
   it('retorna 404 al actualizar una cotización inexistente', async () => {
     const res = await request(app)
       .put('/api/quotes/cot_inexistente_999')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ projectName: 'Nuevo' });
 
     expect(res.status).toBe(404);
@@ -354,6 +411,11 @@ describe('Quotes API (/api/quotes)', () => {
     expect(res.body.success).toBe(false);
   });
 
+  it('rechaza con 401 si un usuario sin token intenta eliminar una cotización', async () => {
+    const res = await request(app).delete(`/api/quotes/${createdQuoteId}`);
+    expect(res.status).toBe(401);
+  });
+
   it('elimina una cotización guardada', async () => {
     // Crear cotización temporal para eliminar
     const tempRes = await request(app)
@@ -380,7 +442,9 @@ describe('Quotes API (/api/quotes)', () => {
     expect(delRes.status).toBe(200);
     expect(delRes.body.success).toBe(true);
 
-    const getRes = await request(app).get(`/api/quotes/${tempId}`);
+    const getRes = await request(app)
+      .get(`/api/quotes/${tempId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(getRes.status).toBe(404);
   });
 
