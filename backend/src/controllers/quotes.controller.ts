@@ -58,6 +58,14 @@ export const updateQuoteSchema = z.object({
 
 export async function listQuotes(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'No autenticado. Token requerido para listar cotizaciones.',
+      });
+      return;
+    }
+
     const { status, search } = req.query as { status?: string; search?: string };
 
     const where: any = {};
@@ -66,35 +74,52 @@ export async function listQuotes(req: AuthenticatedRequest, res: Response, next:
       where.status = status;
     }
 
+    const searchConditions: any[] = [];
     if (search && search.trim()) {
       const q = search.trim();
-      where.OR = [
-        { code: { contains: q } },
-        { projectName: { contains: q } },
-        { leadName: { contains: q } },
-        { leadPhone: { contains: q } },
-        { leadEmail: { contains: q } },
-        { companyName: { contains: q } },
-      ];
+      searchConditions.push(
+        { code: { contains: q, mode: 'insensitive' } },
+        { projectName: { contains: q, mode: 'insensitive' } },
+        { leadName: { contains: q, mode: 'insensitive' } },
+        { leadPhone: { contains: q, mode: 'insensitive' } },
+        { leadEmail: { contains: q, mode: 'insensitive' } },
+        { companyName: { contains: q, mode: 'insensitive' } },
+      );
     }
 
-    // Si es cliente autenticado, filtrar por sus cotizaciones (por email o customerId)
-    if (req.user?.role === 'CUSTOMER') {
+    // Si es cliente autenticado, filtrar estrictamente por sus cotizaciones (por email o customerId)
+    if (req.user.role === 'CUSTOMER') {
       const dbUser = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: { customerId: true, email: true },
       });
-      const orConditions: any[] = [{ leadEmail: req.user.email }];
+      const customerConditions: any[] = [
+        { leadEmail: { equals: req.user.email, mode: 'insensitive' } },
+      ];
       if (dbUser?.customerId) {
         const customer = await prisma.customer.findUnique({
           where: { id: dbUser.customerId },
           select: { email: true },
         });
-        if (customer?.email && customer.email !== req.user.email) {
-          orConditions.push({ leadEmail: customer.email });
+        if (customer?.email && customer.email.toLowerCase() !== req.user.email.toLowerCase()) {
+          customerConditions.push({ leadEmail: { equals: customer.email, mode: 'insensitive' } });
         }
       }
-      where.OR = orConditions;
+
+      where.AND = [{ OR: customerConditions }];
+      if (searchConditions.length > 0) {
+        where.AND.push({ OR: searchConditions });
+      }
+    } else if (req.user.role === 'ADMIN' || req.user.role === 'EMPLOYEE') {
+      if (searchConditions.length > 0) {
+        where.OR = searchConditions;
+      }
+    } else {
+      res.status(403).json({
+        success: false,
+        message: 'Rol no autorizado para listar cotizaciones.',
+      });
+      return;
     }
 
     const quotes = await prisma.quote.findMany({
@@ -137,9 +162,42 @@ export async function getQuoteById(req: AuthenticatedRequest, res: Response, nex
       return;
     }
 
-    if (req.user?.role === 'CUSTOMER' && quote.leadEmail && quote.leadEmail !== req.user.email) {
-      res.status(403).json({ success: false, message: 'Acceso no autorizado a esta cotización.' });
+    // Si es Administrador o Personal de Taller, acceso completo permitido
+    if (req.user?.role === 'ADMIN' || req.user?.role === 'EMPLOYEE') {
+      res.json({ success: true, quote });
       return;
+    }
+
+    // Si la cotización tiene correo de cliente asignado (pertenece a una cuenta)
+    if (quote.leadEmail && quote.leadEmail.trim() !== '') {
+      if (!req.user) {
+        res.status(401).json({ success: false, message: 'No autenticado. Inicia sesión para ver esta cotización.' });
+        return;
+      }
+      if (req.user.role === 'CUSTOMER') {
+        const isOwner = quote.leadEmail.toLowerCase() === req.user.email.toLowerCase();
+        let isCustomerOwner = false;
+        if (!isOwner) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { customerId: true },
+          });
+          if (dbUser?.customerId) {
+            const customer = await prisma.customer.findUnique({
+              where: { id: dbUser.customerId },
+              select: { email: true },
+            });
+            if (customer?.email && customer.email.toLowerCase() === quote.leadEmail.toLowerCase()) {
+              isCustomerOwner = true;
+            }
+          }
+        }
+
+        if (!isOwner && !isCustomerOwner) {
+          res.status(403).json({ success: false, message: 'Acceso no autorizado a esta cotización.' });
+          return;
+        }
+      }
     }
 
     res.json({ success: true, quote });
@@ -249,9 +307,17 @@ export async function updateQuote(req: AuthenticatedRequest, res: Response, next
       return;
     }
 
-    if (req.user?.role === 'CUSTOMER' && existing.leadEmail && existing.leadEmail !== req.user.email) {
-      res.status(403).json({ success: false, message: 'No tienes permiso para modificar esta cotización.' });
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'No autenticado. Token requerido.' });
       return;
+    }
+
+    if (req.user.role === 'CUSTOMER') {
+      const isOwner = existing.leadEmail && existing.leadEmail.toLowerCase() === req.user.email.toLowerCase();
+      if (!isOwner) {
+        res.status(403).json({ success: false, message: 'No tienes permiso para modificar esta cotización.' });
+        return;
+      }
     }
 
     const { items, ...scalarData } = data;
@@ -448,9 +514,17 @@ export async function deleteQuote(req: AuthenticatedRequest, res: Response, next
       return;
     }
 
-    if (req.user?.role === 'CUSTOMER' && existing.leadEmail && existing.leadEmail !== req.user.email) {
-      res.status(403).json({ success: false, message: 'No tienes permiso para eliminar esta cotización.' });
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'No autenticado. Token requerido.' });
       return;
+    }
+
+    if (req.user.role === 'CUSTOMER') {
+      const isOwner = existing.leadEmail && existing.leadEmail.toLowerCase() === req.user.email.toLowerCase();
+      if (!isOwner) {
+        res.status(403).json({ success: false, message: 'No tienes permiso para eliminar esta cotización.' });
+        return;
+      }
     }
 
     await prisma.quote.delete({ where: { id } });

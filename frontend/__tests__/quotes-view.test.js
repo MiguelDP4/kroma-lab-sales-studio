@@ -434,4 +434,88 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
       expect(quotesStore.convertToOrder).toHaveBeenCalledWith('qt_unassigned_02');
     });
   });
+  it('renderiza banner de almacenamiento local para rol VISITOR y dispara apertura de modal login', () => {
+    store.state.user = { role: 'VISITOR' };
+    quotesStore.quotes = [{
+      id: 'qt_vis_01',
+      localCreated: true,
+      code: 'COT-2026-001',
+      projectName: 'Mi Proyecto Local',
+      leadName: 'Visitante',
+      leadPhone: '+502 5555-0000',
+      widthCm: 5,
+      heightCm: 5,
+      qty: 50,
+      totalPriceQ: 140,
+      status: 'SAVED',
+    }];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    // 1. Verificar presencia de banner
+    expect(document.body.innerHTML).toContain('Estás viendo tus cotizaciones guardadas en este dispositivo');
+
+    // 2. Clic en botón iniciar sesión del banner
+    const btnLoginBanner = document.getElementById('btnQuotesLoginBanner');
+    expect(btnLoginBanner).not.toBeNull();
+    btnLoginBanner.click();
+
+    // El modal o handler de login se invoca
+    const userModal = document.getElementById('userProfileModal');
+    if (userModal) {
+      expect(userModal.style.display).toBe('block');
+    }
+  });
+  it('agrega todos los sub-items al carrito cuando la cotización tiene múltiples items', () => {
+    cartStore.items = [];
+    quotesStore.quotes = [{
+      id: 'qt_multi_items_01',
+      localCreated: true,
+      projectName: 'Combo Stickers',
+      items: [
+        { id: 'it_a', title: 'Logo A', widthCm: 5, heightCm: 5, qty: 10, linearMeters: 0.2, totalPriceQ: 30 },
+        { id: 'it_b', title: 'Logo B', widthCm: 10, heightCm: 10, qty: 5, linearMeters: 0.5, totalPriceQ: 70 },
+      ],
+      totalPriceQ: 100,
+    }];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    const btnCart = document.querySelector('.btn-add-quote-to-cart[data-quote-id="qt_multi_items_01"]');
+    expect(btnCart).not.toBeNull();
+    btnCart.click();
+
+    expect(cartStore.items.length).toBe(2);
+    expect(cartStore.items[0].title).toBe('Logo A');
+    expect(cartStore.items[1].title).toBe('Logo B');
+  });
+
+  it('navega a quoter usando window.router cuando se presiona reabrir cotización', () => {
+    vi.useFakeTimers();
+    window.router = { navigate: vi.fn() };
+
+    quotesStore.quotes = [{
+      id: 'qt_reload_01',
+      localCreated: true,
+      projectName: 'Reload Quote',
+      widthCm: 8,
+      heightCm: 8,
+      qty: 25,
+      withCutting: true,
+      totalPriceQ: 80,
+    }];
+
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    const btnReload = document.querySelector('.btn-load-quoter');
+    expect(btnReload).not.toBeNull();
+    btnReload.click();
+
+    expect(window.router.navigate).toHaveBeenCalledWith('/');
+    vi.advanceTimersByTime(200);
+    vi.useRealTimers();
+  });
 });

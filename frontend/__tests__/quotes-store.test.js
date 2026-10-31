@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { quotesStore, INITIAL_SEED_QUOTES } from '../src/js/modules/quotes-store.js';
 import { ordersStore } from '../src/js/modules/orders-store.js';
 import { apiClient } from '../src/js/modules/api-client.js';
+import { store } from '../src/js/store.js';
 
 describe('QuotesStore — Almacén Reactivo de Cotizaciones Guardadas', () => {
   beforeEach(() => {
@@ -376,5 +377,93 @@ describe('QuotesStore — Almacén Reactivo de Cotizaciones Guardadas', () => {
     const quotes = quotesStore.getQuotes();
     expect(quotes.some(q => q.id === localQuote.id)).toBe(true);
     expect(quotes.some(q => q.id === 'api_quote_100')).toBe(true);
+  });
+  it('aisla cotizaciones para rol CUSTOMER mostrando únicamente las que coinciden con su correo', () => {
+    store.state.user = { role: 'CUSTOMER', email: 'maria@mielgt.com', name: 'María Morales' };
+
+    quotesStore.quotes = [
+      { id: 'q1', leadEmail: 'maria@mielgt.com', projectName: 'Etiquetas Miel', totalPriceQ: 100 },
+      { id: 'q2', leadEmail: 'otro@cliente.gt', projectName: 'Stickers Otro Cliente', totalPriceQ: 200 },
+      { id: 'q3', leadEmail: 'MARIA@MIELGT.COM', projectName: 'Frascos Mayúscula', totalPriceQ: 150 },
+    ];
+
+    const quotes = quotesStore.getQuotes();
+    expect(quotes.length).toBe(2);
+    expect(quotes.every(q => q.leadEmail.toLowerCase() === 'maria@mielgt.com')).toBe(true);
+
+    const metrics = quotesStore.getMetrics();
+    expect(metrics.totalQuotes).toBe(2);
+    expect(metrics.totalQuotedQ).toBe(250);
+  });
+
+  it('aisla cotizaciones para rol VISITOR mostrando únicamente las creadas localmente en este dispositivo', () => {
+    store.state.user = { role: 'VISITOR' };
+
+    quotesStore.quotes = [
+      { id: 'q_local_1', localCreated: true, projectName: 'Mi Cotización Local', totalPriceQ: 120 },
+      { id: 'q_remote_foreign', backendId: 'remote-1', leadEmail: 'juan@empresa.gt', projectName: 'Cotización Ajena Servidor' },
+      { id: 'q_local_unassigned', backendId: null, leadEmail: null, projectName: 'Borrador Anónimo Local' },
+    ];
+
+    const quotes = quotesStore.getQuotes();
+    expect(quotes.some(q => q.id === 'q_local_1')).toBe(true);
+    expect(quotes.some(q => q.id === 'q_local_unassigned')).toBe(true);
+    expect(quotes.some(q => q.id === 'q_remote_foreign')).toBe(false);
+  });
+  it('actualiza items de la cotización cuando la API retorna orderItems creados', async () => {
+    vi.spyOn(apiClient.quotes, 'create').mockResolvedValueOnce({
+      quote: {
+        id: 'back_q_999',
+        code: 'COT-2026-0999',
+        items: [
+          { id: 'it_1', name: 'Item Remoto 1', widthCm: 10, heightCm: 10, qty: 5, linearMeters: 0.5, unitRateQ: 140, materialPriceQ: 70, totalPriceQ: 70 }
+        ]
+      }
+    });
+
+    const quote = quotesStore.createQuote({
+      projectName: 'Proyecto con Items Remotos',
+      widthCm: 10,
+      heightCm: 10,
+      qty: 5,
+      linearMeters: 0.5,
+      totalPriceQ: 70,
+    });
+
+    await new Promise(r => setTimeout(r, 30));
+    expect(quote.backendId).toBe('back_q_999');
+    expect(quote.items.length).toBe(1);
+    expect(quote.items[0].id).toBe('it_1');
+  });
+
+  it('actualiza orden existente en ordersStore cuando convertToOrder encuentra orden con mismo ID', async () => {
+    const existingOrder = { id: 'ORD-2026-0001', backendId: 'ORD_BACK_1', client: 'Test' };
+    ordersStore.orders = [existingOrder];
+
+    const quote = quotesStore.createQuote({
+      projectName: 'Proyecto Convert Existente',
+      widthCm: 10,
+      heightCm: 10,
+      qty: 1,
+      linearMeters: 0.2,
+      totalPriceQ: 50,
+    });
+    quote.backendId = 'back_exist';
+
+    vi.spyOn(apiClient.quotes, 'convertToOrder').mockResolvedValueOnce({
+      success: true,
+      order: {
+        id: 'ORD_BACK_1',
+        code: 'ORD-2026-0001',
+        totalAmountQ: 50,
+        status: 'PENDING_APPROVAL',
+        customer: { name: 'Cliente' },
+        items: [],
+      }
+    });
+
+    const res = await quotesStore.convertToOrder(quote.id);
+    expect(res.success).toBe(true);
+    expect(ordersStore.orders[0].id).toBe('ORD-2026-0001');
   });
 });

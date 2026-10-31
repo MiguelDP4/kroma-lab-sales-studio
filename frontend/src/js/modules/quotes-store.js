@@ -8,6 +8,7 @@
 import { apiClient } from './api-client.js';
 import { ordersStore } from './orders-store.js';
 import { mapOrderItem, cleanOrderItemForApi } from './order-item.js';
+import { store } from '../store.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -16,6 +17,7 @@ const STORAGE_KEY_QUOTES = 'kromalab_quotes';
 export const INITIAL_SEED_QUOTES = [
   {
     id: 'qt_001',
+    localCreated: true,
     code: 'COT-2026-001',
     projectName: 'Stickers Termos Stanley 8x5cm',
     leadName: 'Rodrigo Méndez',
@@ -44,6 +46,7 @@ export const INITIAL_SEED_QUOTES = [
   },
   {
     id: 'qt_002',
+    localCreated: true,
     code: 'COT-2026-002',
     projectName: 'Logos Acrílico 5x5cm (Maquila)',
     leadName: 'Ana Lucía Gómez',
@@ -72,6 +75,7 @@ export const INITIAL_SEED_QUOTES = [
   },
   {
     id: 'qt_003',
+    localCreated: true,
     code: 'COT-2026-003',
     projectName: 'Etiquetas Botellas 4x4cm',
     leadName: 'Carlos Morales',
@@ -115,7 +119,30 @@ class QuotesStore {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             if (!IS_TEST_ENV) {
-              const clean = parsed.filter(q => !['qt_001', 'qt_002', 'qt_003'].includes(q.id) && q.leadEmail !== 'rodrigo@promoguate.gt');
+              const testEmails = [
+                'rodrigo@promoguate.gt',
+                'carlos@rivera.gt',
+                'maria@mielgt.com',
+                'admin@kromalab.gt',
+                'testadmin@kromalab.gt',
+                'taller@kromalab.gt',
+                'carlos.taller@kromalab.gt',
+                'sofia.ventas@kromalab.gt',
+              ];
+              const testNames = [
+                'Carlos Test',
+                'Administrador QA',
+                'Juanito unpajote menchaca',
+                'asdf',
+                'Cliente Bobina',
+                'Cliente WhatsApp',
+              ];
+              const clean = parsed.filter(q => {
+                if (['qt_001', 'qt_002', 'qt_003'].includes(q.id)) return false;
+                if (q.leadEmail && testEmails.includes(q.leadEmail.toLowerCase())) return false;
+                if (q.leadName && testNames.includes(q.leadName)) return false;
+                return true;
+              });
               this.quotes = clean;
               this.saveToStorage();
               return;
@@ -156,7 +183,30 @@ class QuotesStore {
   }
 
   getQuotes() {
-    return [...this.quotes];
+    const user = (typeof store !== 'undefined' && store?.state?.user) ? store.state.user : null;
+    const role = user?.role || (IS_TEST_ENV && !user ? 'STAFF_TEST' : 'VISITOR');
+
+    // 1. Administrador o Personal de taller (Staff): pueden ver todas las cotizaciones
+    if (role === 'ADMIN' || role === 'EMPLOYEE' || role === 'STAFF_TEST') {
+      return [...this.quotes];
+    }
+
+    // 2. Cliente Registrado: solo ve sus cotizaciones (por leadEmail o creadas por él)
+    if (role === 'CUSTOMER' && user?.email) {
+      const userEmail = user.email.toLowerCase();
+      return this.quotes.filter(q => {
+        if (q.leadEmail && q.leadEmail.toLowerCase() === userEmail) return true;
+        if (!q.leadEmail && q.localCreated) return true;
+        return false;
+      });
+    }
+
+    // 3. Usuario Sin Cuenta (VISITOR): solo ve las cotizaciones creadas localmente en este dispositivo
+    return this.quotes.filter(q => {
+      if (q.localCreated) return true;
+      if (!q.backendId && (!q.leadEmail || q.leadEmail === '')) return true;
+      return false;
+    });
   }
 
   getQuoteById(id) {
@@ -238,6 +288,10 @@ class QuotesStore {
   async syncWithApi() {
     try {
       if (typeof apiClient !== 'undefined' && apiClient.quotes) {
+        // Visitantes sin sesión iniciada no sincronizan cotizaciones del servidor
+        if (!apiClient.token && !IS_TEST_ENV) {
+          return this.getQuotes();
+        }
         const res = await apiClient.quotes.list();
         if (res && res.success && Array.isArray(res.quotes)) {
           const apiQuotes = res.quotes.map(q => this._mapBackendQuote(q));
@@ -259,7 +313,7 @@ class QuotesStore {
   createQuote(data) {
     const leadName = data?.leadName?.trim() || 'Cliente Cotización';
     const leadPhone = data?.leadPhone?.trim() || '';
-    const leadEmail = data?.leadEmail?.trim()?.toLowerCase() || '';
+    let leadEmail = data?.leadEmail?.trim()?.toLowerCase() || '';
     const companyName = data?.companyName?.trim() || '';
     const widthCm = Number(data?.widthCm) || 5;
     const heightCm = Number(data?.heightCm) || 5;
@@ -275,6 +329,12 @@ class QuotesStore {
     const finishType = data?.finishType || 'GLOSSY_VARNISH';
     const notes = data?.notes?.trim() || '';
     const source = data?.source || 'web';
+
+    // Autoasignar correo si el usuario activo es CUSTOMER y no se ingresó otro correo
+    const activeUser = (typeof store !== 'undefined' && store?.state?.user) ? store.state.user : null;
+    if (!leadEmail && activeUser?.role === 'CUSTOMER' && activeUser?.email) {
+      leadEmail = activeUser.email.toLowerCase();
+    }
 
     const projectName = data?.projectName?.trim() || `Cotización ${widthCm}×${heightCm} cm (${qty} pcs)`;
     const fileUrl = data?.fileUrl || null;
@@ -323,6 +383,7 @@ class QuotesStore {
     const newQuote = {
       id,
       code,
+      localCreated: true,
       projectName,
       leadName,
       leadPhone,
@@ -566,10 +627,11 @@ class QuotesStore {
   }
 
   getMetrics() {
-    const totalQuotes = this.quotes.length;
-    const savedCount = this.quotes.filter(q => q.status === 'SAVED').length;
-    const convertedCount = this.quotes.filter(q => q.status === 'CONVERTED').length;
-    const totalQuotedQ = this.quotes.reduce((acc, q) => acc + (Number(q.totalPriceQ) || 0), 0);
+    const quotes = this.getQuotes();
+    const totalQuotes = quotes.length;
+    const savedCount = quotes.filter(q => q.status === 'SAVED').length;
+    const convertedCount = quotes.filter(q => q.status === 'CONVERTED').length;
+    const totalQuotedQ = quotes.reduce((acc, q) => acc + (Number(q.totalPriceQ) || 0), 0);
     const conversionRate = totalQuotes > 0 ? ((convertedCount / totalQuotes) * 100).toFixed(1) : '0.0';
 
     return {
@@ -582,7 +644,7 @@ class QuotesStore {
   }
 
   filterQuotes(search = '', status = 'ALL') {
-    let result = [...this.quotes];
+    let result = this.getQuotes();
 
     if (status && status !== 'ALL') {
       result = result.filter(q => q.status === status);

@@ -632,12 +632,12 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 | **Cobranza** | `GET /api/receivables` | Cuentas por cobrar con clasificación de antigüedad (0-7d, 8-15d, >15d) |
 | **Cobranza** | `POST /api/receivables/payments` | Registro de abono `PAY-YYYY-XXX` y amortización de deuda |
 | **Cobranza** | `DELETE /api/receivables/payments/:id` | Anulación de abono y restitución del saldo |
-| **Cotizaciones** | `GET /api/quotes` | Lista de cotizaciones con filtros por estado (`SAVED`, `CONVERTED`), texto y rol de cliente. **Incluye `items: OrderItem[]`**. |
-| **Cotizaciones** | `GET /api/quotes/:id` | Detalle de cotización por UUID o código correlativo `COT-YYYY-XXX`. **Incluye `items: OrderItem[]`**. |
+| **Cotizaciones** | `GET /api/quotes` | Lista de cotizaciones con filtros por estado (`SAVED`, `CONVERTED`) y búsqueda. **Requiere autenticación (`authenticate`)**: `CUSTOMER` solo ve sus cotizaciones por email; `ADMIN`/`EMPLOYEE` ven todas. Bloquea llamadas anónimas con HTTP 401. **Incluye `items: OrderItem[]`**. |
+| **Cotizaciones** | `GET /api/quotes/:id` | Detalle de cotización por UUID o código correlativo `COT-YYYY-XXX`. **Aislamiento estricto**: Si la cotización tiene `leadEmail`, requiere sesión (401 si anónimo, 403 si cliente ajeno); cotizaciones anónimas de mostrador son consultables por ID/código. **Incluye `items: OrderItem[]`**. |
 | **Cotizaciones** | `POST /api/quotes` | Guardado de cotización con validación de bobina (≤28 cm útiles) y creación persistente de `OrderItem` vinculados |
-| **Cotizaciones** | `PUT /api/quotes/:id` | Modificación de datos de cotización y sincronización de `OrderItem` |
+| **Cotizaciones** | `PUT /api/quotes/:id` | Modificación de cotización y sincronización de `OrderItem`. **Requiere autenticación**: Propietario o Staff. Retorna 403 Forbidden ante cotizaciones ajenas. |
 | **Cotizaciones** | `POST /api/quotes/:id/convert` | Conversión directa en 1 clic a Orden `KL-YYYY-XXX`, clonando íntegramente todos los `OrderItem` con sus artes y montajes técnicos sin pérdida de ítems ni concatenaciones sintéticas en `notes`. |
-| **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización guardada y sus `OrderItem` asociados |
+| **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización y sus `OrderItem` asociados. **Requiere autenticación**: Propietario o Staff. Retorna 403 Forbidden ante cotizaciones ajenas. |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
 | **Almacenamiento** | `GET /api/storage/status` | Estado operativo de almacenamiento (R2 o fallback local) y límites |
