@@ -3,7 +3,8 @@ import {
   getTierRate, 
   getCuttingRate, 
   validateDimensions, 
-  calculateQuote 
+  calculateQuote,
+  checkFreeShippingEligibility,
 } from '../src/js/modules/quoter-engine.js';
 import { BUSINESS_CONFIG } from '../src/shared/business-config.js';
 
@@ -128,5 +129,33 @@ describe('Quoter Engine — Cálculo Integral de Pedido', () => {
     expect(quote.isCuttingMinApplied).toBe(false);
     expect(quote.cuttingTotalQ).toBe(75.0);
     expect(quote.totalPriceQ).toBe(quote.materialPriceQ + 75.0);
+  });
+
+  describe('Políticas de Envío Gratis (checkFreeShippingEligibility)', () => {
+    it('evalúa envío gratis en Capital a partir de Q400', () => {
+      const under = checkFreeShippingEligibility(350, 'capital');
+      expect(under.isEligible).toBe(false);
+      expect(under.threshold).toBe(400);
+      expect(under.missingQ).toBe(50);
+
+      const exact = checkFreeShippingEligibility(400, 'capital');
+      expect(exact.isEligible).toBe(true);
+      expect(exact.missingQ).toBe(0);
+
+      const over = checkFreeShippingEligibility(550, 'capital');
+      expect(over.isEligible).toBe(true);
+      expect(over.missingQ).toBe(0);
+    });
+
+    it('evalúa envío gratis a Departamentos/Interior a partir de Q600', () => {
+      const under = checkFreeShippingEligibility(550, 'interior');
+      expect(under.isEligible).toBe(false);
+      expect(under.threshold).toBe(600);
+      expect(under.missingQ).toBe(50);
+
+      const exact = checkFreeShippingEligibility(600, 'interior');
+      expect(exact.isEligible).toBe(true);
+      expect(exact.missingQ).toBe(0);
+    });
   });
 });

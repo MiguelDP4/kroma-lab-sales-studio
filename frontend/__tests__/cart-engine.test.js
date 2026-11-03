@@ -5,6 +5,7 @@ import {
   calculateCartItemMetrics,
   calculateCartTotals,
   formatWhatsAppCartOrder,
+  checkCartFreeShipping,
 } from '../src/js/modules/cart-engine.js';
 import { BUSINESS_CONFIG } from '../src/shared/business-config.js';
 
@@ -211,6 +212,58 @@ describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
 
       expect(msg).not.toContain('data:image/png');
       expect(msg).not.toContain('• 📐 *Montaje en bobina:*');
+    });
+
+    it('incluye modalidad de entrega en agencia y aviso de flete por cotizar', () => {
+      const totals = calculateCartTotals([{ widthCm: 5, heightCm: 5, qty: 50, includeCutting: false }]);
+      const msg = formatWhatsAppCartOrder(totals, {
+        name: 'Cliente Agencia',
+        deliveryType: 'AGENCY',
+        agencyName: 'Guatex Central Quetzaltenango',
+        deliveryZone: 'INTERIOR',
+        freeShippingQualified: false,
+      });
+
+      expect(msg).toContain('Recolección en Agencia de Encomiendas');
+      expect(msg).toContain('Guatex Central Quetzaltenango');
+      expect(msg).toContain('Por cotizar por asesor');
+      expect(msg).toContain('50% de anticipo');
+    });
+
+    it('incluye aviso de envío GRATIS cuando el cliente califica', () => {
+      const totals = calculateCartTotals([{ widthCm: 10, heightCm: 10, qty: 200, includeCutting: false }]);
+      const msg = formatWhatsAppCartOrder(totals, {
+        name: 'Cliente VIP',
+        deliveryType: 'HOME',
+        deliveryZone: 'CAPITAL',
+        freeShippingQualified: true,
+      });
+
+      expect(msg).toContain('Envío a Domicilio (Capital / Área Metropolitana)');
+      expect(msg).toContain('🎉 ¡GRATIS!');
+      expect(msg).toContain('Sin cobro contra entrega (COD)');
+    });
+  });
+
+  describe('Cálculo de Envío Gratis Consolidado (checkCartFreeShipping)', () => {
+    it('calcula faltantes y elegibilidad para Capital (Q400) e Interior (Q600)', () => {
+      const resUnder = checkCartFreeShipping(300);
+      expect(resUnder.eligibleCapital).toBe(false);
+      expect(resUnder.eligibleInterior).toBe(false);
+      expect(resUnder.missingCapital).toBe(100);
+      expect(resUnder.missingInterior).toBe(300);
+
+      const resCapitalOk = checkCartFreeShipping(450);
+      expect(resCapitalOk.eligibleCapital).toBe(true);
+      expect(resCapitalOk.eligibleInterior).toBe(false);
+      expect(resCapitalOk.missingCapital).toBe(0);
+      expect(resCapitalOk.missingInterior).toBe(150);
+
+      const resAllOk = checkCartFreeShipping(650);
+      expect(resAllOk.eligibleCapital).toBe(true);
+      expect(resAllOk.eligibleInterior).toBe(true);
+      expect(resAllOk.missingCapital).toBe(0);
+      expect(resAllOk.missingInterior).toBe(0);
     });
   });
 });

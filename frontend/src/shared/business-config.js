@@ -20,6 +20,20 @@ export const BUSINESS_CONFIG = {
   phoneWhatsApp: "50254066217", // Actualizable con el WhatsApp de Kroma Lab
   currencySymbol: "Q",
   currencyCode: "GTQ",
+
+  // Políticas de entrega y flete en Guatemala
+  freeShippingThresholds: {
+    capital: 400.0,   // Q400 para Ciudad de Guatemala / Área Metropolitana
+    interior: 600.0,  // Q600 para Departamentos / Interior de la República
+  },
+
+  // Política estricta de pagos para trabajos personalizados UV DTF
+  paymentPolicy: {
+    advancePercentage: 50,      // 50% anticipo requerido para iniciar impresión
+    balanceBeforeDelivery: 50,  // 50% restante requerido antes de entregar al courier
+    allowFullPayment: true,     // Opción de pago 100% anticipado
+    allowCOD: false,            // Cobro contra entrega estrictamente deshabilitado para evitar estafas
+  },
 };
 
 /**

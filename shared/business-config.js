@@ -11,7 +11,7 @@ export const BUSINESS_CONFIG = {
 
   // Tarifa mínima de impresión base
   minimumBillableMeters: 1.0,
-  minimumBasePriceQ: 140.0,
+  minimumBasePriceQ: 150.0,
 
   // Tarifa mínima de servicio de corte de precisión
   cuttingMinimumQ: 25.0,
@@ -20,17 +20,31 @@ export const BUSINESS_CONFIG = {
   phoneWhatsApp: "50254066217", // Actualizable con el WhatsApp de Kroma Lab
   currencySymbol: "Q",
   currencyCode: "GTQ",
+
+  // Políticas de entrega y flete en Guatemala
+  freeShippingThresholds: {
+    capital: 400.0,   // Q400 para Ciudad de Guatemala / Área Metropolitana
+    interior: 600.0,  // Q600 para Departamentos / Interior de la República
+  },
+
+  // Política estricta de pagos para trabajos personalizados UV DTF
+  paymentPolicy: {
+    advancePercentage: 50,      // 50% anticipo requerido para iniciar impresión
+    balanceBeforeDelivery: 50,  // 50% restante requerido antes de entregar al courier
+    allowFullPayment: true,     // Opción de pago 100% anticipado
+    allowCOD: false,            // Cobro contra entrega estrictamente deshabilitado para evitar estafas
+  },
 };
 
 /**
  * Escala de precios de impresión UV DTF por metro lineal según volumen
  */
 export const PRICING_TIERS = [
-  { minMeters: 0.0, maxMeters: 2.0, ratePerMeterQ: 140.0, label: "1 a 2 metros" },
-  { minMeters: 2.0, maxMeters: 5.0, ratePerMeterQ: 115.0, label: "2 a 5 metros" },
-  { minMeters: 5.0, maxMeters: 10.0, ratePerMeterQ: 105.0, label: "5 a 10 metros" },
-  { minMeters: 10.0, maxMeters: 20.0, ratePerMeterQ: 95.0, label: "10 a 20 metros" },
-  { minMeters: 20.0, maxMeters: Infinity, ratePerMeterQ: 85.0, label: "20+ metros (Mayoreo)" },
+  { minMeters: 0.0, maxMeters: 2.0, ratePerMeterQ: 150.0, label: "1 a 2 metros" },
+  { minMeters: 2.0, maxMeters: 5.0, ratePerMeterQ: 125.0, label: "2 a 5 metros" },
+  { minMeters: 5.0, maxMeters: 10.0, ratePerMeterQ: 115.0, label: "5 a 10 metros" },
+  { minMeters: 10.0, maxMeters: 20.0, ratePerMeterQ: 105.0, label: "10 a 20 metros" },
+  { minMeters: 20.0, maxMeters: Infinity, ratePerMeterQ: 95.0, label: "20+ metros (Mayoreo)" },
 ];
 
 /**

@@ -1303,6 +1303,20 @@ export function renderQuoteResults(quote) {
       noticeBox.style.display = 'none';
     }
   }
+
+  // Actualizar aviso dinámico de incentivo de envío gratis
+  const incentiveEl = document.getElementById('quoterShippingIncentiveText');
+  if (incentiveEl) {
+    if (quote.totalPriceQ >= 600) {
+      incentiveEl.innerHTML = '🎉 <strong>¡Felicidades!</strong> Esta cotización califica para <strong>Envío GRATIS</strong> en todo el país.';
+    } else if (quote.totalPriceQ >= 400) {
+      const missingDepartamentos = (600 - quote.totalPriceQ).toFixed(2);
+      incentiveEl.innerHTML = `🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missingDepartamentos}</strong> más para envío gratis a Departamentos.`;
+    } else {
+      const missingCapital = (400 - quote.totalPriceQ).toFixed(2);
+      incentiveEl.innerHTML = `🎁 <strong>¡Envío GRATIS!</strong> Agrega <strong>Q${missingCapital}</strong> más para Capital (o <strong>Q${(600 - quote.totalPriceQ).toFixed(2)}</strong> para Departamentos).`;
+    }
+  }
 }
 
 /**
@@ -1339,6 +1353,7 @@ export function sendWhatsAppQuote(quote) {
     clientArtText +
     snapText +
     `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
+    `• *Nota de Envío:* No incluye flete. Un asesor confirmará la cuota exacta de entrega según tu dirección o agencia (¡Envío GRATIS en Capital desde Q400 y Departamentos desde Q600!).\n\n` +
     `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 
   const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;
