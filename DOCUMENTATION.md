@@ -147,6 +147,22 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
   * `qty > 200`: `Q0.25` / pieza
   * **Tarifa Mínima de Corte:** `Q25.00` (si $\text{qty} \times \text{tarifa} < 25$, se cobra el piso de Q25).
 
+### Políticas de Envío, Flete y Entrega en Guatemala
+1. **Precios de Producción sin Flete Incluido:**
+   * Las cotizaciones públicas y pedidos generados en la plataforma cubren exclusivamente costos de impresión, barniz y corte.
+   * La cuota de envío se calcula de forma asistida por un operador utilizando las plataformas oficiales de los couriers (Forza Delivery Express, Guatex o Cargo Expreso) y se notifica vía WhatsApp.
+2. **Incentivo de Envío Gratis por Volumen:**
+   * **Ciudad de Guatemala / Área Metropolitana:** Pedidos con monto de producción $\ge \text{Q400.00}$ califican automáticamente para **Envío GRATIS**.
+   * **Departamentos / Interior del País:** Pedidos con monto de producción $\ge \text{Q600.00}$ califican automáticamente para **Envío GRATIS**.
+3. **Modalidades de Entrega Admitidas:**
+   * **Envío a Domicilio:** Entrega directa con motorista o courier en la dirección especificada por el cliente.
+   * **Recolección en Agencia (Ocurre):** Envío a la agencia o sucursal seleccionada por el cliente (Guatex, Caex o Forza).
+   * **Privacidad de Taller:** Por política de seguridad y privacidad conyugal, queda terminantemente deshabilitada la recolección física de clientes en el domicilio particular.
+4. **Condiciones Financieras y Términos de Pago:**
+   * **Anticipo Obligatorio del 50%:** Requerido para ingresar cualquier diseño a la cola de impresión de la Audley.
+   * **Saldo Restante del 50%:** Liquidado previo a la entrega del paquete al courier (o pago del 100% anticipado).
+   * **Cero Cobro Contra Entrega (COD):** No se realizan entregas con pago en destino para proteger la inversión en materiales y la exclusividad del trabajo gráfico personalizado.
+
 ---
 
 ## 5. Matriz Maestra de Roles y Permisos (RBAC)

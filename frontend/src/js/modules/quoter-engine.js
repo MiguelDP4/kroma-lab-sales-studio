@@ -142,3 +142,21 @@ export function calculateQuote({ widthCm, heightCm, qty, includeCutting = false 
     optimalQty,
   };
 }
+
+/**
+ * Evalúa si un total de cotización o carrito califica para envío gratis según la zona.
+ * @param {number} totalQ Monto total en Quetzales
+ * @param {'capital'|'interior'} [zone='capital'] Zona geográfica de destino
+ * @returns {{ isEligible: boolean, threshold: number, missingQ: number }}
+ */
+export function checkFreeShippingEligibility(totalQ, zone = 'capital') {
+  const thresholds = BUSINESS_CONFIG.freeShippingThresholds || { capital: 400.0, interior: 600.0 };
+  const threshold = zone === 'interior' ? thresholds.interior : thresholds.capital;
+  const isEligible = totalQ >= threshold;
+  const missingQ = isEligible ? 0 : Math.round((threshold - totalQ) * 100) / 100;
+  return {
+    isEligible,
+    threshold,
+    missingQ,
+  };
+}

@@ -215,6 +215,25 @@ export const quoterView = {
               <div class="total-price" id="resTotalPrice">Q150.00</div>
               <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q3.00 por sticker</div>
             </div>
+
+            <!-- Aviso de Política de Envíos y Gancho de Envío Gratis -->
+            <div class="shipping-policy-banner" id="quoterShippingPolicyBanner">
+              <div class="shipping-policy-header">
+                <span style="font-size: 1.1rem;">🚚</span>
+                <span>Entrega y Envíos en Guatemala</span>
+              </div>
+              <p class="shipping-policy-desc">
+                Precios de producción en taller. El costo de flete se cotiza según tu dirección o agencia (Guatex, Forza o Cargo Expreso).
+              </p>
+              <div class="shipping-progress-wrap" id="quoterShippingIncentive">
+                <div class="shipping-progress-bar">
+                  <div class="shipping-progress-fill" id="quoterShippingProgressBar" style="width: 25%;"></div>
+                </div>
+                <div class="shipping-progress-text">
+                  <span id="quoterShippingIncentiveText">¡Envío GRATIS en pedidos desde Q400 en Capital y Q600 en Departamentos!</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Acciones Comerciales -->

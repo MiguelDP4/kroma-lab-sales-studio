@@ -167,6 +167,8 @@ describe('Vistas Modulares SPA', () => {
       expect(html).toContain('stickerHeight');
       expect(html).toContain('stickerQty');
       expect(html).toContain('optCutting');
+      expect(html).toContain('quoterShippingPolicyBanner');
+      expect(html).toContain('quoterShippingIncentive');
     });
 
     it('mantiene la jerarquia visual: medidas -> canvas bobina -> uploader -> cantidad -> corte', () => {
