@@ -1306,13 +1306,19 @@ export function renderQuoteResults(quote) {
 
   // Actualizar aviso dinámico de incentivo de envío gratis
   const incentiveEl = document.getElementById('quoterShippingIncentiveText');
+  const progressBar = document.getElementById('quoterShippingProgressBar');
   if (incentiveEl) {
     if (quote.totalPriceQ >= 600) {
+      if (progressBar) progressBar.style.width = '100%';
       incentiveEl.innerHTML = '🎉 <strong>¡Felicidades!</strong> Esta cotización califica para <strong>Envío GRATIS</strong> en todo el país.';
     } else if (quote.totalPriceQ >= 400) {
+      const pct = Math.min(100, Math.round((quote.totalPriceQ / 600) * 100));
+      if (progressBar) progressBar.style.width = `${pct}%`;
       const missingDepartamentos = (600 - quote.totalPriceQ).toFixed(2);
       incentiveEl.innerHTML = `🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missingDepartamentos}</strong> más para envío gratis a Departamentos.`;
     } else {
+      const pct = Math.min(100, Math.round((quote.totalPriceQ / 400) * 100));
+      if (progressBar) progressBar.style.width = `${pct}%`;
       const missingCapital = (400 - quote.totalPriceQ).toFixed(2);
       incentiveEl.innerHTML = `🎁 <strong>¡Envío GRATIS!</strong> Agrega <strong>Q${missingCapital}</strong> más para Capital (o <strong>Q${(600 - quote.totalPriceQ).toFixed(2)}</strong> para Departamentos).`;
     }
@@ -1353,7 +1359,7 @@ export function sendWhatsAppQuote(quote) {
     clientArtText +
     snapText +
     `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
-    `• *Nota de Envío:* No incluye flete. Un asesor confirmará la cuota exacta de entrega según tu dirección o agencia (¡Envío GRATIS en Capital desde Q400 y Departamentos desde Q600!).\n\n` +
+    `• *Envío:* Por coordinar según tu dirección o agencia (¡Envío gratis desde Q400 en Capital y Q600 en Departamentos!).\n\n` +
     `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 
   const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;

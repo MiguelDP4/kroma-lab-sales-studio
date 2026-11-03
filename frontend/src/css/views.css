@@ -3150,3 +3150,231 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ==========================================================================
+   POLÍTICAS Y LOGÍSTICA DE ENVÍO (COTIZADOR, CARRITO Y CHECKOUT)
+   ========================================================================== */
+.shipping-policy-banner {
+  background: rgba(28, 114, 147, 0.08);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--cerulean);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  margin-top: 1rem;
+}
+
+.shipping-policy-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 0.35rem;
+}
+
+.shipping-policy-desc {
+  margin: 0 0 0.55rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.shipping-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.shipping-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.shipping-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cerulean), var(--color-success));
+  border-radius: var(--radius-full);
+  transition: width 0.35s ease;
+}
+
+.shipping-progress-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Badge y Barra de Envío en Carrito */
+.cart-free-shipping-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cart-free-shipping-card.is-qualified {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.cart-free-shipping-msg {
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.cart-free-shipping-card.is-qualified .cart-free-shipping-msg {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+/* Selector de Modalidad de Entrega (Segmented Cards) en Checkout */
+.delivery-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 480px) {
+  .delivery-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.delivery-option-card {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-height: 48px;
+  user-select: none;
+}
+
+.delivery-option-card:hover {
+  border-color: var(--cerulean);
+  background: rgba(28, 114, 147, 0.05);
+}
+
+.delivery-option-card.active {
+  border-color: var(--cerulean);
+  background: rgba(28, 114, 147, 0.12);
+  box-shadow: 0 0 0 1px var(--cerulean);
+}
+
+.delivery-option-card input[type="radio"] {
+  accent-color: var(--cerulean);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.delivery-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.delivery-option-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.delivery-option-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Alerta de Envío en Checkout */
+.checkout-shipping-alert {
+  margin-top: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  border: 1px solid var(--border-color);
+  background: rgba(28, 114, 147, 0.06);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.checkout-shipping-alert.is-free {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+/* Caja de Pago Bancario en Checkout */
+.checkout-bank-box {
+  margin: 0.85rem 0;
+  padding: 0.9rem;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.checkout-bank-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.checkout-bank-title {
+  font-size: 0.88rem;
+  color: var(--cerulean);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.checkout-bank-content {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.checkout-bank-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.75rem;
+  margin: 0.35rem 0;
+}
+
+.checkout-bank-policy {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+

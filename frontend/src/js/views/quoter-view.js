@@ -217,17 +217,21 @@ export const quoterView = {
             </div>
 
             <!-- Aviso de Política de Envíos y Gancho de Envío Gratis -->
-            <div class="shipping-policy-banner" id="quoterShippingPolicyBanner" style="background: rgba(28, 114, 147, 0.08); border: 1px solid var(--border-color); border-left: 4px solid var(--cerulean); border-radius: var(--radius-md, 8px); padding: 0.85rem 1rem; margin-top: 1rem; font-size: 0.84rem; line-height: 1.45;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.35rem;">
-                <span style="font-size: 1.15rem;">🚚</span>
+            <div class="shipping-policy-banner" id="quoterShippingPolicyBanner">
+              <div class="shipping-policy-header">
+                <span style="font-size: 1.1rem;">🚚</span>
                 <span>Entrega y Envíos en Guatemala</span>
               </div>
-              <p style="margin: 0 0 0.4rem; color: var(--text-secondary); font-size: 0.83rem;">
-                * <strong>Precios de taller:</strong> No incluyen costo de envío. Un operador te contactará por WhatsApp para verificar y coordinar la cuota de envío según tu dirección o agencia (Forza, Guatex o Cargo Expreso).
+              <p class="shipping-policy-desc">
+                Precios de producción en taller. El costo de flete se cotiza según tu dirección o agencia (Guatex, Forza o Cargo Expreso).
               </p>
-              <div id="quoterShippingIncentive" style="display: flex; align-items: center; gap: 0.4rem; color: var(--cerulean); font-weight: 600; font-size: 0.82rem; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed var(--border-color);">
-                <span>🎁</span>
-                <span id="quoterShippingIncentiveText">¡Envío GRATIS en pedidos desde Q400 en Capital y Q600 en Departamentos!</span>
+              <div class="shipping-progress-wrap" id="quoterShippingIncentive">
+                <div class="shipping-progress-bar">
+                  <div class="shipping-progress-fill" id="quoterShippingProgressBar" style="width: 25%;"></div>
+                </div>
+                <div class="shipping-progress-text">
+                  <span id="quoterShippingIncentiveText">¡Envío GRATIS en pedidos desde Q400 en Capital y Q600 en Departamentos!</span>
+                </div>
               </div>
             </div>
           </div>

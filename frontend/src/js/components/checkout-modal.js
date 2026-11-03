@@ -101,32 +101,37 @@ export function openCheckoutModal(cartTotals) {
         </div>
 
         <!-- SECCIÓN DE LOGÍSTICA Y ENVÍO EN GUATEMALA -->
-        <div class="delivery-config-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px);">
+        <div class="delivery-config-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
           <div style="font-weight: 700; color: var(--cerulean); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem; font-size: 0.88rem;">
             <span>🚚</span>
             <span>Destino y Modalidad de Entrega</span>
           </div>
 
-          <div class="input-row" style="margin-bottom: 0.5rem;">
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="deliveryZoneSelect">Región de Destino *</label>
-              <select id="deliveryZoneSelect" class="input-control">
-                <option value="CAPITAL" selected>Capital y Área Metropolitana</option>
-                <option value="INTERIOR">Departamentos / Interior del País</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Modalidad de Envío *</label>
-              <div style="display: flex; gap: 0.5rem; align-items: center; min-height: 44px;">
-                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.84rem; cursor: pointer;">
-                  <input type="radio" name="deliveryType" id="deliveryTypeHome" value="HOME" checked>
-                  <span>A Domicilio</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.84rem; cursor: pointer;">
-                  <input type="radio" name="deliveryType" id="deliveryTypeAgency" value="AGENCY">
-                  <span>En Agencia</span>
-                </label>
-              </div>
+          <div class="form-group" style="margin-bottom: 0.65rem;">
+            <label class="form-label" for="deliveryZoneSelect">Región de Destino *</label>
+            <select id="deliveryZoneSelect" class="input-control">
+              <option value="CAPITAL" selected>Capital y Área Metropolitana</option>
+              <option value="INTERIOR">Departamentos / Interior del País</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.65rem;">
+            <label class="form-label">Modalidad de Entrega *</label>
+            <div class="delivery-options-grid">
+              <label class="delivery-option-card active" id="deliveryCardHome">
+                <input type="radio" name="deliveryType" id="deliveryTypeHome" value="HOME" checked>
+                <div class="delivery-option-info">
+                  <span class="delivery-option-title">🏠 A Domicilio</span>
+                  <span class="delivery-option-desc">Entrega en tu dirección</span>
+                </div>
+              </label>
+              <label class="delivery-option-card" id="deliveryCardAgency">
+                <input type="radio" name="deliveryType" id="deliveryTypeAgency" value="AGENCY">
+                <div class="delivery-option-info">
+                  <span class="delivery-option-title">🏢 En Agencia</span>
+                  <span class="delivery-option-desc">Guatex / Caex / Forza</span>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -143,7 +148,7 @@ export function openCheckoutModal(cartTotals) {
           </div>
 
           <!-- Banner Informativo de Envío Gratis o Flete por Cotizar -->
-          <div id="checkoutShippingAlert" style="margin-top: 0.65rem; padding: 0.5rem 0.65rem; border-radius: 4px; font-size: 0.8rem; line-height: 1.4;"></div>
+          <div id="checkoutShippingAlert" class="checkout-shipping-alert"></div>
         </div>
 
         <div class="form-group">
@@ -162,19 +167,24 @@ export function openCheckoutModal(cartTotals) {
         <input type="hidden" id="checkSaveToClients" value="false">
         `}
         <!-- INFORMACIÓN DE PAGO BANCARIO Y SUBIDA DE BOLETA -->
-        <div class="checkout-bank-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
-            <strong style="font-size: 0.88rem; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
+        <div class="checkout-bank-box">
+          <div class="checkout-bank-header">
+            <span class="checkout-bank-title">
               <span>💳</span>
               <span>Cuentas para Transferencia / Depósito</span>
-            </strong>
+            </span>
             <span class="badge" style="font-size: 0.72rem;">Anticipo 50% o Pago 100%</span>
           </div>
-          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0.65rem;">
-            <div>• <strong>Banco Industrial (Monetaria Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">5371667253</code></div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Beneficiario: Miguel Angel Dubois / Kroma Lab</div>
-            <div style="margin-top: 0.45rem; padding-top: 0.45rem; border-top: 1px dashed var(--border-color); font-size: 0.76rem; color: var(--text-secondary); line-height: 1.4;">
-              🔒 <strong>Política de Producción:</strong> 50% de anticipo para iniciar impresión en Audley y 50% restante antes de despachar al courier (o 100% anticipado). No se realizan envíos contra entrega (COD).
+          <div class="checkout-bank-content">
+            <div class="checkout-bank-account">
+              <div>
+                <strong>Banco Industrial (Monetaria Q):</strong>
+                <div style="font-size: 0.74rem; color: var(--text-muted);">Beneficiario: Miguel Angel Dubois / Kroma Lab</div>
+              </div>
+              <code style="user-select: all; font-weight: 800; color: var(--cerulean); font-size: 0.95rem;">5371667253</code>
+            </div>
+            <div class="checkout-bank-policy">
+              🔒 <strong>Condiciones:</strong> 50% de anticipo para iniciar impresión en máquina Audley y saldo contra notificación de despacho (o 100% contado). Sin cobro contra entrega (COD).
             </div>
           </div>
 
@@ -355,6 +365,8 @@ export function openCheckoutModal(cartTotals) {
   const zoneSelect = document.getElementById('deliveryZoneSelect');
   const typeHome = document.getElementById('deliveryTypeHome');
   const typeAgency = document.getElementById('deliveryTypeAgency');
+  const cardHome = document.getElementById('deliveryCardHome');
+  const cardAgency = document.getElementById('deliveryCardAgency');
   const agencyGroup = document.getElementById('deliveryAgencyGroup');
   const agencyInput = document.getElementById('custAgencyName');
   const addressLabel = document.getElementById('custAddressLabel');
@@ -368,21 +380,25 @@ export function openCheckoutModal(cartTotals) {
     const isEligible = isCapital ? total >= 400 : total >= 600;
 
     if (isEligible) {
-      shippingAlert.style.background = 'rgba(16, 185, 129, 0.12)';
-      shippingAlert.style.color = '#10b981';
-      shippingAlert.style.border = '1px solid #10b981';
+      shippingAlert.className = 'checkout-shipping-alert is-free';
+      shippingAlert.style.background = '';
+      shippingAlert.style.color = '';
+      shippingAlert.style.border = '';
       shippingAlert.innerHTML = `🎉 <strong>¡Envío GRATIS!</strong> Tu pedido califica para entrega gratuita en ${isCapital ? 'Capital y Área Metropolitana' : 'Departamentos'}.`;
     } else {
       const missing = isCapital ? (400 - total).toFixed(2) : (600 - total).toFixed(2);
-      shippingAlert.style.background = 'rgba(28, 114, 147, 0.08)';
-      shippingAlert.style.color = 'var(--text-secondary)';
-      shippingAlert.style.border = '1px solid var(--border-color)';
+      shippingAlert.className = 'checkout-shipping-alert';
+      shippingAlert.style.background = '';
+      shippingAlert.style.color = '';
+      shippingAlert.style.border = '';
       shippingAlert.innerHTML = `🚚 <strong>Flete por confirmar:</strong> No incluido en este total. Un asesor verificará la cuota con el courier (Forza/Guatex/Caex). <em>(Agrega Q${missing} más para envío gratis).</em>`;
     }
   }
 
   function handleDeliveryTypeChange() {
     const isAgency = typeAgency && typeAgency.checked;
+    if (cardHome) cardHome.classList.toggle('active', !isAgency);
+    if (cardAgency) cardAgency.classList.toggle('active', isAgency);
     if (agencyGroup) agencyGroup.style.display = isAgency ? 'block' : 'none';
     if (agencyInput) agencyInput.required = isAgency;
     if (addressLabel) {

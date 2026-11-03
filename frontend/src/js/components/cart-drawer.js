@@ -82,22 +82,39 @@ export function renderCartDrawer(items, totals) {
   if (items.length > 0) {
     if (grandTotal >= 600) {
       freeShippingHtml = `
-        <div class="cart-free-shipping-badge" style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: #10b981; margin-bottom: 0.75rem; text-align: center; font-weight: 700;">
-          🎉 ¡Felicidades! Calificas para ENVÍO GRATIS en todo el país.
+        <div class="cart-free-shipping-card cart-free-shipping-badge is-qualified">
+          <div class="shipping-progress-bar">
+            <div class="shipping-progress-fill" style="width: 100%;"></div>
+          </div>
+          <div class="cart-free-shipping-msg">
+            🎉 ¡Felicidades! Calificas para <strong>ENVÍO GRATIS</strong> en todo el país.
+          </div>
         </div>
       `;
     } else if (grandTotal >= 400) {
+      const pct = Math.min(100, Math.round((grandTotal / 600) * 100));
       const missing = (600 - grandTotal).toFixed(2);
       freeShippingHtml = `
-        <div class="cart-free-shipping-badge" style="background: rgba(28, 114, 147, 0.1); border: 1px solid var(--cerulean); border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary); margin-bottom: 0.75rem; text-align: center;">
-          🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missing}</strong> más para Departamentos.
+        <div class="cart-free-shipping-card cart-free-shipping-badge">
+          <div class="shipping-progress-bar">
+            <div class="shipping-progress-fill" style="width: ${pct}%;"></div>
+          </div>
+          <div class="cart-free-shipping-msg">
+            🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missing}</strong> más para Departamentos.
+          </div>
         </div>
       `;
     } else {
+      const pct = Math.min(100, Math.round((grandTotal / 400) * 100));
       const missing = (400 - grandTotal).toFixed(2);
       freeShippingHtml = `
-        <div class="cart-free-shipping-badge" style="background: rgba(28, 114, 147, 0.06); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; text-align: center;">
-          🎁 Agrega <strong>Q${missing}</strong> más para <strong>Envío GRATIS</strong> en Capital (Q600 Departamentos).
+        <div class="cart-free-shipping-card cart-free-shipping-badge">
+          <div class="shipping-progress-bar">
+            <div class="shipping-progress-fill" style="width: ${pct}%;"></div>
+          </div>
+          <div class="cart-free-shipping-msg">
+            🎁 Agrega <strong>Q${missing}</strong> más para <strong>Envío GRATIS</strong> en Capital (Q600 Departamentos).
+          </div>
         </div>
       `;
     }
