@@ -179,6 +179,30 @@ class ProductionStore {
     });
   }
 
+  clearProductionCache() {
+    this.state = {
+      orders: [],
+      roll: { ...INITIAL_ROLL },
+    };
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_ORDERS);
+        window.localStorage.removeItem(STORAGE_KEY_ROLL);
+      } catch (_) {}
+    }
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.state);
+      } catch (err) {
+        console.error('Error en listener de producción:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearProductionCache();
+  }
+
   /**
    * Cambia el estado de una orden a uno específico y sincroniza con el backend (PUT /api/orders/:id/status)
    */

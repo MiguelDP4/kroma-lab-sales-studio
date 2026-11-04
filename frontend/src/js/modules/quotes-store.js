@@ -169,6 +169,20 @@ class QuotesStore {
     } catch (_) {}
   }
 
+  clearQuotesCache() {
+    this.quotes = [];
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY_QUOTES);
+      } catch (_) {}
+    }
+    this.notify();
+  }
+
+  clearCache() {
+    this.clearQuotesCache();
+  }
+
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

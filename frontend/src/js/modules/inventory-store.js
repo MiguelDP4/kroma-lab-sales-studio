@@ -396,6 +396,30 @@ class InventoryStore {
     });
   }
 
+  clearInventoryCache() {
+    this.items = [];
+    this.kardex = [];
+    this.deductedOrders = new Set();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_INVENTORY);
+        window.localStorage.removeItem(STORAGE_KEY_KARDEX);
+        window.localStorage.removeItem(STORAGE_KEY_DEDUCTED_ORDERS);
+      } catch (_) {}
+    }
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.getItems());
+      } catch (err) {
+        console.error('Error en listener de inventoryStore:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearInventoryCache();
+  }
+
   /**
    * Retorna los insumos enriquecidos con su estado de stock (Óptimo, Bajo, Crítico) y valor monetario.
    */

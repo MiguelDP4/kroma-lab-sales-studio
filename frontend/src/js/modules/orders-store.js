@@ -375,7 +375,17 @@ class OrdersStore {
         window.localStorage.removeItem(STORAGE_KEY_ORDERS);
       } catch (_) {}
     }
-    this._notify();
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.orders);
+      } catch (err) {
+        console.error('Error en listener de ordersStore:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearOrdersCache();
   }
 
   subscribe(listener) {

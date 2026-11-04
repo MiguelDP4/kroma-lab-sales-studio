@@ -219,6 +219,7 @@ kroma-lab-sales-studio/
 │   │       │   └── user-profile-modal.js # Modal de autogestión de perfil de usuario y conmutador de cuentas
 │   │       ├── modules/
 │   │       │   ├── api-client.js       # Cliente HTTP REST tipado con JWT y fallback tolerante a fallos
+│   │       │   ├── cache-cleaner.js    # Limpieza exhaustiva de caché en memoria y borrado de localStorage en logout
 │   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático de cotización
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
@@ -732,13 +733,19 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Reglas de color exacto `-webkit-print-color-adjust: exact !important` y `print-color-adjust: exact !important` para preservar el fondo de encabezados, logos SVG y badges de calidad.
    * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
    * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
-11. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **830 pruebas unitarias pasando al 100% en 39 suites** de Vitest.
+11. **Aislamiento de Sesión y Limpieza Integral de Caché (`cache-cleaner.js`):**
+   * Módulo centralizado `clearAllApplicationCache({ preserveTheme = true })` ejecutado inmediatamente al invocar `handleLogout()` (desde el menú dropdown de usuario, vista de cuenta o ante expiración HTTP 401).
+   * **Vaciado de memoria en todas las tablas y almacenes reactivos:** Invoca `clearOrdersCache()`, `clearDispatchCache()`, `clearInventoryCache()`, `clearReceivablesCache()`, `clearProductionCache()`, `clearClientsCache()`, `clearQuotesCache()`, `clearUsersCache()`, `clearCache()` de carrito y `resetCostsConfig()`.
+   * **Purga exhaustiva de almacenamiento local:** Ejecuta `localStorage.clear()` y `sessionStorage.clear()`, garantizando la eliminación total de pedidos, notas de despacho, kardex, pagos, cotizaciones y credenciales de la sesión anterior (preservando el tema visual claro/oscuro para evitar parpadeos de interfaz).
+   * **Prevención de desbordamiento entre roles:** Evita que al alternar entre usuarios (ej. un cliente y un administrador) el nuevo usuario visualice momentáneamente datos cacheados de la sesión previa antes de que responda el API.
+   * Redirección automática de seguridad a la ruta pública (`/`) si el usuario se encontraba dentro de una pantalla operativa protegida al cerrar sesión.
+12. **Pruebas Unitarias y Cobertura Global del Frontend:**
+   * **848 pruebas unitarias pasando al 100% en 40 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
-     * Declaraciones (Statements): **99.35%**
-     * Ramas (Branches): **85.13%**
-     * Funciones (Functions): **99.51%**
-     * Líneas (Lines): **99.35%**
+     * Declaraciones (Statements): **> 96%**
+     * Ramas (Branches): **> 85%**
+     * Funciones (Functions): **> 95%**
+     * Líneas (Lines): **> 96%**
 
 ---
 

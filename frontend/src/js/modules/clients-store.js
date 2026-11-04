@@ -204,6 +204,26 @@ class ClientsStore {
     });
   }
 
+  clearClientsCache() {
+    this.clients = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_CLIENTS);
+      } catch (_) {}
+    }
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.clients);
+      } catch (err) {
+        console.error('Error en listener de clientsStore:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearClientsCache();
+  }
+
   getClients() {
     return this.clients;
   }

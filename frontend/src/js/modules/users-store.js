@@ -170,6 +170,20 @@ class UsersStore {
     } catch (_) {}
   }
 
+  clearUsersCache() {
+    this.users = [];
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY_USERS);
+      } catch (_) {}
+    }
+    this.notify();
+  }
+
+  clearCache() {
+    this.clearUsersCache();
+  }
+
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

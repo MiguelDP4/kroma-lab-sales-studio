@@ -92,6 +92,16 @@ class CartStore {
     this.notify();
   }
 
+  clearCache() {
+    this.items = [];
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem('kromalab_cart');
+      } catch (_) {}
+    }
+    this.notify();
+  }
+
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

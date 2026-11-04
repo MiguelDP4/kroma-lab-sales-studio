@@ -22,6 +22,7 @@ import { initUserProfileModal, openUserProfileModal, closeUserProfileModal, hand
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
 import { quotesStore } from './modules/quotes-store.js';
+import { clearAllApplicationCache } from './modules/cache-cleaner.js';
 
 import { quoterView } from './views/quoter-view.js';
 import { ordersView } from './views/orders-view.js';
@@ -138,7 +139,7 @@ export async function initBackendSync() {
           }
         } catch (authErr) {
           if (authErr?.status === 401 || authErr?.message?.includes('401') || authErr?.message?.includes('No autenticado')) {
-            store.clearUser();
+            clearAllApplicationCache({ preserveTheme: true });
           }
         }
         // Carga bajo demanda (Lazy loading): no cargar masivamente todos los módulos en el arranque.

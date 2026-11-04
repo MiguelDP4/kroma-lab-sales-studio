@@ -364,6 +364,20 @@ export class DispatchStore {
     });
   }
 
+  clearDispatchCache() {
+    this.dispatchNotes = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_DISPATCH);
+      } catch (_) {}
+    }
+    this._notify();
+  }
+
+  clearCache() {
+    this.clearDispatchCache();
+  }
+
   subscribe(listener) {
     if (typeof listener !== 'function') return () => {};
     this.listeners.push(listener);

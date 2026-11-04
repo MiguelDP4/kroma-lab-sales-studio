@@ -211,6 +211,26 @@ class ReceivablesStore {
     });
   }
 
+  clearReceivablesCache() {
+    this.payments = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_PAYMENTS);
+      } catch (_) {}
+    }
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.getReceivablesSummary());
+      } catch (err) {
+        console.error('Error en listener de receivablesStore:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearReceivablesCache();
+  }
+
   getPayments() {
     return [...this.payments].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
