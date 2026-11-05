@@ -14,6 +14,8 @@ import {
 } from '../modules/inventory-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
 import { renderMetricsSkeleton, renderCardsSkeleton, renderTableSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 export const inventoryView = {
   path: '/inventario',
@@ -77,6 +79,11 @@ export const inventoryView = {
           <button type="button" class="btn btn-secondary btn-cat-filter" data-category="MAINTENANCE" style="min-height: 44px; padding: 0.45rem 1rem; font-size: 0.85rem; border-radius: var(--radius-full); white-space: nowrap;">
             🧼 Mantenimiento
           </button>
+        </div>
+
+        <!-- Alerta Offline si el API no responde -->
+        <div id="inventoryOfflineAlertContainer">
+          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar el inventario con el backend.') : ''}
         </div>
 
         <!-- Cuadrícula de Tarjetas de Insumos -->
@@ -476,6 +483,12 @@ export const inventoryView = {
     function renderInventoryGrid() {
       const grid = document.getElementById('inventoryGrid');
       if (!grid) return;
+
+      const offlineAlertEl = document.getElementById('inventoryOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar el inventario con el backend.') : '';
+      }
+
       if (inventoryStore.isLoading) {
         grid.innerHTML = renderCardsSkeleton(6);
         return;

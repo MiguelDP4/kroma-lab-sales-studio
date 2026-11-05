@@ -20,6 +20,8 @@ import {
   renderKromaReceiptItemsAndSummary,
 } from '../modules/print-helper.js';
 import { renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 export const dispatchView = {
   path: '/despacho',
@@ -96,6 +98,11 @@ export const dispatchView = {
               Limpiar
             </button>
           </div>
+        </div>
+
+        <!-- Alerta Offline si el API no responde -->
+        <div id="dispatchOfflineAlertContainer">
+          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron sincronizar las guías de despacho con el backend.') : ''}
         </div>
 
         <!-- Rejilla Principal de Tarjetas de Remisión y Despacho Responsivas -->
@@ -407,6 +414,11 @@ export const dispatchView = {
     }
 
     function applyFilters() {
+      const offlineAlertEl = document.getElementById('dispatchOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudieron sincronizar las guías de despacho con el backend.') : '';
+      }
+
       if (dispatchStore.isLoading) {
         if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(4);
         return;

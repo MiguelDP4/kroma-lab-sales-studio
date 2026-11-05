@@ -3483,5 +3483,141 @@
   }
 }
 
+/* ==========================================================================
+   BANNER GLOBAL Y ALERTAS: EL SERVIDOR API NO RESPONDE (OFFLINE / ERROR DE RED)
+   ========================================================================== */
+.backend-offline-banner {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.18));
+  border-bottom: 2px solid #ef4444;
+  padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 999;
+  animation: fadeInOffline 0.25s ease-out;
+}
+
+@keyframes fadeInOffline {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.backend-offline-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.backend-offline-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.backend-offline-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.backend-offline-title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #dc2626;
+  margin-bottom: 0.15rem;
+}
+
+[data-theme="dark"] .backend-offline-title {
+  color: #f87171;
+}
+
+.backend-offline-desc {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.backend-offline-desc code {
+  background: var(--bg-surface-elevated);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--baltic-blue);
+}
+
+.btn-retry-backend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-retry-backend:hover {
+  background: var(--bg-surface-elevated);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-retry-backend:active {
+  transform: scale(0.97);
+}
+
+/* Alerta inline para vistas de datos */
+.api-offline-inline-alert {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.14));
+  border: 1px solid #ef4444;
+  border-radius: var(--radius-md, 8px);
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.api-offline-inline-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 250px;
+}
+
+.api-offline-inline-content strong {
+  display: block;
+  color: #dc2626;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .api-offline-inline-content strong {
+  color: #f87171;
+}
+
+.api-offline-inline-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
 
 

@@ -18,6 +18,8 @@ import {
 } from '../modules/print-helper.js';
 import { uploadFileToStorage, readFileAsDataURL, validateReceiptFile, formatFileSize } from '../modules/file-uploader.js';
 import { renderTableSkeleton, renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 /**
  * Genera el HTML unificado del Recibo de Servicio de Impresión UV DTF / Orden de Trabajo
@@ -280,6 +282,11 @@ export const ordersView = {
               <option value="${PAYMENT_STATUS.PAID}">Pagado</option>
             </select>
           </div>
+        </div>
+
+        <!-- Alerta Offline si el API no responde -->
+        <div id="ordersOfflineAlertContainer">
+          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar los pedidos del backend.') : ''}
         </div>
 
         <!-- Tabla Principal de Pedidos -->
@@ -1011,6 +1018,10 @@ export const ordersView = {
     function renderOrdersTable() {
       if (!tableBody) return;
       const cardsContainer = document.getElementById('ordersCardsContainer');
+      const offlineAlertEl = document.getElementById('ordersOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudieron sincronizar los pedidos con el backend.') : '';
+      }
 
       if (ordersStore.isLoading) {
         tableBody.innerHTML = renderTableSkeleton(5, isStaff ? 8 : 6);
@@ -1037,12 +1048,13 @@ export const ordersView = {
         return matchesQuery && matchesProd && matchesPay;
       });
 
-      
-
       if (filtered.length === 0) {
         tableBody.innerHTML = '';
         if (cardsContainer) cardsContainer.innerHTML = '';
-        if (emptyState) emptyState.style.display = 'block';
+        if (emptyState) {
+          emptyState.textContent = 'No se encontraron pedidos que coincidan con los filtros seleccionados.';
+          emptyState.style.display = 'block';
+        }
         return;
       }
 

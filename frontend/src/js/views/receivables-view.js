@@ -14,6 +14,8 @@ import {
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABELS } from '../modules/orders-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
 import { renderMetricsSkeleton, renderTableSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 export const receivablesView = {
   path: '/cobranza',
@@ -107,6 +109,11 @@ export const receivablesView = {
                 <option value="CURRENT">🟢 Al Día (0-7 días)</option>
               </select>
             </div>
+          </div>
+
+          <!-- Alerta Offline si el API no responde -->
+          <div id="receivablesOfflineAlertContainer">
+            ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cuentas por cobrar del backend.') : ''}
           </div>
 
           <div class="mobile-scroll-hint receivables-mobile-scroll-hint">Desliza para ver columnas de saldo, mora y cobranza ↔</div>
@@ -590,6 +597,11 @@ export const receivablesView = {
       const cardsContainer = document.getElementById('receivablesCardsContainer');
       const emptyState = document.getElementById('receivablesEmptyState');
       if (!tbody) return;
+
+      const offlineAlertEl = document.getElementById('receivablesOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cuentas por cobrar del backend.') : '';
+      }
 
       if (receivablesStore.isLoading) {
         tbody.innerHTML = renderTableSkeleton(5, 7);

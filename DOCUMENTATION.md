@@ -214,6 +214,7 @@ kroma-lab-sales-studio/
 │   │       ├── router.js           # Enrutador SPA ligero con History API y guardias RBAC
 │   │       ├── store.js            # Estado reactivo global (usuario, token, tema)
 │   │       ├── components/
+│   │       │   ├── api-offline-alert.js # Alerta visual reactiva cuando el servidor API no responde
 │   │       │   ├── cart-drawer.js      # Componente interactivo de carrito (drawer lateral)
 │   │       │   ├── checkout-modal.js   # Modal de datos de entrega y facturación SAT
 │   │       │   ├── skeleton-loader.js  # Esqueletos animados (shimmer) para tablas, kanban, métricas y tarjetas
@@ -252,7 +253,8 @@ kroma-lab-sales-studio/
 │       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
 │       ├── app.test.js             # 24 tests de integración, roles, topbar, sidebar y WhatsApp
-│       ├── api-client.test.js      # 14 tests de cliente HTTP, tokens JWT y fallback
+│       ├── api-client.test.js      # 20 tests de cliente HTTP, tokens JWT, eventos de conexión y fallback
+│       ├── offline-banner.test.js  # 4 tests de detección offline, banner global y botón de reconexión
 │       ├── skeleton-loader.test.js # 11 tests de generación de esqueletos y accesibilidad (ARIA)
 │       ├── setup.js                # Mock de Canvas para JSDOM
 ├── backend/                        # API REST (TypeScript, Express, Prisma, Vitest)
@@ -270,7 +272,9 @@ kroma-lab-sales-studio/
 │   │   │   └── seed.ts             # Semilla inicial con usuarios, clientes e insumos
 │   │   ├── controllers/            # Controladores de auth, orders, customers, dispatch, inventory, receivables, workshop
 │   │   ├── middlewares/            # Autenticación JWT Bearer, RBAC y errorHandler centralizado
-│   │   └── routes/                 # Enrutadores REST montados en /api/*
+│   │   ├── routes/                 # Enrutadores REST montados en /api/*
+│   │   └── scripts/
+│   │       └── reset-password.ts   # Script utilitario para restablecer contraseñas locales con bcryptjs
 │   └── __tests__/                  # 80 pruebas unitarias e integración en Vitest + Supertest (> 85% coverage)
 └── shared/                         # Constantes maestras de negocio
     └── business-config.js
@@ -585,6 +589,31 @@ kroma-lab-sales-studio/
     * Sincronizado bidireccionalmente con `usersStore` y `store.setUser()`. Al guardar, actualiza instantáneamente el chip visual, el avatar con iniciales y los datos en memoria/localStorage.
   * **Respaldo de Pruebas Unitarias:**
     * Cubierto con 21 pruebas unitarias dedicadas en `frontend/__tests__/user-profile-modal.test.js` (100% pass rate).
+
+* **Detección Reactiva de Desconexión del API y Banner Global (`#backendOfflineBanner` & `api-offline-alert.js`):**
+  * **Problema Resuelto:** Si el desarrollador o usuario ejecuta el frontend sin haber iniciado el backend (`npm run dev` en `backend/`), la aplicación solía fallar silenciosamente en segundo plano o mostrar tablas vacías sin ninguna explicación.
+  * **Detección Reactiva en `ApiClient` (`onConnectionChange`):**
+    * `ApiClient` implementa el patrón observador con `onConnectionChange(callback)` y `_notifyConnectionStatus(isOnline, error)`.
+    * En cada petición HTTP (`_request`) o chequeo de salud (`checkHealth`), si se detecta un error de red (`TypeError`, `fetch failed`, `Failed to fetch`, `NetworkError`, `ECONNREFUSED` o `navigator.onLine === false`), `apiClient` cambia su estado a `isOnline = false` y dispara las notificaciones inmediatamente a todos los suscriptores.
+    * Cuando el backend vuelve a responder, conmuta reactivamente a `isOnline = true` y oculta las alertas.
+  * **Banner Global Superior (`#backendOfflineBanner`):**
+    * Colocado directamente debajo del topbar en `index.html`.
+    * Diseño llamativo con gradiente ámbar/carmesí, borde de advertencia e icono `⚠️`.
+    * Mensaje explícito: *"El servidor API no responde: No se pudo establecer conexión con el backend en http://localhost:4000/api. Verifica que el servidor esté en ejecución (ejecuta npm run dev en la carpeta backend)."*
+    * Botón ergonómico táctil (área mínima de toque > 44px): `🔄 Reintentar conexión`, el cual ejecuta `apiClient.checkHealth()`, relanza la sincronización y refresca la vista activa.
+  * **Alertas Inline Contextuales en Vistas de Datos (`api-offline-alert.js`):**
+    * Componente reutilizable `renderApiOfflineAlert(message)` presente en las vistas que consultan el backend:
+      * `orders-view.js` (`#ordersOfflineAlertContainer`)
+      * `quotes-view.js` (`#quotesOfflineAlertContainer`)
+      * `clients-view.js` (`#clientsOfflineAlertContainer`)
+      * `inventory-view.js` (`#inventoryOfflineAlertContainer`)
+      * `dispatch-view.js` (`#dispatchOfflineAlertContainer`)
+      * `receivables-view.js` (`#receivablesOfflineAlertContainer`)
+      * `users-view.js` (`#usersOfflineAlertContainer`)
+    * Alerta al usuario en su propio espacio de trabajo sin romper la estructura de las tablas ni distorsionar los mensajes de filtros vacíos.
+  * **Script de Restablecimiento de Credenciales Locales (`backend/src/scripts/reset-password.ts`):**
+    * Permite restablecer contraseñas de cualquier cuenta (`migueldp4@gmail.com`) en la base de datos de desarrollo mediante `npx tsx src/scripts/reset-password.ts [email] [nueva_contraseña]`.
+    * Hashea de forma segura con `bcryptjs` (salt rounds: 10) y actualiza el registro en Neon/PostgreSQL.
 * **Especificación y Roadmap Técnico para Botón de Configuración de Taller (⚙️):**
   * **Botón de Configuración de Taller (⚙️) — Roles STAFF (`ADMIN` y `EMPLOYEE`):**
       * Retirado temporalmente del topbar para mantener la barra superior limpia mientras se concluye la maqueta frontend sin backend.

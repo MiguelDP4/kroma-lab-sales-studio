@@ -12,6 +12,8 @@ import { openUserProfileModal } from '../components/user-profile-modal.js';
 import { store } from '../store.js';
 import { mapOrderItem } from '../modules/order-item.js';
 import { renderCardsSkeleton, renderMetricsSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 let currentFilter = 'ALL';
 let currentSearch = '';
@@ -146,6 +148,11 @@ export const quotesView = {
 
         <!-- Mensaje de Feedback -->
         <div id="quotesViewFeedback" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem; font-size: 0.88rem; font-weight: 600;"></div>
+
+        <!-- Alerta Offline si el API no responde -->
+        <div id="quotesOfflineAlertContainer">
+          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cotizaciones del backend.') : ''}
+        </div>
 
         <!-- Listado en Tarjetas (Mobile-First) -->
         <div id="quotesListContainer" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -1016,6 +1023,10 @@ function refreshQuotesList() {
   const container = document.getElementById('quotesListContainer');
   if (container) {
     container.innerHTML = renderQuotesCards(quotes);
+  }
+  const offlineAlertEl = document.getElementById('quotesOfflineAlertContainer');
+  if (offlineAlertEl) {
+    offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cotizaciones del backend.') : '';
   }
   updateKPIDisplay();
 }

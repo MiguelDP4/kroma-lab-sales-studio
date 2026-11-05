@@ -9,6 +9,8 @@ import { clientsStore, CLIENT_CATEGORIES, CLIENT_TIERS } from '../modules/client
 import { ordersStore, PRODUCTION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../modules/orders-store.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { renderTableSkeleton, renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 export const clientsView = {
   path: '/clientes',
@@ -70,6 +72,11 @@ export const clientsView = {
               <option value="INACTIVO">⏸️ Inactivo</option>
             </select>
           </div>
+        </div>
+
+        <!-- Alerta Offline si el API no responde -->
+        <div id="clientsOfflineAlertContainer">
+          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar la cartera de clientes con el backend.') : ''}
         </div>
 
         <!-- Tabla Principal de Clientes (Desktop > 1200px) -->
@@ -380,6 +387,12 @@ export const clientsView = {
     // Render de Tabla
     function renderClientsTable() {
       if (!tableBody) return;
+
+      const offlineAlertEl = document.getElementById('clientsOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar la cartera de clientes con el backend.') : '';
+      }
+
       if (clientsStore.isLoading) {
         tableBody.innerHTML = renderTableSkeleton(5, 7);
         const cardsCont = document.getElementById('clientsCardsContainer');
@@ -411,7 +424,10 @@ export const clientsView = {
       if (filtered.length === 0) {
         tableBody.innerHTML = '';
         if (cardsContainer) cardsContainer.innerHTML = '';
-        if (emptyState) emptyState.style.display = 'block';
+        if (emptyState) {
+          emptyState.textContent = 'No se encontraron clientes que coincidan con la búsqueda o filtros aplicados.';
+          emptyState.style.display = 'block';
+        }
         return;
       }
 

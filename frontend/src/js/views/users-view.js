@@ -6,6 +6,8 @@
 
 import { usersStore } from '../modules/users-store.js';
 import { renderMetricsSkeleton, renderTableSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 import { USER_ROLES } from '../../shared/business-config.js';
 import {
   PERMISSIONS,
@@ -74,6 +76,11 @@ export const usersView = {
             <option value="${USER_STATUS.INACTIVE.id}">🔴 Inactivos</option>
           </select>
         </div>
+      </div>
+
+      <!-- Alerta Offline si el API no responde -->
+      <div id="usersOfflineAlertContainer">
+        ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar los usuarios colaboradores del backend.') : ''}
       </div>
 
       <!-- Tabla Principal de Usuarios -->
@@ -418,6 +425,11 @@ export const usersView = {
     function renderTable(usersList) {
       if (!tableBody) return;
 
+      const offlineAlertEl = document.getElementById('usersOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar los usuarios colaboradores del backend.') : '';
+      }
+
       if (usersStore.isLoading) {
         tableBody.innerHTML = renderTableSkeleton(4, 6);
         if (emptyState) emptyState.style.display = 'none';
@@ -426,7 +438,10 @@ export const usersView = {
 
       if (!usersList || usersList.length === 0) {
         tableBody.innerHTML = '';
-        if (emptyState) emptyState.style.display = 'block';
+        if (emptyState) {
+          emptyState.textContent = 'No se encontraron usuarios que coincidan con los filtros aplicados.';
+          emptyState.style.display = 'block';
+        }
         return;
       }
 

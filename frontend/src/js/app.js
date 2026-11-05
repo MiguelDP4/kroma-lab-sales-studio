@@ -146,9 +146,53 @@ export async function initBackendSync() {
         // Cada vista (orders, quotes, clients, inventory, dispatch, receivables, users) sincroniza
         // sus datos en su respectivo onMount() únicamente cuando el usuario navega a ella.
       }
+    } else {
+      apiClient._notifyConnectionStatus(false, 'Servidor no responde');
     }
   } catch (err) {
+    apiClient._notifyConnectionStatus(false, err?.message || 'Servidor no responde');
     console.warn('[BackendSync] Servidor backend offline o no disponible:', err?.message || err);
+  }
+}
+
+export function initOfflineBanner() {
+  const banner = document.getElementById('backendOfflineBanner');
+  const urlDisplay = document.getElementById('backendOfflineUrl');
+  const retryBtn = document.getElementById('btnRetryBackendConnect');
+
+  if (urlDisplay && apiClient.baseUrl) {
+    urlDisplay.textContent = apiClient.baseUrl;
+  }
+
+  const updateBanner = (isOnline) => {
+    if (!banner) return;
+    banner.style.display = isOnline ? 'none' : 'block';
+  };
+
+  // Escuchar cambios reactivos en la conexión con el API
+  apiClient.onConnectionChange((isOnline) => {
+    updateBanner(isOnline);
+  });
+
+  if (retryBtn && !retryBtn.dataset.bound) {
+    retryBtn.dataset.bound = 'true';
+    retryBtn.addEventListener('click', async () => {
+      retryBtn.disabled = true;
+      const originalText = retryBtn.textContent;
+      retryBtn.textContent = '⏳ Conectando...';
+      try {
+        const res = await apiClient.checkHealth();
+        if (res && res.status === 'ok') {
+          await initBackendSync();
+          if (router && typeof router.handleRoute === 'function') {
+            router.handleRoute();
+          }
+        }
+      } finally {
+        retryBtn.disabled = false;
+        retryBtn.textContent = originalText;
+      }
+    });
   }
 }
 
@@ -297,6 +341,7 @@ export function initApp() {
   initTheme();
   initNavbarRoleSync();
   initUserDropdown();
+  initOfflineBanner();
   initMobileNav();
   initCartDrawer();
   initUserProfileModal();
@@ -1373,4 +1418,4 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', initApp);
 }
 
-export { accountView, openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners };
+export { accountView, openUserProfileModal, closeUserProfileModal, initUserProfileModal, openSaveQuoteModal, closeSaveQuoteModal, initSaveQuoteModal, printDocument, initPrintListeners, initOfflineBanner };
