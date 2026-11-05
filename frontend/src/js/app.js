@@ -70,6 +70,7 @@ export const routes = [
 export const router = new Router(routes, 'app');
 if (typeof window !== 'undefined') {
   window.router = router;
+  window.apiClient = apiClient;
 }
 
 export function purgeLegacyMockStorage(force = false) {

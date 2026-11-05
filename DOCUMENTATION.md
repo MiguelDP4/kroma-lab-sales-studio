@@ -908,3 +908,24 @@ Tras la auditoría E2E automatizada en producción con Playwright sobre `https:/
   3. Se blindó `backend/src/db/seed.ts` con una guarda estricta que aborta la ejecución si `process.env.NODE_ENV === 'production'`.
   4. Se removió cualquier dato personal o credencial real del archivo de semilla, configurando usuarios de prueba genéricos (`testadmin@kromalab.gt`) exclusivos para desarrollo local y suites automatizadas sobre la base de pruebas.
   5. Se purgó la base de datos de producción preservando únicamente la cuenta administrativa autorizada.
+
+---
+
+## 12. Suite Automatizada E2E con Playwright en Local (
+pm run test:e2e)
+
+En cumplimiento de la norma de doble revisión visual y control de calidad sobre http://localhost:3000:
+
+* **Script:** rontend/scripts/e2e-playwright.js.
+* **Comando:** 
+pm run test:e2e (ejecutado desde rontend/).
+* **Auto-arranque de Servicios:** Si el frontend (:3000) o el backend (:4000) están inactivos, el runner los detecta y los inicia en background automáticamente.
+* **Cobertura de la Suite E2E (17/17 pruebas passing):**
+  1. Carga limpia de la landing page con 0 excepciones no controladas y 0 errores en consola.
+  2. Cotizador interactivo UV DTF con simulador de bobina Audley (28 cm útiles) y recalculo reactivo de precios.
+  3. Auditoría visual Mobile-First en viewport de 375px (iPhone SE) con verificación estricta de cero desbordamiento horizontal (scrollWidth <= clientWidth + 3).
+  4. Flujo de autenticación con cuenta de Administrador (migueldp4@gmail.com).
+  5. Navegación SPA por vistas protegidas (/pedidos), skeletons de carga wireframe y tablas de datos.
+  6. Cierre de sesión (Logout) con purga total de localStorage y de caches de tablas (cero fuga de datos entre perfiles).
+  7. Detección reactiva de desconexión del backend API y despliegue del banner global de advertencia (#backendOfflineBanner).
+* **Capturas de Pantalla:** Se almacenan automáticamente en la carpeta raíz qa-results/ (ignorada en git).
