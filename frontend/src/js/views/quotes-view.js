@@ -151,7 +151,6 @@ export const quotesView = {
 
         <!-- Alerta Offline si el API no responde -->
         <div id="quotesOfflineAlertContainer">
-          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cotizaciones del backend.') : ''}
         </div>
 
         <!-- Listado en Tarjetas (Mobile-First) -->

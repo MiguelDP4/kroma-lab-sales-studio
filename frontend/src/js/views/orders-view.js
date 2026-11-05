@@ -286,7 +286,6 @@ export const ordersView = {
 
         <!-- Alerta Offline si el API no responde -->
         <div id="ordersOfflineAlertContainer">
-          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar los pedidos del backend.') : ''}
         </div>
 
         <!-- Tabla Principal de Pedidos -->

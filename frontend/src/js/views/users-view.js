@@ -80,7 +80,6 @@ export const usersView = {
 
       <!-- Alerta Offline si el API no responde -->
       <div id="usersOfflineAlertContainer">
-        ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar los usuarios colaboradores del backend.') : ''}
       </div>
 
       <!-- Tabla Principal de Usuarios -->

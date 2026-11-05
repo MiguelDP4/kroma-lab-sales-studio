@@ -255,9 +255,9 @@ describe('ApiClient — Cliente HTTP Frontend', () => {
       statuses.push({ isOnline, err });
     });
 
-    // Estado inicial notificado inmediatamente
+    // Estado inicial optimista notificado inmediatamente (evita parpadeo rojo en UI)
     expect(statuses.length).toBe(1);
-    expect(statuses[0].isOnline).toBe(false);
+    expect(statuses[0].isOnline).toBe(true);
 
     // Petición exitosa notifica isOnline: true
     global.fetch = vi.fn().mockResolvedValue({

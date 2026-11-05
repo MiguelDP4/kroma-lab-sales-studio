@@ -83,7 +83,6 @@ export const inventoryView = {
 
         <!-- Alerta Offline si el API no responde -->
         <div id="inventoryOfflineAlertContainer">
-          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar el inventario con el backend.') : ''}
         </div>
 
         <!-- Cuadrícula de Tarjetas de Insumos -->

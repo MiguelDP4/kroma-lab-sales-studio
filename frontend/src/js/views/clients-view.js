@@ -76,7 +76,6 @@ export const clientsView = {
 
         <!-- Alerta Offline si el API no responde -->
         <div id="clientsOfflineAlertContainer">
-          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar la cartera de clientes con el backend.') : ''}
         </div>
 
         <!-- Tabla Principal de Clientes (Desktop > 1200px) -->

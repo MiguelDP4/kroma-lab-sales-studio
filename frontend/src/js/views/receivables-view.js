@@ -113,7 +113,6 @@ export const receivablesView = {
 
           <!-- Alerta Offline si el API no responde -->
           <div id="receivablesOfflineAlertContainer">
-            ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cuentas por cobrar del backend.') : ''}
           </div>
 
           <div class="mobile-scroll-hint receivables-mobile-scroll-hint">Desliza para ver columnas de saldo, mora y cobranza ↔</div>

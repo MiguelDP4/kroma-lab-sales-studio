@@ -46,7 +46,7 @@ export class ApiClient {
   constructor(baseUrl = getApiBaseUrl()) {
     this.baseUrl = baseUrl;
     this.token = this._loadToken();
-    this.isOnline = false;
+    this.isOnline = true;
     this.connectionListeners = new Set();
     this.lastError = null;
   }

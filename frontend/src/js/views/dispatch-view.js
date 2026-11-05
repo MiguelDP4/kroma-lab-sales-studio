@@ -102,7 +102,6 @@ export const dispatchView = {
 
         <!-- Alerta Offline si el API no responde -->
         <div id="dispatchOfflineAlertContainer">
-          ${!apiClient.isOnline ? renderApiOfflineAlert('No se pudieron sincronizar las guías de despacho con el backend.') : ''}
         </div>
 
         <!-- Rejilla Principal de Tarjetas de Remisión y Despacho Responsivas -->

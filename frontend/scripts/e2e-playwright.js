@@ -171,6 +171,15 @@ async function runE2ESuite() {
     const appExists = await page.$('#app');
     assert(appExists !== null, 'Elemento contenedor #app montado en el DOM');
 
+    // Validar ausencia de parpadeo rojo (anti-flicker en recarga)
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const bannerVisibleOnReload = await page.evaluate(() => {
+      const b = document.getElementById('backendOfflineBanner');
+      if (!b) return false;
+      return window.getComputedStyle(b).display !== 'none';
+    });
+    assert(!bannerVisibleOnReload, 'Cero parpadeo rojo: banner offline permanece oculto al recargar la página');
+
     // --------------------------------------------------------------------------
     // TEST 2: Cotizador Interactivo y Simulador Canvas Audley
     // --------------------------------------------------------------------------
