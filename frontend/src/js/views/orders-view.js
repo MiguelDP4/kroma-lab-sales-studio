@@ -17,6 +17,7 @@ import {
   renderKromaReceiptItemsAndSummary,
 } from '../modules/print-helper.js';
 import { uploadFileToStorage, readFileAsDataURL, validateReceiptFile, formatFileSize } from '../modules/file-uploader.js';
+import { renderTableSkeleton, renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
 
 /**
  * Genera el HTML unificado del Recibo de Servicio de Impresión UV DTF / Orden de Trabajo
@@ -253,7 +254,7 @@ export const ordersView = {
         <!-- Métricas KPI para Staff -->
         ${isStaff ? `
           <div id="ordersMetricsContainer" class="orders-metrics-grid">
-            <!-- Inyectado por renderOrdersMetrics() -->
+            ${ordersStore.isLoading ? renderMetricsSkeleton(4) : ''}
           </div>
         ` : ''}
 
@@ -300,13 +301,15 @@ export const ordersView = {
               </tr>
             </thead>
             <tbody id="ordersTableBody">
-              <!-- Filas generadas por renderOrdersTable() -->
+              ${ordersStore.isLoading ? renderTableSkeleton(5, isStaff ? 8 : 6) : ''}
             </tbody>
           </table>
         </div>
 
         <!-- Tarjetas de Pedidos Estilo Despacho (<= 1200px) -->
-        <div id="ordersCardsContainer" class="orders-cards-grid dispatch-cards-grid"></div>
+        <div id="ordersCardsContainer" class="orders-cards-grid dispatch-cards-grid">
+          ${ordersStore.isLoading ? renderCardsSkeleton(4) : ''}
+        </div>
 
         <div id="ordersEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
           No se encontraron pedidos que coincidan con los filtros seleccionados.
@@ -976,6 +979,10 @@ export const ordersView = {
     // Render de KPIs para Staff
     function renderOrdersMetrics() {
       if (!metricsContainer || !isStaff) return;
+      if (ordersStore.isLoading) {
+        metricsContainer.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
       const metrics = ordersStore.getSummaryMetrics();
 
       metricsContainer.innerHTML = `
@@ -1005,7 +1012,12 @@ export const ordersView = {
       if (!tableBody) return;
       const cardsContainer = document.getElementById('ordersCardsContainer');
 
-      // Skeleton removed per QA spec
+      if (ordersStore.isLoading) {
+        tableBody.innerHTML = renderTableSkeleton(5, isStaff ? 8 : 6);
+        if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(3);
+        if (emptyState) emptyState.style.display = 'none';
+        return;
+      }
 
       const allOrders = ordersStore.getOrders();
       const q = (searchInput?.value || '').toLowerCase().trim();

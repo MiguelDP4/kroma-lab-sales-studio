@@ -340,6 +340,11 @@ class OrdersStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   async syncWithApi() {
     if (!IS_TEST_ENV) {
       this.isLoading = true;

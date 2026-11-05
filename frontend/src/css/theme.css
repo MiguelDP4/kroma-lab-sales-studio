@@ -65,6 +65,10 @@ html[data-theme="dark"],
   --roll-canvas-bg: #090e1c;
   --roll-ruler-color: #3b4968;
   --logo-monogram: #ffffff;
+
+  /* Skeleton Loading (Cyber-Industrial Dark) */
+  --skeleton-bg: rgba(158, 179, 194, 0.08);
+  --skeleton-shimmer: rgba(158, 179, 194, 0.18);
 }
 
 /* ==========================================================================
@@ -96,5 +100,9 @@ html[data-theme="light"] {
   --roll-canvas-bg: #e2e8f0;
   --roll-ruler-color: #94a3b8;
   --logo-monogram: #111827;
+
+  /* Skeleton Loading (Clean Corporate Light) */
+  --skeleton-bg: rgba(27, 59, 111, 0.06);
+  --skeleton-shimmer: rgba(27, 59, 111, 0.14);
 }
 

@@ -108,6 +108,7 @@ class QuotesStore {
   constructor() {
     this.quotes = [];
     this.listeners = new Set();
+    this.isLoading = false;
     this.loadFromStorage();
   }
 
@@ -299,7 +300,16 @@ class QuotesStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this.notify();
+  }
+
   async syncWithApi() {
+    if (!IS_TEST_ENV && apiClient.token) {
+      this.isLoading = true;
+      this.notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.quotes) {
         // Visitantes sin sesión iniciada no sincronizan cotizaciones del servidor
@@ -314,12 +324,18 @@ class QuotesStore {
           const localOnly = this.quotes.filter(q => !q.backendId && !apiIds.has(q.id) && !apiCodes.has(q.code));
           this.quotes = [...apiQuotes, ...localOnly];
           this.saveToStorage();
-          this.notify();
           return this.getQuotes();
         }
       }
     } catch (err) {
-      console.warn('[QuotesStore] Sincronización API no disponible:', err?.message || err);
+      if (!IS_TEST_ENV) {
+        console.warn('[QuotesStore] Sincronización API no disponible:', err?.message || err);
+      }
+    } finally {
+      if (!IS_TEST_ENV && apiClient.token) {
+        this.isLoading = false;
+        this.notify();
+      }
     }
     return this.getQuotes();
   }

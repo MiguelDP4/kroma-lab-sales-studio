@@ -278,6 +278,7 @@ export const INITIAL_KARDEX_MOVEMENTS = [
 class InventoryStore {
   constructor() {
     this.listeners = new Set();
+    this.isLoading = false;
     this.items = this._loadItems();
     this.kardex = this._loadKardex();
     this.deductedOrders = this._loadDeductedOrders();
@@ -335,7 +336,16 @@ class InventoryStore {
   }
 
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.inventory) {
         const res = await apiClient.inventory.list();
@@ -357,13 +367,19 @@ class InventoryStore {
               }
             });
             this._save();
-            this._notify();
           }
           return this.getItems();
         }
       }
     } catch (err) {
-      console.warn('[InventoryStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[InventoryStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
     return this.getItems();
   }

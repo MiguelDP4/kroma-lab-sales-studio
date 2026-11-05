@@ -11,6 +11,7 @@ import { openCartDrawer } from '../components/cart-drawer.js';
 import { openUserProfileModal } from '../components/user-profile-modal.js';
 import { store } from '../store.js';
 import { mapOrderItem } from '../modules/order-item.js';
+import { renderCardsSkeleton, renderMetricsSkeleton } from '../components/skeleton-loader.js';
 
 let currentFilter = 'ALL';
 let currentSearch = '';
@@ -313,6 +314,10 @@ export const quotesView = {
 };
 
 function renderQuotesCards(quotes) {
+  if (quotesStore.isLoading) {
+    return renderCardsSkeleton(3);
+  }
+
   if (!quotes || quotes.length === 0) {
     return `
       <div class="calc-card" style="text-align: center; padding: 3rem 1.5rem; background: var(--bg-surface-elevated);">

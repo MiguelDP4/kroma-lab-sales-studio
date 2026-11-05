@@ -5,6 +5,7 @@
  */
 
 import { usersStore } from '../modules/users-store.js';
+import { renderMetricsSkeleton, renderTableSkeleton } from '../components/skeleton-loader.js';
 import { USER_ROLES } from '../../shared/business-config.js';
 import {
   PERMISSIONS,
@@ -47,7 +48,7 @@ export const usersView = {
 
       <!-- Métricas KPI de Usuarios y Accesos -->
       <div id="usersMetricsContainer" class="orders-metrics-grid">
-        <!-- Inyectado dinámicamente por renderUsersMetrics() -->
+        ${usersStore.isLoading ? renderMetricsSkeleton(4) : ''}
       </div>
 
       <!-- Barra de Búsqueda y Filtros -->
@@ -92,7 +93,7 @@ export const usersView = {
             </tr>
           </thead>
           <tbody id="usersTableBody">
-            <!-- Inyectado dinámicamente por renderUsersTable() -->
+            ${usersStore.isLoading ? renderTableSkeleton(4, 6) : ''}
           </tbody>
         </table>
         <div id="usersEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
@@ -374,6 +375,10 @@ export const usersView = {
 
     function renderMetrics() {
       if (!metricsContainer) return;
+      if (usersStore.isLoading) {
+        metricsContainer.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
       const m = usersStore.getMetrics();
 
       metricsContainer.innerHTML = `
@@ -412,6 +417,12 @@ export const usersView = {
 
     function renderTable(usersList) {
       if (!tableBody) return;
+
+      if (usersStore.isLoading) {
+        tableBody.innerHTML = renderTableSkeleton(4, 6);
+        if (emptyState) emptyState.style.display = 'none';
+        return;
+      }
 
       if (!usersList || usersList.length === 0) {
         tableBody.innerHTML = '';

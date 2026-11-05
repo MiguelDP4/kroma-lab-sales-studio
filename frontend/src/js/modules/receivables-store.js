@@ -118,6 +118,7 @@ export function calculateAging(orderCreatedAt) {
 class ReceivablesStore {
   constructor() {
     this.listeners = new Set();
+    this.isLoading = false;
     this.payments = this._loadPayments();
   }
 
@@ -163,7 +164,16 @@ class ReceivablesStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.receivables) {
         const res = await apiClient.receivables.listPayments();
@@ -175,12 +185,18 @@ class ReceivablesStore {
             : [];
           this.payments = [...apiPayments, ...localOnly];
           this._savePayments();
-          this._notify();
           return this.payments;
         }
       }
     } catch (err) {
-      console.warn('[ReceivablesStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[ReceivablesStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
     return this.payments;
   }

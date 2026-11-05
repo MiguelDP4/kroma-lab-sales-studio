@@ -216,6 +216,7 @@ kroma-lab-sales-studio/
 │   │       ├── components/
 │   │       │   ├── cart-drawer.js      # Componente interactivo de carrito (drawer lateral)
 │   │       │   ├── checkout-modal.js   # Modal de datos de entrega y facturación SAT
+│   │       │   ├── skeleton-loader.js  # Esqueletos animados (shimmer) para tablas, kanban, métricas y tarjetas
 │   │       │   └── user-profile-modal.js # Modal de autogestión de perfil de usuario y conmutador de cuentas
 │   │       ├── modules/
 │   │       │   ├── api-client.js       # Cliente HTTP REST tipado con JWT y fallback tolerante a fallos
@@ -252,7 +253,8 @@ kroma-lab-sales-studio/
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
 │       ├── app.test.js             # 24 tests de integración, roles, topbar, sidebar y WhatsApp
 │       ├── api-client.test.js      # 14 tests de cliente HTTP, tokens JWT y fallback
-│       └── setup.js                # Mock de Canvas para JSDOM
+│       ├── skeleton-loader.test.js # 11 tests de generación de esqueletos y accesibilidad (ARIA)
+│       ├── setup.js                # Mock de Canvas para JSDOM
 ├── backend/                        # API REST (TypeScript, Express, Prisma, Vitest)
 │   ├── package.json                # Scripts de ejecución, migraciones y test
 │   ├── tsconfig.json               # Configuración TypeScript ES2022 / CommonJS
@@ -556,8 +558,29 @@ kroma-lab-sales-studio/
       * **Carlos Méndez:** Operador de Taller Audley (`EMPLOYEE`) con acceso a producción, pedidos, inventario, despacho y cobranza.
       * **Rodrigo Castillo (PromoGuate):** Cliente B2B VIP (`CUSTOMER`) con portal de autoservicio y seguimiento de pedidos.
       * **Visitante Anónimo:** Modo público (`VISITOR`) para cotizador y landing page comercial.
-  * **Cierre de Sesión Seguro (`store.clearUser()`):**
-    * Botón de cierre de sesión que restablece el estado a `VISITOR`, limpiando tokens y sincronizando de forma reactiva el topbar, el sidebar y las rutas protegidas.
+  * **Cierre de Sesión Seguro y Purga de Caché (`cache-cleaner.js` + `handleLogout()`):**
+    * Función centralizada `clearAllApplicationCache({ preserveTheme = true })` que limpia de manera exhaustiva el estado en memoria de todos los almacenes (`ordersStore`, `dispatchStore`, `inventoryStore`, `receivablesStore`, `productionStore`, `clientsStore`, `quotesStore`, `usersStore`, `cartStore`).
+    * Elimina todas las claves de almacenamiento local (`localStorage` y `sessionStorage`) asociadas a tablas de pedidos, carteras de clientes, movimientos de inventario, cotizaciones y tokens JWT.
+    * Si el usuario se encuentra navegando en una ruta protegida (`/pedidos`, `/produccion`, `/inventario`, `/clientes`, `/cobranza`, `/remisiones`, `/reportes`, `/rentabilidad`, `/usuarios`, `/mi-cuenta`), redirige automáticamente a la página de inicio (`/`) tras cerrar sesión.
+    * Garantiza un aislamiento absoluto de datos entre usuarios (evitando que un administrador vea transacciones de un cliente previo o viceversa en dispositivos compartidos).
+
+* **Sistema de Esqueletos de Carga y UX de Espera (`skeleton-loader.js`):**
+  * **Propósito y Arquitectura:** Proporciona marcadores de posición animados (*shimmer loading states*) para todas las páginas que requieren carga asíncrona de datos desde el backend API (pedidos, producción, inventario, clientes, cobranza, cotizaciones guardadas, reportes, usuarios y cuenta).
+  * **Prevención de Exposición de Datos Residuales:** Al abrir una vista o iniciar una sincronización de datos (`store.isLoading = true`), la interfaz presenta de inmediato el skeleton estructural correspondiente, garantizando que el usuario nunca perciba un flash de datos de sesiones anteriores ni pantallas vacías prematuras mientras se completan las peticiones de red.
+  * **Tokens del Sistema de Diseño en `theme.css`:**
+    * Modo Oscuro: `--skeleton-bg: #16203a`, `--skeleton-shimmer: rgba(28, 114, 147, 0.22)`.
+    * Modo Claro: `--skeleton-bg: #e2e8f0`, `--skeleton-shimmer: rgba(255, 255, 255, 0.70)`.
+  * **Animación e Inclusión Accesible (`views.css`):**
+    * Efecto shimmer acelerado por hardware mediante `@keyframes skeleton-shimmer` con gradiente lineal a 90 grados.
+    * Compatibilidad con accesibilidad para usuarios sensibles al movimiento mediante `@media (prefers-reduced-motion: reduce)` que pausa la animación continua y mantiene un fondo estático visible.
+    * Todos los esqueletos incorporan atributos ARIA semánticos (`role="status"`, `aria-busy="true"`, `aria-label="Cargando..."`).
+  * **Componentes Reutilizables Exportados:**
+    1. `renderMetricsSkeleton(count = 4)`: Cuadrícula de tarjetas KPI con líneas de título, valores simulados y avatares circulares.
+    2. `renderTableSkeleton(rows = 5, cols = 6)`: Filas y celdas tabulares adaptables con anchos alternados para emular contenido real.
+    3. `renderCardsSkeleton(count = 3)`: Tarjetas apiladas para el feed responsivo móvil (enfoque mobile-first).
+    4. `renderKanbanSkeleton(columns = 4, cardsPerCol = 2)`: Columnas de producción Audley con tarjetas de orden en proceso.
+    5. `renderChartSkeleton(heightPx = 220)`: Marco de gráfico analítico y barras verticales simuladas para analítica comercial.
+    6. `renderProfileSkeleton()`: Placeholder de ficha de usuario con avatar circular y cuadrícula de campos de formulario.
   * **Persistencia Reactiva y Notificaciones:**
     * Sincronizado bidireccionalmente con `usersStore` y `store.setUser()`. Al guardar, actualiza instantáneamente el chip visual, el avatar con iniciales y los datos en memoria/localStorage.
   * **Respaldo de Pruebas Unitarias:**

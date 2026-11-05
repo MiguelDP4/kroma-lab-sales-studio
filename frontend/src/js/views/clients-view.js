@@ -8,6 +8,7 @@ import { store } from '../store.js';
 import { clientsStore, CLIENT_CATEGORIES, CLIENT_TIERS } from '../modules/clients-store.js';
 import { ordersStore, PRODUCTION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../modules/orders-store.js';
 import { BUSINESS_CONFIG } from '../../shared/business-config.js';
+import { renderTableSkeleton, renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
 
 export const clientsView = {
   path: '/clientes',
@@ -44,7 +45,7 @@ export const clientsView = {
 
         <!-- Métricas KPI de Cartera -->
         <div id="clientsMetricsContainer" class="orders-metrics-grid">
-          <!-- Inyectado dinámicamente por renderClientsMetrics() -->
+          ${clientsStore.isLoading ? renderMetricsSkeleton(4) : ''}
         </div>
 
         <!-- Barra de Búsqueda y Filtros -->
@@ -88,14 +89,14 @@ export const clientsView = {
               </tr>
             </thead>
             <tbody id="clientsTableBody">
-              <!-- Inyectado dinámicamente por renderClientsTable() -->
+              ${clientsStore.isLoading ? renderTableSkeleton(5, 6) : ''}
             </tbody>
           </table>
         </div>
 
         <!-- Tarjetas de Clientes Estilo Despacho (<= 1200px) -->
         <div id="clientsCardsContainer" class="clients-cards-grid dispatch-cards-grid">
-          <!-- Tarjetas generadas dinámicamente por renderClientsTable() -->
+          ${clientsStore.isLoading ? renderCardsSkeleton(4) : ''}
         </div>
 
         <div id="clientsEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
@@ -348,6 +349,10 @@ export const clientsView = {
     // Render de KPIs
     function renderClientsMetrics() {
       if (!metricsContainer) return;
+      if (clientsStore.isLoading) {
+        metricsContainer.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
       const metrics = clientsStore.getPortfolioMetrics();
 
       metricsContainer.innerHTML = `
@@ -375,6 +380,13 @@ export const clientsView = {
     // Render de Tabla
     function renderClientsTable() {
       if (!tableBody) return;
+      if (clientsStore.isLoading) {
+        tableBody.innerHTML = renderTableSkeleton(5, 7);
+        const cardsCont = document.getElementById('clientsCardsContainer');
+        if (cardsCont) cardsCont.innerHTML = renderCardsSkeleton(3);
+        if (emptyState) emptyState.style.display = 'none';
+        return;
+      }
       const allClients = clientsStore.getClients();
       const q = (searchInput?.value || '').toLowerCase().trim();
       const catFilter = categoryFilter?.value || 'ALL';

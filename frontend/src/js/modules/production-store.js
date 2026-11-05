@@ -113,6 +113,7 @@ function mapOrderToProduction(order) {
 class ProductionStore {
   constructor() {
     this.listeners = new Set();
+    this.isLoading = false;
     this.state = this._loadState();
   }
 
@@ -273,13 +274,29 @@ class ProductionStore {
     this._notify();
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   /**
    * Sincronización bajo demanda con la API del backend
    */
   async syncWithApi() {
-    if (typeof ordersStore !== 'undefined' && ordersStore.syncWithApi) {
-      await ordersStore.syncWithApi();
-      this.syncWithOrdersStore();
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
+    try {
+      if (typeof ordersStore !== 'undefined' && ordersStore.syncWithApi) {
+        await ordersStore.syncWithApi();
+        this.syncWithOrdersStore();
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
   }
 

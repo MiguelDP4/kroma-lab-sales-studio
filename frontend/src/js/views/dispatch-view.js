@@ -19,6 +19,7 @@ import {
   renderKromaDocumentHeader,
   renderKromaReceiptItemsAndSummary,
 } from '../modules/print-helper.js';
+import { renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
 
 export const dispatchView = {
   path: '/despacho',
@@ -61,7 +62,7 @@ export const dispatchView = {
 
         <!-- Indicadores KPI Logísticos (Estilo orders-metrics-grid) -->
         <div id="dispatchMetricsGrid" class="orders-metrics-grid">
-          ${renderMetricsHtml(metrics)}
+          ${dispatchStore.isLoading ? renderMetricsSkeleton(4) : renderMetricsHtml(metrics)}
         </div>
 
         <!-- Barra de Búsqueda y Filtros (Estilo orders-controls-bar) -->
@@ -99,7 +100,7 @@ export const dispatchView = {
 
         <!-- Rejilla Principal de Tarjetas de Remisión y Despacho Responsivas -->
         <div id="dispatchCardsContainer" class="dispatch-cards-grid">
-          ${renderDispatchCardsHtml(dispatchStore.getDispatchNotes())}
+          ${dispatchStore.isLoading ? renderCardsSkeleton(4) : renderDispatchCardsHtml(dispatchStore.getDispatchNotes())}
         </div>
       </div>
 
@@ -406,6 +407,10 @@ export const dispatchView = {
     }
 
     function applyFilters() {
+      if (dispatchStore.isLoading) {
+        if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(4);
+        return;
+      }
       const term = (searchInput?.value || '').trim().toLowerCase();
       const status = statusFilter?.value || 'ALL';
       const method = methodFilter?.value || 'ALL';
@@ -691,7 +696,12 @@ export const dispatchView = {
     }
 
     const attachRowEventListeners = attachCardEventListeners;
-    attachCardEventListeners();
+    if (dispatchStore.isLoading) {
+      if (metricsGrid) metricsGrid.innerHTML = renderMetricsSkeleton(4);
+      if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(4);
+    } else {
+      attachCardEventListeners();
+    }
 
     // Suscripción reactiva al almacén de despacho
     const unsubDispatch = dispatchStore.subscribe(() => {
