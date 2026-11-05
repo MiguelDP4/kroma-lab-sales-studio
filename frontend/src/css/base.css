@@ -111,15 +111,20 @@ textarea {
 .theme-toggle-btn {
   width: 42px;
   height: 42px;
+  min-width: 42px;
+  min-height: 42px;
   border-radius: var(--radius-full);
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: transform var(--transition-fast), border-color var(--transition-fast);
+  box-sizing: border-box;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .theme-toggle-btn:hover {

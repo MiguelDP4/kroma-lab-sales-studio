@@ -185,8 +185,11 @@ El acceso sigue la directriz **Default-Deny**:
 | `CONFIG_PRICING_TIERS`| Modificar tarifas por metro del cotizador | `ADMIN` |
 
 ### Regla Específica de Visibilidad de Marca en Navbar:
-* **"KROMA LAB":** Visible universalmente para todos los usuarios (Visitantes, Clientes, Empleados y Administradores).
-* **"Sales Studio":** Oculto por defecto (`display: none`). **Únicamente visible cuando el usuario tiene rol `ADMIN` o `EMPLOYEE`**. Los clientes y visitantes no registrados jamás ven el texto "Sales Studio", manteniendo un perfil limpio hacia el consumidor.
+* **"KROMA LAB":** Visible universalmente para todos los usuarios (Visitantes, Clientes, Empleados y Administradores) en pantallas de 411px de ancho o superiores.
+* **"Sales Studio":** Oculto por defecto (`display: none`). **Únicamente visible cuando el usuario tiene rol `ADMIN` o `EMPLOYEE`** en pantallas de 411px o superiores.
+* **Comportamiento en Pantallas Menores de 411px (`< 411px` / `@media (max-width: 410px)`):**
+  * Se ocultan automáticamente todas las letras al lado del logo (`.brand-name { display: none !important; }`), dejando visible **únicamente el isotipo oficial SVG** de Kroma Lab para evitar saturación y desbordamientos en el topbar móvil.
+  * **Unificación de Tamaños de Botones:** Los 3 botones del lado derecho (`.cart-toggle-btn`, `.user-profile-chip` y `.theme-toggle-btn`) se configuran con dimensiones idénticas cuadradas/circulares (38 × 38 px en móviles compactos, 42 × 42 px en tablets) para una simetría visual y ergonomía táctil perfecta. En estos tamaños móviles, el nombre y flecha del chip de usuario se ocultan para mostrar sólo el avatar centrado.
 
 ---
 

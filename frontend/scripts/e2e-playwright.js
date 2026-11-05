@@ -328,6 +328,51 @@ async function runFullQASuite() {
     });
     assert(!mobileOverflow.hasOverflow, 'Mobile-First: Cero desbordamiento horizontal en 375px', `Visible: ${mobileOverflow.docW}px, Total: ${mobileOverflow.maxW}px`);
 
+    // 3. Auditoría de Topbar Responsivo en pantalla < 411px (375px)
+    const topbarUnder411 = await page.evaluate(() => {
+      const brandName = document.querySelector('.brand-name');
+      const logoSvg = document.querySelector('.logo-svg-wrap');
+      const cartBtn = document.getElementById('cartToggleBtn');
+      const userChip = document.getElementById('userProfileChip');
+      const themeBtn = document.getElementById('themeToggleBtn');
+
+      const brandHidden = brandName ? window.getComputedStyle(brandName).display === 'none' : false;
+      const logoVisible = logoSvg ? window.getComputedStyle(logoSvg).display !== 'none' : false;
+
+      const cartRect = cartBtn ? cartBtn.getBoundingClientRect() : null;
+      const userRect = userChip ? userChip.getBoundingClientRect() : null;
+      const themeRect = themeBtn ? themeBtn.getBoundingClientRect() : null;
+
+      const sameWidth = Math.round(cartRect.width) === Math.round(userRect.width) && Math.round(userRect.width) === Math.round(themeRect.width);
+      const sameHeight = Math.round(cartRect.height) === Math.round(userRect.height) && Math.round(userRect.height) === Math.round(themeRect.height);
+
+      return {
+        brandHidden,
+        logoVisible,
+        sameWidth,
+        sameHeight,
+        cartSize: cartRect ? `${Math.round(cartRect.width)}x${Math.round(cartRect.height)}` : null,
+        userSize: userRect ? `${Math.round(userRect.width)}x${Math.round(userRect.height)}` : null,
+        themeSize: themeRect ? `${Math.round(themeRect.width)}x${Math.round(themeRect.height)}` : null,
+      };
+    });
+
+    assert(topbarUnder411.brandHidden, 'Topbar < 411px: Letras al lado del logo ocultas (.brand-name display: none)');
+    assert(topbarUnder411.logoVisible, 'Topbar < 411px: Emblema logo SVG Kroma Lab permanece visible');
+    assert(topbarUnder411.sameWidth && topbarUnder411.sameHeight, 'Topbar < 411px: Carrito, Chip de usuario y Tema tienen exactamente el mismo tamaño', `Carrito: ${topbarUnder411.cartSize}, Chip: ${topbarUnder411.userSize}, Tema: ${topbarUnder411.themeSize}`);
+
+    await page.screenshot({ path: path.join(QA_RESULTS_DIR, 'qa-01b-topbar-under-411.png') });
+
+    // 4. Auditoría de Topbar en pantalla >= 411px (414px)
+    await page.setViewportSize({ width: 414, height: 736 });
+    await page.waitForTimeout(400);
+
+    const topbarOver411 = await page.evaluate(() => {
+      const brandName = document.querySelector('.brand-name');
+      return brandName ? window.getComputedStyle(brandName).display !== 'none' : false;
+    });
+    assert(topbarOver411, 'Topbar >= 411px: Letras de Kroma Lab visibles al lado del logo en 414px');
+
     await page.screenshot({ path: path.join(QA_RESULTS_DIR, 'qa-01-mobile-quoter.png'), fullPage: true });
 
     // Restaurar viewport escritorio
