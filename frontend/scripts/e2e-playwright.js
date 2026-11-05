@@ -306,6 +306,29 @@ async function runE2ESuite() {
     await page.screenshot({ path: ordersShot, fullPage: true });
     console.log(`  📸 Captura vista de pedidos guardada en: ${ordersShot}`);
 
+
+    // Navegacion a /cotizaciones y verificacion de Skeletons de Presupuestos
+    console.log('\n[TEST 5.1] Navegacion a /cotizaciones y Skeletons de Presupuestos');
+    await page.evaluate(() => {
+      if (window.router) window.router.navigate('/cotizaciones');
+      else window.history.pushState({}, '', '/cotizaciones');
+    });
+
+    const quotesSkeletons = await page.evaluate(() => {
+      const metricsCont = document.getElementById('quotesMetricsContainer');
+      const listCont = document.getElementById('quotesListContainer');
+      const hasSkeleton = document.querySelector('.skeleton-card, .skeleton-metric-card, .skeleton-text');
+      return {
+        mounted: !!metricsCont && !!listCont,
+        hasSkeletonOrData: !!hasSkeleton || (listCont && listCont.children.length > 0)
+      };
+    });
+    assert(quotesSkeletons.mounted, 'Vista /cotizaciones y contenedores KPI y Cards montados');
+    assert(quotesSkeletons.hasSkeletonOrData, 'Skeletons o datos de cotizaciones presentes en DOM');
+
+    await page.waitForTimeout(600);
+    const quotesShot = path.join(QA_RESULTS_DIR, 'e2e-quotes-view.png');
+    await page.screenshot({ path: quotesShot, fullPage: true });
     // --------------------------------------------------------------------------
     // TEST 6: Logout con Purga Total de Caché y Cero Fuga de Datos
     // --------------------------------------------------------------------------

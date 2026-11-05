@@ -306,6 +306,7 @@ class QuotesStore {
   }
 
   async syncWithApi() {
+    const startTime = Date.now();
     if (!IS_TEST_ENV && apiClient.token) {
       this.isLoading = true;
       this.notify();
@@ -333,6 +334,11 @@ class QuotesStore {
       }
     } finally {
       if (!IS_TEST_ENV && apiClient.token) {
+        // Garantizar al menos 300ms para que la animación del skeleton sea perceptible
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 300) {
+          await new Promise(r => setTimeout(r, 300 - elapsed));
+        }
         this.isLoading = false;
         this.notify();
       }

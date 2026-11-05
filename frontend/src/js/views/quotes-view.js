@@ -23,6 +23,61 @@ export function resetQuotesViewFilters() {
   currentSearch = '';
 }
 
+export function renderQuotesMetrics(metrics, isLoading = false) {
+  if (isLoading) {
+    return renderMetricsSkeleton(4);
+  }
+  return `
+    <div class="calc-card" style="padding: 1rem; text-align: center;">
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+        Total Cotizadas
+      </div>
+      <div style="font-size: 1.8rem; font-weight: 900; color: var(--text-primary); margin: 0.25rem 0;" id="kpiTotalQuotes">
+        ${metrics.totalQuotes}
+      </div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">
+        Presupuestos generados
+      </div>
+    </div>
+
+    <div class="calc-card" style="padding: 1rem; text-align: center;">
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+        Guardadas (Pendientes)
+      </div>
+      <div style="font-size: 1.8rem; font-weight: 900; color: var(--cerulean); margin: 0.25rem 0;" id="kpiSavedQuotes">
+        ${metrics.savedCount}
+      </div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">
+        Listas para conversión
+      </div>
+    </div>
+
+    <div class="calc-card" style="padding: 1rem; text-align: center;">
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+        Convertidas a Orden
+      </div>
+      <div style="font-size: 1.8rem; font-weight: 900; color: #10b981; margin: 0.25rem 0;" id="kpiConvertedQuotes">
+        ${metrics.convertedCount}
+      </div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">
+        En cola o terminadas
+      </div>
+    </div>
+
+    <div class="calc-card" style="padding: 1rem; text-align: center;">
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+        Tasa de Conversión
+      </div>
+      <div style="font-size: 1.8rem; font-weight: 900; color: #f59e0b; margin: 0.25rem 0;" id="kpiConversionRate">
+        ${metrics.conversionRate}%
+      </div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">
+        Efectividad comercial
+      </div>
+    </div>
+  `;
+}
+
 export const quotesView = {
   path: '/quotes',
   name: 'quotes',
@@ -74,54 +129,8 @@ export const quotesView = {
         ` : ''}
 
         <!-- Tarjetas de Métricas KPI -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem;">
-          <div class="calc-card" style="padding: 1rem; text-align: center;">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
-              Total Cotizadas
-            </div>
-            <div style="font-size: 1.8rem; font-weight: 900; color: var(--text-primary); margin: 0.25rem 0;" id="kpiTotalQuotes">
-              ${metrics.totalQuotes}
-            </div>
-            <div style="font-size: 0.76rem; color: var(--text-muted);">
-              Presupuestos generados
-            </div>
-          </div>
-
-          <div class="calc-card" style="padding: 1rem; text-align: center;">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
-              Guardadas (Pendientes)
-            </div>
-            <div style="font-size: 1.8rem; font-weight: 900; color: var(--cerulean); margin: 0.25rem 0;" id="kpiSavedQuotes">
-              ${metrics.savedCount}
-            </div>
-            <div style="font-size: 0.76rem; color: var(--text-muted);">
-              Listas para conversión
-            </div>
-          </div>
-
-          <div class="calc-card" style="padding: 1rem; text-align: center;">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
-              Convertidas a Orden
-            </div>
-            <div style="font-size: 1.8rem; font-weight: 900; color: #10b981; margin: 0.25rem 0;" id="kpiConvertedQuotes">
-              ${metrics.convertedCount}
-            </div>
-            <div style="font-size: 0.76rem; color: var(--text-muted);">
-              En cola o terminadas
-            </div>
-          </div>
-
-          <div class="calc-card" style="padding: 1rem; text-align: center;">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
-              Tasa de Conversión
-            </div>
-            <div style="font-size: 1.8rem; font-weight: 900; color: #f59e0b; margin: 0.25rem 0;" id="kpiConversionRate">
-              ${metrics.conversionRate}%
-            </div>
-            <div style="font-size: 0.76rem; color: var(--text-muted);">
-              Efectividad comercial
-            </div>
-          </div>
+        <div id="quotesMetricsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem;">
+          ${renderQuotesMetrics(metrics, quotesStore.isLoading)}
         </div>
 
         <!-- Filtros y Barra de Búsqueda Mobile-First -->
@@ -302,6 +311,17 @@ export const quotesView = {
 
   onMount: () => {
     resetQuotesViewFilters();
+
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    const isVisitor = !apiClient.token;
+    if (!isVisitor && !isTest) {
+      quotesStore.isLoading = true;
+      const metricsCont = document.getElementById('quotesMetricsContainer');
+      const listCont = document.getElementById('quotesListContainer');
+      if (metricsCont) metricsCont.innerHTML = renderMetricsSkeleton(4);
+      if (listCont) listCont.innerHTML = renderCardsSkeleton(3);
+    }
+
     // Sincronizar en segundo plano con el backend API
     quotesStore.syncWithApi().catch(() => {});
 
@@ -1035,7 +1055,17 @@ function updateQuotesUI(quotes) {
 }
 
 function updateKPIDisplay() {
+  const metricsCont = document.getElementById('quotesMetricsContainer');
   const m = quotesStore.getMetrics();
+  if (metricsCont) {
+    if (quotesStore.isLoading) {
+      metricsCont.innerHTML = renderMetricsSkeleton(4);
+      return;
+    }
+    metricsCont.innerHTML = renderQuotesMetrics(m, false);
+    return;
+  }
+
   const elTotal = document.getElementById('kpiTotalQuotes');
   const elSaved = document.getElementById('kpiSavedQuotes');
   const elConverted = document.getElementById('kpiConvertedQuotes');
