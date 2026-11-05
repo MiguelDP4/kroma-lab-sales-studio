@@ -118,11 +118,25 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
 * **Ancho Útil Imprimible (`printableWidthCm`):** `28.0 cm` (margen técnico de 1 cm por lado para tracción del film).
 * **Separación entre Stickers (`marginBetweenCm`):** `0.3 cm` (3 mm).
 * **Mínimo de Facturación:** `1.0 metro lineal` (`Q150.00`).
+* **Selección Autónoma de Medidas:** La plataforma no impone medidas predefinidas ni presets sugeridos; el cliente ingresa las dimensiones de su diseño según su necesidad exacta (ancho hasta 28 cm y alto libre).
+
+### Modos de Cotización: Por Stickers vs Por Metro
+El cotizador interactivo permite alternar dinámicamente entre dos modos mediante selector de radio buttons ergonómico:
+1. **Modo "Por stickers" (Comportamiento Estándar):**
+   * El cliente ingresa la cantidad exacta de piezas requeridas (`qty`).
+   * El sistema calcula las filas necesarias, el largo físico total y los metros lineales facturables.
+2. **Modo "Por metro" (Cálculo Autónomo de Capacidad):**
+   * El cliente ingresa los metros lineales que desea adquirir (`meters`, mínimo 1 m).
+   * La interfaz cambia automáticamente la etiqueta a *"Cantidad de metros"*.
+   * El motor calcula la cantidad máxima de stickers que caben en ese metraje sin sobrepasarse del largo físico contratado:
+     $$\text{rows} = \max\left(0, \left\lfloor \frac{\text{meters} \times 100.0 + \text{gap}}{\text{heightCm} + \text{gap}} \right\rfloor\right)$$
+     $$\text{maxStickers} = \text{rows} \times \text{stickersPerRow}$$
+   * La cotización, carrito, orden y WhatsApp preservan la estructura técnica de datos idéntica (`widthCm`, `heightCm`, `qty`, `linearMeters`), reflejando el número exacto de stickers a imprimir sin romper integraciones con backend ni taller.
 
 ### Fórmulas del Motor Matemático
 1. **Stickers por fila:**
    $$\text{stickersPerRow} = \max\left(1, \left\lfloor \frac{\text{printableWidthCm} + \text{gap}}{\text{widthCm} + \text{gap}} \right\rfloor\right)$$
-2. **Filas requeridas:**
+2. **Filas requeridas (en modo por stickers):**
    $$\text{rows} = \left\lceil \frac{\text{qty}}{\text{stickersPerRow}} \right\rceil$$
 3. **Largo físico en centímetros:**
    $$\text{lengthCm} = (\text{rows} \times (\text{heightCm} + \text{gap})) - \text{gap}$$

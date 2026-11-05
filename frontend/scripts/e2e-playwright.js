@@ -203,14 +203,26 @@ async function runFullQASuite() {
       assert(totalPriceText.includes('Q150'), 'Cálculo correcto de 50 stickers de 5x5 cm a Q150.00 mínimo', `Total: ${totalPriceText}`);
     }
 
-    // 2. Presets rápidos de medidas
-    const presetBtn = await page.$('.btn-chip[data-w="8"][data-h="5"]');
-    if (presetBtn) {
-      await presetBtn.click();
+    // 2. Modo de cotización: Por stickers vs Por metro
+    const modeMetersRadio = await page.$('#modeMeters');
+    if (modeMetersRadio) {
+      await modeMetersRadio.click();
       await page.waitForTimeout(300);
-      const wVal = await page.$eval('#stickerWidth', (el) => el.value);
-      const hVal = await page.$eval('#stickerHeight', (el) => el.value);
-      assert(wVal === '8' && hVal === '5', 'Preset rápido "8 × 5 cm (Termos Stanley)" aplica medidas exactas');
+      const labelText = await page.$eval('#qtyLabelText', (el) => el.textContent.trim());
+      assert(labelText === 'Cantidad de metros', 'Label cambia dinámicamente a "Cantidad de metros" al elegir por metro');
+      
+      const noticeDisplay = await page.$eval('#metersCalculatedNotice', (el) => window.getComputedStyle(el).display);
+      assert(noticeDisplay !== 'none', 'Aviso de cálculo automático de stickers por metro visible');
+
+      const calculatedText = await page.$eval('#hintStickersCount', (el) => el.textContent.trim());
+      assert(parseInt(calculatedText, 10) > 0, `Calcula stickers automáticos en 1 metro (${calculatedText} piezas)`);
+
+      // Regresar a Por stickers
+      const modeStickersRadio = await page.$('#modeStickers');
+      await modeStickersRadio.click();
+      await page.waitForTimeout(300);
+      const labelTextStickers = await page.$eval('#qtyLabelText', (el) => el.textContent.trim());
+      assert(labelTextStickers === 'Cantidad de stickers', 'Label regresa dinámicamente a "Cantidad de stickers" al elegir por stickers');
     }
 
     // 3. Opción de Acabado: Corte Individual

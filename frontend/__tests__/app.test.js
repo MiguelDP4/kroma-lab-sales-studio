@@ -225,19 +225,74 @@ describe('App — Inicialización y DOM', () => {
   });
 
   describe('Cotizador Interactivo y Cálculos en DOM', () => {
-    it('recalcula la cotización al escribir en los inputs y al hacer clic en chips de preset', () => {
+    it('recalcula la cotización al escribir en los inputs y al alternar modo de cotización por stickers y por metro', () => {
       setActivePreviewImg(null);
       initApp();
 
       const widthInput = document.getElementById('stickerWidth');
-      const chip = document.querySelector('.btn-chip[data-w="8"]');
+      const heightInput = document.getElementById('stickerHeight');
+      const qtyInput = document.getElementById('stickerQty');
+      const modeStickers = document.getElementById('modeStickers');
+      const modeMeters = document.getElementById('modeMeters');
+      const qtyLabelText = document.getElementById('qtyLabelText');
+      const metersNotice = document.getElementById('metersCalculatedNotice');
 
-      chip.click();
-      expect(widthInput.value).toBe('8');
+      expect(modeStickers.checked).toBe(true);
+      expect(qtyLabelText.textContent).toBe('Cantidad de stickers');
+
+      // Modificar ancho
+      widthInput.value = '8';
+      widthInput.dispatchEvent(new Event('input'));
       expect(store.state.activeQuote.widthCm).toBe(8);
 
       const totalPriceEl = document.getElementById('resTotalPrice');
       expect(totalPriceEl.textContent).toContain('Q');
+
+      // Cambiar a modo por metros
+      modeMeters.checked = true;
+      modeMeters.dispatchEvent(new Event('change'));
+
+      expect(qtyLabelText.textContent).toBe('Cantidad de metros');
+      expect(qtyInput.value).toBe('1');
+      expect(metersNotice.style.display).toBe('block');
+      // Con ancho 8 y alto 5 en 1 metro: 3 por fila, 18 filas = 54 stickers
+      expect(store.state.activeQuote.qty).toBe(54);
+
+      // Cambiar a 2 metros
+      qtyInput.value = '2';
+      qtyInput.dispatchEvent(new Event('input'));
+      // Con 2 metros: 3 por fila, 37 filas = 111 stickers
+      expect(store.state.activeQuote.qty).toBe(111);
+
+      // Regresar a modo por stickers
+      modeStickers.checked = true;
+      modeStickers.dispatchEvent(new Event('change'));
+      expect(qtyLabelText.textContent).toBe('Cantidad de stickers');
+      expect(qtyInput.value).toBe('111');
+      expect(metersNotice.style.display).toBe('none');
+
+      // Caso diseño demasiado grande para los metros solicitados (0 piezas)
+      modeMeters.checked = true;
+      modeMeters.dispatchEvent(new Event('change'));
+      qtyInput.value = '1';
+      heightInput.value = '150';
+      heightInput.dispatchEvent(new Event('input'));
+      expect(metersNotice.innerHTML).toContain('Diseño demasiado grande');
+
+      // Regresar a tamaño estándar y probar acciones de carrito y guardado en modo metros
+      heightInput.value = '5';
+      heightInput.dispatchEvent(new Event('input'));
+      const btnAddToCart = document.getElementById('btnAddToCart');
+      btnAddToCart.click();
+
+      const btnSaveQuote = document.getElementById('btnSaveQuote');
+      btnSaveQuote.click();
+
+      // Probar fallback cuando activeQuote es null
+      store.setActiveQuote(null);
+      btnSaveQuote.click();
+      store.setActiveQuote(null);
+      btnAddToCart.click();
 
       // Probar evento resize de ventana
       window.dispatchEvent(new Event('resize'));

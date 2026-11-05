@@ -35,6 +35,32 @@ export function getCuttingRate(qty) {
 }
 
 /**
+ * Calcula la cantidad máxima de stickers de dimensiones widthCm x heightCm
+ * que caben en una cantidad dada de metros lineales en la bobina de 28 cm útiles,
+ * sin sobrepasar el largo físico indicado.
+ * @param {number} widthCm Ancho en cm
+ * @param {number} heightCm Alto en cm
+ * @param {number} [meters=1] Cantidad de metros lineales solicitados
+ * @returns {number} Cantidad máxima de stickers que caben
+ */
+export function calculateMaxStickersInMeters(widthCm, heightCm, meters = 1) {
+  const valid = validateDimensions(widthCm, heightCm, 1);
+  const w = valid.width;
+  const h = valid.height;
+  const m = Math.max(0.01, parseFloat(meters) || 1.0);
+
+  const rollWidth = BUSINESS_CONFIG.printableWidthCm;
+  const gap = BUSINESS_CONFIG.marginBetweenCm;
+
+  const stickersPerRow = Math.max(1, Math.floor((rollWidth + gap) / (w + gap)));
+  const totalLengthCm = m * 100.0;
+  const rows = Math.floor((totalLengthCm + gap) / (h + gap));
+  const maxStickers = Math.max(0, rows * stickersPerRow);
+
+  return maxStickers;
+}
+
+/**
  * Valida y normaliza las dimensiones solicitadas.
  * @param {number} widthCm 
  * @param {number} heightCm 
