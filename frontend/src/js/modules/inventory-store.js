@@ -661,9 +661,51 @@ class InventoryStore {
   /**
    * Actualiza los umbrales de alerta crítica y óptima configurados por el usuario.
    */
-  updateItemAlerts(itemId, { minStockThreshold, optimalThreshold, unitCostQ, supplier, name }) {
-    const item = this.items.find(it => it.id === itemId || it.backendId === itemId);
-    if (!item) return null;
+  updateItemAlerts(itemId, { minStockThreshold, optimalThreshold, unitCostQ, supplier, name } = {}) {
+    let item = this.items.find(it => it.id === itemId || it.backendId === itemId);
+    if (!item) {
+      const template = PRODUCTION_SUPPLIES_CATALOG.find(s => s.id === itemId);
+      if (template) {
+        const crit = minStockThreshold !== undefined ? Number(minStockThreshold) : template.minThreshold;
+        const opt = optimalThreshold !== undefined ? Number(optimalThreshold) : (template.minThreshold * 1.5);
+        item = {
+          id: template.id,
+          name: name || template.name,
+          category: template.category,
+          unit: template.unit,
+          currentStock: 0,
+          minStockThreshold: crit,
+          minThreshold: crit,
+          optimalThreshold: opt,
+          costPerUnitQ: unitCostQ !== undefined ? Number(unitCostQ) : template.costPerUnitQ,
+          supplier: supplier || template.supplier || '',
+          location: template.location || 'Taller Audley UV DTF',
+        };
+        this.items.push(item);
+        this._save();
+        this._notify();
+
+        if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.inventory) {
+          apiClient.inventory.createItem({
+            code: template.id.toUpperCase(),
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            currentStock: 0,
+            minStockThreshold: item.minStockThreshold,
+            optimalThreshold: item.optimalThreshold,
+            unitCostQ: item.costPerUnitQ,
+            supplier: item.supplier,
+          }).then(res => {
+            if (res && res.item) item.backendId = res.item.id;
+          }).catch(err => {
+            console.warn('[InventoryStore] Error al crear insumo con alertas en API:', err);
+          });
+        }
+        return item;
+      }
+      return null;
+    }
 
     if (minStockThreshold !== undefined) {
       item.minStockThreshold = Number(minStockThreshold);
@@ -676,7 +718,7 @@ class InventoryStore {
     this._save();
     this._notify();
 
-    if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.inventory && item.backendId) {
+    if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.inventory) {
       const payload = {
         minStockThreshold: item.minStockThreshold,
         optimalThreshold: item.optimalThreshold,
@@ -685,9 +727,27 @@ class InventoryStore {
       if (item.supplier !== undefined) payload.supplier = item.supplier;
       if (item.name !== undefined) payload.name = item.name;
 
-      apiClient.inventory.updateItem(item.backendId, payload).catch(err => {
-        console.warn('[InventoryStore] Error al actualizar alertas en API:', err);
-      });
+      if (item.backendId) {
+        apiClient.inventory.updateItem(item.backendId, payload).catch(err => {
+          console.warn('[InventoryStore] Error al actualizar alertas en API:', err);
+        });
+      } else {
+        apiClient.inventory.createItem({
+          code: item.id.toUpperCase(),
+          name: item.name,
+          category: item.category,
+          unit: item.unit,
+          currentStock: item.currentStock,
+          minStockThreshold: item.minStockThreshold,
+          optimalThreshold: item.optimalThreshold,
+          unitCostQ: item.costPerUnitQ || 0,
+          supplier: item.supplier || '',
+        }).then(res => {
+          if (res && res.item) item.backendId = res.item.id;
+        }).catch(err => {
+          console.warn('[InventoryStore] Error al crear insumo con alertas en API:', err);
+        });
+      }
     }
 
     return item;

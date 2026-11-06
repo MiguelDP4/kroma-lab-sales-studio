@@ -47,6 +47,10 @@ export const inventoryView = {
               <span>➕</span>
               <span>Registrar Compra / Entrada</span>
             </button>
+            <button id="btnOpenAlertsModal" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1.1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
+              <span>🔔</span>
+              <span>Configurar Alertas</span>
+            </button>
             <button id="btnExportKardexCSV" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
               <span>📥</span>
               <span>Exportar Kardex CSV</span>
@@ -211,33 +215,6 @@ export const inventoryView = {
                 </div>
               </div>
 
-              <!-- SECCIÓN: ALERTAS DE STOCK CONFIGURABLES POR MIGUEL -->
-              <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
-                <div style="font-weight: 800; font-size: 0.92rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-                  <span>🔔</span>
-                  <span>Configuración de Alertas de Stock</span>
-                </div>
-                <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 0.75rem; line-height: 1.4;">
-                  Tú decides los límites: ingresa la cantidad exacta para encender la alerta crítica roja (🔴) y el nivel óptimo verde (🟢).
-                </p>
-                <div class="input-row">
-                  <div class="form-group">
-                    <label class="form-label" for="restockCriticalThreshold" style="font-weight: 700; color: #ef4444; font-size: 0.82rem;">
-                      🔴 Cantidad Nivel Crítico:
-                    </label>
-                    <input type="number" id="restockCriticalThreshold" class="input-control" placeholder="Ej: 20" min="0" step="any" style="min-height: 44px;">
-                    <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Rojo cuando el stock sea ≤ este valor.</span>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="restockOptimalThreshold" style="font-weight: 700; color: #10b981; font-size: 0.82rem;">
-                      🟢 Cantidad Nivel Óptimo:
-                    </label>
-                    <input type="number" id="restockOptimalThreshold" class="input-control" placeholder="Ej: 50" min="0" step="any" style="min-height: 44px;">
-                    <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Verde si el stock es ≥ este valor (🟡 en el rango medio).</span>
-                  </div>
-                </div>
-              </div>
-
               <div class="form-group">
                 <label class="form-label" for="restockNotes" style="font-weight: 700;">Observaciones:</label>
                 <textarea id="restockNotes" class="input-control" placeholder="Detalles de la compra, condición del empaque..." rows="2"></textarea>
@@ -304,14 +281,17 @@ export const inventoryView = {
           </div>
         </div>
 
-        <!-- MODAL 3: CONFIGURACIÓN INDIVIDUAL DE ALERTAS DE STOCK -->
+        <!-- MODAL 3: CONFIGURACIÓN GENERAL DE ALERTAS DE STOCK -->
         <div id="configureAlertsModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
-          <div class="modal-card" style="width: min(500px, 94vw);">
+          <div class="modal-card" style="width: min(520px, 94vw);">
             <div class="modal-header">
               <div>
-                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;">⚙️ Configurar Alertas de Stock</h2>
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0;">
-                  Define la cantidad que activa el estado crítico y el óptimo para este insumo.
+                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                  <span>🔔</span>
+                  <span>Configuración de Alertas de Stock</span>
+                </h2>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0.35rem 0 0; line-height: 1.4;">
+                  Tú decides los límites: selecciona un insumo e ingresa la cantidad exacta para encender la alerta crítica roja (🔴) y el nivel óptimo verde (🟢).
                 </p>
               </div>
               <button type="button" class="btn-close-modal" id="btnCloseAlertsModal" aria-label="Cerrar modal">✕</button>
@@ -320,33 +300,63 @@ export const inventoryView = {
             <form id="formConfigureAlerts">
               <input type="hidden" id="alertItemId">
 
-              <div style="background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border-color);">
-                <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Insumo Seleccionado:</span>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" for="alertItemSelect" style="font-weight: 700;">
+                  Insumo a Configurar:
+                </label>
+                <select id="alertItemSelect" class="input-control" style="min-height: 44px; font-weight: 600;" required>
+                  <!-- Opciones cargadas dinámicamente -->
+                </select>
+              </div>
+
+              <div style="background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                  <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Insumo Seleccionado:</span>
+                  <span id="alertItemUnitBadge" style="font-size: 0.75rem; padding: 0.15rem 0.5rem; background: var(--bg-card); border-radius: 4px; font-weight: 700; color: var(--cerulean);"></span>
+                </div>
                 <div id="alertItemNameDisplay" style="font-weight: 800; font-size: 1.05rem; color: var(--cerulean);"></div>
                 <div id="alertCurrentStockDisplay" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;"></div>
               </div>
 
-              <div class="input-row">
-                <div class="form-group">
-                  <label class="form-label" for="alertCriticalInput" style="font-weight: 700; color: #ef4444;">🔴 Cantidad Nivel Crítico:</label>
-                  <input type="number" id="alertCriticalInput" class="input-control" min="0" step="any" style="min-height: 44px;" required>
-                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Alerta roja si el stock es ≤ a esta cantidad.</span>
+              <!-- CONTENEDOR DE ALERTAS DE STOCK (DISEÑO SOLICITADO) -->
+              <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
+                <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.45rem;">
+                  <span>🔔</span>
+                  <span>Límites de Alerta para Bodega</span>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="alertOptimalInput" style="font-weight: 700; color: #10b981;">🟢 Cantidad Nivel Óptimo:</label>
-                  <input type="number" id="alertOptimalInput" class="input-control" min="0" step="any" style="min-height: 44px;" required>
-                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Alerta verde si el stock es ≥ a esta cantidad.</span>
+                <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 0.85rem; line-height: 1.4;">
+                  Define cuándo el sistema debe avisarte que queda poco insumo:
+                </p>
+                <div class="input-row">
+                  <div class="form-group">
+                    <label class="form-label" for="alertCriticalInput" style="font-weight: 700; color: #ef4444; font-size: 0.85rem;">
+                      🔴 Cantidad Nivel Crítico:
+                    </label>
+                    <input type="number" id="alertCriticalInput" class="input-control" placeholder="Ej: 30" min="0" step="any" style="min-height: 44px;" required>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                      Rojo cuando el stock sea ≤ este valor.
+                    </span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="alertOptimalInput" style="font-weight: 700; color: #10b981; font-size: 0.85rem;">
+                      🟢 Cantidad Nivel Óptimo:
+                    </label>
+                    <input type="number" id="alertOptimalInput" class="input-control" placeholder="Ej: 45" min="0" step="any" style="min-height: 44px;" required>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                      Verde si el stock es ≥ este valor (🟡 en el rango medio).
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div class="input-row">
                 <div class="form-group">
                   <label class="form-label" for="alertUnitCostInput" style="font-weight: 700;">Costo Ref. Unitario (Q):</label>
-                  <input type="number" id="alertUnitCostInput" class="input-control" min="0" step="any" style="min-height: 44px;">
+                  <input type="number" id="alertUnitCostInput" class="input-control" min="0" step="any" style="min-height: 44px;" placeholder="Opcional">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="alertSupplierInput" style="font-weight: 700;">Proveedor Preferido:</label>
-                  <input type="text" id="alertSupplierInput" class="input-control" style="min-height: 44px;">
+                  <input type="text" id="alertSupplierInput" class="input-control" style="min-height: 44px;" placeholder="Ej: Audley Guatemala">
                 </div>
               </div>
 
@@ -404,9 +414,11 @@ export const inventoryView = {
     const btnCancelAdjust = document.getElementById('btnCancelAdjustModal');
     const formAdjust = document.getElementById('formAdjustStock');
 
+    const btnOpenAlerts = document.getElementById('btnOpenAlertsModal');
     const btnCloseAlerts = document.getElementById('btnCloseAlertsModal');
     const btnCancelAlerts = document.getElementById('btnCancelAlertsModal');
     const formAlerts = document.getElementById('formConfigureAlerts');
+    const alertItemSelect = document.getElementById('alertItemSelect');
 
     const btnCloseDelete = document.getElementById('btnCloseDeleteInventoryModal');
     const btnCancelDelete = document.getElementById('btnCancelDeleteInventoryModal');
@@ -465,8 +477,6 @@ export const inventoryView = {
       if (!restockItemSelect) return;
       const val = restockItemSelect.value;
       const isCustom = val === '__CUSTOM__';
-      const critInput = document.getElementById('restockCriticalThreshold');
-      const optInput = document.getElementById('restockOptimalThreshold');
       const supplierInput = document.getElementById('restockSupplier');
       const costInput = document.getElementById('restockCostQ');
 
@@ -478,8 +488,6 @@ export const inventoryView = {
         if (restockUnitLabel) {
           restockUnitLabel.textContent = 'Unidad de medida definida en el formulario.';
         }
-        if (critInput && critInput.value === '') critInput.value = 10;
-        if (optInput && optInput.value === '') optInput.value = 25;
       } else {
         const it = inventoryStore.getItemById(val) || (PRODUCTION_SUPPLIES_CATALOG || []).find(c => c.id === val);
         if (it) {
@@ -488,13 +496,6 @@ export const inventoryView = {
           }
           if (supplierInput && it.supplier && !supplierInput.value) {
             supplierInput.value = it.supplier;
-          }
-          if (critInput) {
-            critInput.value = it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minThreshold || 10);
-          }
-          if (optInput) {
-            const crit = parseFloat(critInput.value) || 10;
-            optInput.value = it.optimalThreshold !== undefined ? it.optimalThreshold : Math.round(crit * 1.5);
           }
         }
       }
@@ -538,19 +539,14 @@ export const inventoryView = {
         const invoice = document.getElementById('restockInvoice')?.value.trim() || '';
         const notes = document.getElementById('restockNotes')?.value.trim() || '';
 
-        const critVal = document.getElementById('restockCriticalThreshold')?.value;
-        const optVal = document.getElementById('restockOptimalThreshold')?.value;
-        const minStockThreshold = critVal !== '' && !isNaN(parseFloat(critVal)) ? parseFloat(critVal) : undefined;
-        const optimalThreshold = optVal !== '' && !isNaN(parseFloat(optVal)) ? parseFloat(optVal) : undefined;
-
         if (isCustom) {
           inventoryStore.createItem({
             name: customName,
             category: customCategory,
             unit: customUnit,
             currentStock: qty,
-            minStockThreshold: minStockThreshold !== undefined ? minStockThreshold : 10,
-            optimalThreshold: optimalThreshold !== undefined ? optimalThreshold : (minStockThreshold ? minStockThreshold * 2 : 25),
+            minStockThreshold: 10,
+            optimalThreshold: 25,
             unitCostQ: qty > 0 ? (cost / qty) : 0,
             supplier,
             invoiceNumber: invoice,
@@ -564,8 +560,6 @@ export const inventoryView = {
             supplier,
             invoiceNumber: invoice,
             notes,
-            minStockThreshold,
-            optimalThreshold,
           });
         }
 
@@ -600,14 +594,97 @@ export const inventoryView = {
       });
     }
 
-    // Modal Configuración de Alertas
+    // Modal Configuración de Alertas de Stock (Separado e Independiente)
+    function populateAlertsSelect(selectedId = null) {
+      if (!alertItemSelect) return;
+      const catalog = PRODUCTION_SUPPLIES_CATALOG || [];
+      const items = inventoryStore.getItems();
+      const optionsMap = new Map();
+
+      // Insumos ya dados de alta en el sistema
+      items.forEach(it => {
+        optionsMap.set(it.id, `<option value="${it.id}">📦 ${it.name} (${it.currentStock.toFixed(1)} ${it.unit} en stock)</option>`);
+      });
+
+      // Insumos del catálogo estándar de taller si no están en existencias aún
+      catalog.forEach(c => {
+        if (!optionsMap.has(c.id)) {
+          optionsMap.set(c.id, `<option value="${c.id}">📋 ${c.name} (${c.unit} - Catálogo Oficial)</option>`);
+        }
+      });
+
+      alertItemSelect.innerHTML = Array.from(optionsMap.values()).join('');
+
+      if (selectedId && optionsMap.has(selectedId)) {
+        alertItemSelect.value = selectedId;
+      } else if (items.length > 0) {
+        alertItemSelect.value = items[0].id;
+      } else if (catalog.length > 0) {
+        alertItemSelect.value = catalog[0].id;
+      }
+
+      updateAlertsModalFields();
+    }
+
+    function updateAlertsModalFields() {
+      if (!alertItemSelect) return;
+      const selectedId = alertItemSelect.value;
+      if (!selectedId) return;
+
+      const item = inventoryStore.getItemById(selectedId);
+      const catalogItem = (PRODUCTION_SUPPLIES_CATALOG || []).find(c => c.id === selectedId);
+
+      const name = item ? item.name : (catalogItem ? catalogItem.name : selectedId);
+      const unit = item ? item.unit : (catalogItem ? catalogItem.unit : 'uds');
+      const currentStock = item ? item.currentStock : 0;
+      const crit = item?.minStockThreshold ?? catalogItem?.minThreshold ?? 10;
+      const opt = item?.optimalThreshold ?? ((catalogItem?.minThreshold || 10) * 1.5);
+      const cost = item?.costPerUnitQ ?? catalogItem?.costPerUnitQ ?? '';
+      const supplier = item?.supplier ?? catalogItem?.supplier ?? '';
+
+      const hiddenId = document.getElementById('alertItemId');
+      if (hiddenId) hiddenId.value = selectedId;
+
+      const nameDisplay = document.getElementById('alertItemNameDisplay');
+      if (nameDisplay) nameDisplay.textContent = name;
+
+      const stockDisplay = document.getElementById('alertCurrentStockDisplay');
+      if (stockDisplay) stockDisplay.textContent = `Stock actual en taller: ${currentStock.toFixed(1)} ${unit}`;
+
+      const unitBadge = document.getElementById('alertItemUnitBadge');
+      if (unitBadge) unitBadge.textContent = `Unidad: ${unit}`;
+
+      const critInput = document.getElementById('alertCriticalInput');
+      if (critInput) critInput.value = crit;
+
+      const optInput = document.getElementById('alertOptimalInput');
+      if (optInput) optInput.value = opt;
+
+      const costInput = document.getElementById('alertUnitCostInput');
+      if (costInput) costInput.value = cost;
+
+      const supplierInput = document.getElementById('alertSupplierInput');
+      if (supplierInput) supplierInput.value = supplier;
+    }
+
+    if (alertItemSelect) {
+      alertItemSelect.addEventListener('change', updateAlertsModalFields);
+    }
+
+    if (btnOpenAlerts) {
+      btnOpenAlerts.addEventListener('click', () => {
+        populateAlertsSelect();
+        toggleModal(alertsModal, true);
+      });
+    }
+
     if (btnCloseAlerts) btnCloseAlerts.addEventListener('click', () => toggleModal(alertsModal, false));
     if (btnCancelAlerts) btnCancelAlerts.addEventListener('click', () => toggleModal(alertsModal, false));
 
     if (formAlerts) {
       formAlerts.addEventListener('submit', (e) => {
         e.preventDefault();
-        const itemId = document.getElementById('alertItemId')?.value;
+        const itemId = alertItemSelect?.value || document.getElementById('alertItemId')?.value;
         const crit = parseFloat(document.getElementById('alertCriticalInput')?.value);
         const opt = parseFloat(document.getElementById('alertOptimalInput')?.value);
         const unitCostQ = parseFloat(document.getElementById('alertUnitCostInput')?.value);
@@ -622,7 +699,7 @@ export const inventoryView = {
           return;
         }
 
-        inventoryStore.updateItemAlerts(itemId, {
+        const updated = inventoryStore.updateItemAlerts(itemId, {
           minStockThreshold: crit,
           optimalThreshold: opt,
           unitCostQ: !isNaN(unitCostQ) ? unitCostQ : undefined,
@@ -630,7 +707,8 @@ export const inventoryView = {
         });
 
         toggleModal(alertsModal, false);
-        showInventoryToast('✅ Umbrales de alerta configurados exitosamente.');
+        const itemName = updated?.name || 'Insumo';
+        showInventoryToast(`🔔 Alertas de stock para "${itemName}" actualizadas: 🔴 Crítico ≤ ${crit}, 🟢 Óptimo ≥ ${opt}`);
       });
     }
 
@@ -872,16 +950,7 @@ export const inventoryView = {
       grid.querySelectorAll('.btn-config-alerts').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-item-id');
-          const it = inventoryStore.getItemById(id);
-          if (!it) return;
-
-          document.getElementById('alertItemId').value = it.id;
-          document.getElementById('alertItemNameDisplay').textContent = it.name;
-          document.getElementById('alertCurrentStockDisplay').textContent = `Stock actual: ${it.currentStock.toFixed(1)} ${it.unit}`;
-          document.getElementById('alertCriticalInput').value = it.minStockThreshold !== undefined ? it.minStockThreshold : 10;
-          document.getElementById('alertOptimalInput').value = it.optimalThreshold !== undefined ? it.optimalThreshold : 25;
-          document.getElementById('alertUnitCostInput').value = it.costPerUnitQ || '';
-          document.getElementById('alertSupplierInput').value = it.supplier || '';
+          populateAlertsSelect(id);
           toggleModal(alertsModal, true);
         });
       });

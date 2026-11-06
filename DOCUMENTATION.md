@@ -774,7 +774,7 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
 4. **`inventoryStore` (`inventory-store.js`):**
    * Método `syncWithApi()`: consulta simultáneamente `GET /api/inventory` y `GET /api/inventory/kardex` para sincronizar existencias de los insumos de taller y movimientos del Kardex con la base de datos real.
    * `createItem()`: emite `POST /api/inventory` para dar de alta insumos personalizados con stock inicial y umbrales configurables.
-   * `updateItemAlerts()`: emite `PUT /api/inventory/:id` permitiendo al usuario definir exactamente las cantidades para stock Crítico (🔴) y Óptimo (🟢).
+   * `updateItemAlerts()`: emite `PUT /api/inventory/:id` (o `POST /api/inventory` si es insumo de catálogo no inicializado) permitiendo al usuario definir exactamente las cantidades para stock Crítico (🔴) y Óptimo (🟢) mediante un modal de configuración dedicado accesible desde la cabecera (`#btnOpenAlertsModal`) con selector de insumos (`#alertItemSelect`) o directamente desde cada tarjeta de insumo.
    * `recordRestock()` y `recordManualAdjustment()`: emiten `POST /api/inventory/restock` y `POST /api/inventory/adjust` registrando compras/facturas y conteos físicos en el Kardex.
    * `deleteItem()`: emite `DELETE /api/inventory/:id` eliminando de forma segura el insumo y sus movimientos asociados.
 5. **`receivablesStore` (`receivables-store.js`):**
