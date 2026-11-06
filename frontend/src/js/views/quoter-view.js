@@ -226,7 +226,7 @@ export const quoterView = {
                 <span>Entrega y Envíos en Guatemala</span>
               </div>
               <p class="shipping-policy-desc">
-                Precios de producción en taller. El costo de flete se cotiza según tu dirección o agencia (Guatex, Forza o Cargo Expreso).
+                El costo de flete se cotiza según tu dirección o agencia (Guatex, Forza o Cargo Expreso).
               </p>
               <div class="shipping-progress-wrap" id="quoterShippingIncentive">
                 <div class="shipping-progress-bar">

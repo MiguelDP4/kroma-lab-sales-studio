@@ -275,7 +275,11 @@ async function runFullQASuite() {
     assert(btnAddToCart !== null, 'Botón #btnAddToCart disponible');
     if (btnAddToCart) {
       await btnAddToCart.click();
-      await page.waitForTimeout(400);
+      await page.waitForFunction(() => {
+        const badge = document.getElementById('cartCountBadge');
+        return badge && parseInt(badge.textContent.trim(), 10) >= 1;
+      }, { timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(300);
 
       const cartToggleBtn = await page.$('#cartToggleBtn');
       if (cartToggleBtn) {

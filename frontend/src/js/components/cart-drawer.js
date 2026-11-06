@@ -226,7 +226,7 @@ export function renderCartDrawer(items, totals) {
               <span class="grand-total-amount">Q${totals.grandTotalQ.toFixed(2)}</span>
             </div>
             <div style="font-size: 0.74rem; color: var(--text-muted); text-align: center; margin-top: 0.35rem;">
-              * Precios de producción en taller. No incluyen flete.
+              * No incluye flete.
             </div>
           </div>
 
