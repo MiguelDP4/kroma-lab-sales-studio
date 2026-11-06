@@ -4,8 +4,6 @@
 
 import { initQuoter } from '../app.js';
 
-export const SHOW_SPOT_STUDIO = false;
-
 export const quoterView = {
   path: '/',
   name: 'quoter',
@@ -59,17 +57,6 @@ export const quoterView = {
             <button type="button" id="btnRotateImage" class="btn btn-secondary" style="min-height: 44px; font-size: 0.85rem; padding: 0.4rem 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;" title="Rotar diseño 90° e intercambiar ancho y alto">
               <span>🔄 Rotar 90°</span>
             </button>
-          </div>
-
-          <!-- Presets Rápidos -->
-          <div class="form-group">
-            <span class="form-label" style="margin-bottom: 0.35rem;">Medidas comunes de referencia:</span>
-            <div class="quick-sizes">
-              <button class="btn-chip active" data-w="5" data-h="5">5 × 5 cm (Vasos/Tazas)</button>
-              <button class="btn-chip" data-w="8" data-h="5">8 × 5 cm (Termos Stanley/Yeti)</button>
-              <button class="btn-chip" data-w="10" data-h="10">10 × 10 cm (Laptops/Autos)</button>
-              <button class="btn-chip" data-w="4" data-h="4">4 × 4 cm (Logos pequeños)</button>
-            </div>
           </div>
 
           <!-- Simulador Visual de Bobina Audley (Ubicado justo bajo medidas para feedback visual inmediato) -->
@@ -132,13 +119,29 @@ export const quoterView = {
             <div id="dropzoneError" class="dropzone-error-msg" style="display: none;"></div>
           </div>
 
-          <!-- Cantidad de stickers -->
+          <!-- Modo de cotización y Cantidad -->
           <div class="form-group" style="margin-top: 1.5rem;">
-            <label class="form-label" for="stickerQty">
-              Cantidad de stickers
-              <span class="tip">Piezas totales</span>
+            <span class="form-label" style="margin-bottom: 0.4rem;">Modo de cotización</span>
+            <div class="quote-mode-radios" role="radiogroup" aria-label="Modo de cotización">
+              <label class="radio-label" for="modeStickers">
+                <input type="radio" name="quoteMode" id="modeStickers" value="stickers" checked>
+                <span>Por stickers</span>
+              </label>
+              <label class="radio-label" for="modeMeters">
+                <input type="radio" name="quoteMode" id="modeMeters" value="meters">
+                <span>Por metro</span>
+              </label>
+            </div>
+
+            <label class="form-label" for="stickerQty" id="qtyInputLabel" style="margin-top: 0.75rem;">
+              <span id="qtyLabelText">Cantidad de stickers</span>
+              <span class="tip" id="qtyTipText">Piezas totales</span>
             </label>
             <input type="number" id="stickerQty" class="input-control" value="50" min="1" max="10000" step="1">
+
+            <div id="metersCalculatedNotice" class="meters-calculated-hint" style="display: none;">
+              🎯 <strong>Cálculo por metro:</strong> En <span id="hintMetersVal">1</span> m caben <strong id="hintStickersCount">90</strong> stickers sin sobrepasar el material.
+            </div>
           </div>
 
           <!-- Opción de Acabado: Despiece / Corte Recto de Precisión -->
@@ -214,6 +217,28 @@ export const quoterView = {
               <div class="total-label">Total Estimado en Quetzales</div>
               <div class="total-price" id="resTotalPrice">Q150.00</div>
               <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q3.00 por sticker</div>
+              <div class="total-freight-notice" id="totalFreightNotice">
+                <span class="freight-notice-badge">📦 No incluye flete</span>
+              </div>
+            </div>
+
+            <!-- Aviso de Política de Envíos y Gancho de Envío Gratis -->
+            <div class="shipping-policy-banner" id="quoterShippingPolicyBanner">
+              <div class="shipping-policy-header">
+                <span style="font-size: 1.1rem;">🚚</span>
+                <span>Entrega y Envíos en Guatemala</span>
+              </div>
+              <p class="shipping-policy-desc">
+                El costo de flete se cotiza según tu dirección o agencia (Guatex, Forza o Cargo Expreso).
+              </p>
+              <div class="shipping-progress-wrap" id="quoterShippingIncentive">
+                <div class="shipping-progress-bar">
+                  <div class="shipping-progress-fill" id="quoterShippingProgressBar" style="width: 25%;"></div>
+                </div>
+                <div class="shipping-progress-text">
+                  <span id="quoterShippingIncentiveText">¡Envío GRATIS en pedidos desde Q400 en Capital y Q600 en Departamentos!</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -234,25 +259,6 @@ export const quoterView = {
         </div>
 
       </div>
-
-      ${SHOW_SPOT_STUDIO ? `
-      <!-- Banner informativo Kroma Spot Studio para talleres de impresión -->
-      <div style="max-width: 1100px; margin: 2rem auto 0.5rem; padding: 1.25rem 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-        <div style="max-width: 700px;">
-          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
-            <span style="font-size: 1.2rem;">⚡</span>
-            <span style="font-weight: 800; color: var(--text-primary); font-size: 1.05rem;">¿Tienes tu propia impresora UV DTF o DTF Textil?</span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0; line-height: 1.4;">
-            Descubre <strong>Kroma Spot Studio</strong>: nuestro generador automático de canales Spot (Blanco y Barniz) para PhotoPRINT, Flexi, Maintop, Roland y Mimaki en 0.04s sin usar Photoshop.
-          </p>
-        </div>
-        <a href="/software" class="btn btn-secondary" data-link style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; border-color: var(--cerulean); color: var(--cerulean); font-weight: 700;">
-          <span>Conocer Software</span>
-          <span>→</span>
-        </a>
-      </div>
-      ` : ''}
     </section>
   `,
   onMount: () => {

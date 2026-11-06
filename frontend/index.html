@@ -26,7 +26,7 @@
     <div class="container navbar-container">
       
       <!-- Lado Izquierdo: Botón Hamburguesa + Logo Oficial Vectorial Kroma Lab -->
-      <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <div class="navbar-brand-wrapper">
         <!-- Botón para alternar el Menú Lateral (Sidebar Drawer) -->
         <button id="mobileNavToggle" class="sidebar-toggle-btn" aria-label="Abrir menú de navegación" aria-expanded="false" title="Menú de Navegación">
           <span id="mobileNavIcon">☰</span>
@@ -155,6 +155,26 @@
       </div>
     </div>
   </header>
+
+  <!-- ==========================================================================
+       BANNER GLOBAL: ERROR CUANDO EL SERVIDOR BACKEND / API NO RESPONDE
+       ========================================================================== -->
+  <div id="backendOfflineBanner" class="backend-offline-banner" style="display: none;" role="alert" aria-live="assertive">
+    <div class="backend-offline-container">
+      <div class="backend-offline-message">
+        <span class="backend-offline-icon" aria-hidden="true">⚠️</span>
+        <div>
+          <strong class="backend-offline-title">El servidor API no responde</strong>
+          <p class="backend-offline-desc">
+            No se pudo establecer conexión con el backend en <code id="backendOfflineUrl">http://localhost:4000/api</code>. Verifica que el servidor esté en ejecución (ejecuta <code>npm run dev</code> en la carpeta <code>backend</code>).
+          </p>
+        </div>
+      </div>
+      <button type="button" id="btnRetryBackendConnect" class="btn-retry-backend" aria-label="Reintentar conexión con el API">
+        🔄 Reintentar conexión
+      </button>
+    </div>
+  </div>
 
   <!-- ==========================================================================
        SIDEBAR DRAWER: MENÚ LATERAL COLAPSABLE CATEGORIZADO

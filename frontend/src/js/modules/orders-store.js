@@ -340,6 +340,11 @@ class OrdersStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   async syncWithApi() {
     if (!IS_TEST_ENV) {
       this.isLoading = true;
@@ -375,7 +380,17 @@ class OrdersStore {
         window.localStorage.removeItem(STORAGE_KEY_ORDERS);
       } catch (_) {}
     }
-    this._notify();
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.orders);
+      } catch (err) {
+        console.error('Error en listener de ordersStore:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearOrdersCache();
   }
 
   subscribe(listener) {
@@ -443,6 +458,10 @@ class OrdersStore {
         nit: customer.nit || 'CF',
         address: customer.address || 'Ciudad de Guatemala',
         email: customer.email || '',
+        deliveryType: customer.deliveryType || 'HOME',
+        deliveryZone: customer.deliveryZone || 'CAPITAL',
+        agencyName: customer.agencyName || '',
+        freeShippingQualified: Boolean(customer.freeShippingQualified),
       },
       paymentReceiptUrl: paymentReceiptUrl || cartTotals.paymentReceiptUrl || null,
       paymentReceiptFileName: paymentReceiptFileName || cartTotals.paymentReceiptFileName || null,

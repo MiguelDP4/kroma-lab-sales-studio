@@ -91,7 +91,6 @@ flowchart TD
 3. **100% Tests Passing:**
    * Tras cualquier cambio en el código, se debe ejecutar la suite de pruebas (`npm test` / `npm run test:coverage`).
    * **El 100% de las pruebas deben pasar sin errores.** Queda estrictamente prohibido commitear o entregar tareas con pruebas rotas o fallidas.
-
 ---
 
 ## 5. Directrices de Arquitectura del Código
@@ -176,6 +175,27 @@ flowchart TD
 4. **Canvas y Simuladores Gráficos:**
    * El simulador de bobina Audley y el dropzone deben escalar dinámicamente según el ancho de pantalla (`max-width: 100%`, auto-resize en Canvas), manteniendo legibilidad sin recortes.
 
-## 7. Regla de Base de Datos para Pruebas Automatizadas
-- **Aislamiento absoluto de Staging:** Queda estrictamente prohibido ejecutar pruebas automatizadas (unitarias, de integración o e2e) contra la base de datos de staging (`neondb`), ya que dicha base de datos se utiliza para pruebas manuales y validación de features antes de producción.
-- **Base de datos exclusiva de tests:** Todas las suites de pruebas deben conectarse y operar exclusivamente sobre la base de datos de test (`kroma_test`).
+---
+
+## 9. Regla de Base de Datos para Pruebas Automatizadas
+- **Aislamiento absoluto de Staging:** Queda estrictamente prohibido ejecutar pruebas automatizadas (unitarias, de integración o e2e) contra la base de datos de staging (
+eondb), ya que dicha base de datos se utiliza para pruebas manuales y validación de features antes de producción.
+- **Base de datos exclusiva de tests:** Todas las suites de pruebas deben conectarse y operar exclusivamente sobre la base de datos de test (kroma_test).
+
+---
+
+## 10. Regla Obligatoria de Pruebas E2E con Playwright en Local
+
+> **NORMA DE AUDITORÍA VISUAL Y E2E (PLAYWRIGHT):**
+> Con cada cambio o feature que se implemente en el sistema, es obligatorio ejecutar una suite de pruebas automatizadas con **Playwright** apuntando estrictamente a http://localhost:3000.
+
+1. **Auto-arranque de Servidores Locales:**
+   * Antes de iniciar las pruebas E2E, se debe verificar la disponibilidad de http://localhost:3000 (Frontend) y http://localhost:4000/api/health (Backend).
+   * Si cualquiera de los servidores no está corriendo, el agente debe iniciarlo automáticamente en segundo plano antes de correr los tests.
+2. **Doble Revisión y Detección de Errores Gráficos:**
+   * Validar ausencia total de errores en la consola del navegador (pageerror, excepciones no controladas o fallos de carga de scripts).
+   * Auditar desbordamiento horizontal (horizontal overflow / layout roto) tanto en vista móvil (375px) como en escritorio.
+   * Comprobar el comportamiento visual de skeletons de carga, renderizado del Canvas del cotizador, estado de autenticación, logout con purga total de caché y banners informativos.
+3. **Aislamiento de Base de Datos:**
+   * Cualquier prueba E2E automatizada que interactúe con el backend debe operar exclusivamente sobre la base de datos de test (kroma_test), nunca sobre staging (
+eondb).

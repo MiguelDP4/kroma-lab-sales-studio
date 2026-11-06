@@ -8,6 +8,7 @@
 import { store } from '../store.js';
 import { apiClient } from '../modules/api-client.js';
 import { handleLogout, openUserProfileModal } from '../components/user-profile-modal.js';
+import { renderProfileSkeleton } from '../components/skeleton-loader.js';
 
 export const accountView = {
   path: '/mi-cuenta',
@@ -15,6 +16,10 @@ export const accountView = {
   allowedRoles: ['VISITOR', 'CUSTOMER', 'EMPLOYEE', 'ADMIN'],
 
   render: () => {
+    if (store.state.isLoading || (store.state.token && !store.state.user)) {
+      return renderProfileSkeleton();
+    }
+
     const user = store.state.user;
     const isVisitor = !user || user.role === 'VISITOR';
 

@@ -120,6 +120,28 @@ export function calculateCartTotals(items = []) {
   };
 }
 
+/**
+ * Evalúa los umbrales de envío gratis para el monto total del carrito.
+ * @param {number} grandTotalQ 
+ * @returns {{ capitalThreshold: number, interiorThreshold: number, eligibleCapital: boolean, eligibleInterior: boolean, missingCapital: number, missingInterior: number }}
+ */
+export function checkCartFreeShipping(grandTotalQ = 0) {
+  const thresholds = BUSINESS_CONFIG.freeShippingThresholds || { capital: 400.0, interior: 600.0 };
+  const eligibleCapital = grandTotalQ >= thresholds.capital;
+  const eligibleInterior = grandTotalQ >= thresholds.interior;
+  const missingCapital = eligibleCapital ? 0 : Math.round((thresholds.capital - grandTotalQ) * 100) / 100;
+  const missingInterior = eligibleInterior ? 0 : Math.round((thresholds.interior - grandTotalQ) * 100) / 100;
+
+  return {
+    capitalThreshold: thresholds.capital,
+    interiorThreshold: thresholds.interior,
+    eligibleCapital,
+    eligibleInterior,
+    missingCapital,
+    missingInterior,
+  };
+}
+
 export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
   const { items, totalBillableMeters, tierRate, grandTotalQ, hasCutting, cuttingTotalQ, isUnderMin } = cartTotals;
 
@@ -166,6 +188,30 @@ export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
     msg += `• *Servicio de Corte:* +Q${cuttingTotalQ.toFixed(2)}\n`;
   }
   msg += `• *TOTAL ESTIMADO:* Q${grandTotalQ.toFixed(2)}\n\n`;
+
+  // Detalle y condiciones de entrega y flete
+  msg += `*DETALLE DE ENTREGA Y ENVÍO:*\n`;
+  if (customer.deliveryType === 'AGENCY') {
+    msg += `• *Modalidad:* Recolección en Agencia de Encomiendas\n`;
+    if (customer.agencyName) {
+      msg += `• *Agencia / Sucursal:* ${customer.agencyName}\n`;
+    }
+  } else {
+    const zoneText = customer.deliveryZone === 'INTERIOR' ? 'Departamentos / Interior' : 'Capital / Área Metropolitana';
+    msg += `• *Modalidad:* Envío a Domicilio (${zoneText})\n`;
+  }
+
+  if (customer.freeShippingQualified) {
+    const thresholdQ = customer.deliveryZone === 'INTERIOR' ? 'Q600' : 'Q400';
+    msg += `• *Flete de Envío:* 🎉 ¡GRATIS! (Califica por pedido mayor a ${thresholdQ})\n`;
+  } else {
+    msg += `• *Flete de Envío:* Por cotizar por asesor (Precios de taller no incluyen envío)\n`;
+  }
+  msg += `\n`;
+
+  // Condiciones de pago
+  msg += `*POLÍTICA DE PAGO:* 50% de anticipo para iniciar impresión y 50% restante antes de despachar al courier (o 100% de contado). Sin cobro contra entrega (COD).\n\n`;
+
   if (customer.notes) {
     msg += `• *Notas:* ${customer.notes}\n\n`;
   }
@@ -175,7 +221,7 @@ export function formatWhatsAppCartOrder(cartTotals, customer = {}) {
   if (customer.paymentReceiptUrl) {
     msg += `Adjunto mi comprobante para revisión y confirmación a producción. ¡Gracias!`;
   } else {
-    msg += `¿Me confirman tiempos de entrega y métodos de pago (transferencia/depósito)? Gracias.`;
+    msg += `¿Me confirman tiempos de entrega y cuota de flete para proceder? Gracias.`;
   }
 
   return msg;

@@ -77,6 +77,49 @@ export function renderCartDrawer(items, totals) {
 
   const isOpen = document.getElementById('cartDrawer')?.classList.contains('open');
 
+  const grandTotal = totals?.grandTotalQ || 0;
+  let freeShippingHtml = '';
+  if (items.length > 0) {
+    if (grandTotal >= 600) {
+      freeShippingHtml = `
+        <div class="cart-free-shipping-card cart-free-shipping-badge is-qualified">
+          <div class="shipping-progress-bar">
+            <div class="shipping-progress-fill" style="width: 100%;"></div>
+          </div>
+          <div class="cart-free-shipping-msg">
+            🎉 ¡Felicidades! Calificas para <strong>ENVÍO GRATIS</strong> en todo el país.
+          </div>
+        </div>
+      `;
+    } else if (grandTotal >= 400) {
+      const pct = Math.min(100, Math.round((grandTotal / 600) * 100));
+      const missing = (600 - grandTotal).toFixed(2);
+      freeShippingHtml = `
+        <div class="cart-free-shipping-card cart-free-shipping-badge">
+          <div class="shipping-progress-bar">
+            <div class="shipping-progress-fill" style="width: ${pct}%;"></div>
+          </div>
+          <div class="cart-free-shipping-msg">
+            🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missing}</strong> más para Departamentos.
+          </div>
+        </div>
+      `;
+    } else {
+      const pct = Math.min(100, Math.round((grandTotal / 400) * 100));
+      const missing = (400 - grandTotal).toFixed(2);
+      freeShippingHtml = `
+        <div class="cart-free-shipping-card cart-free-shipping-badge">
+          <div class="shipping-progress-bar">
+            <div class="shipping-progress-fill" style="width: ${pct}%;"></div>
+          </div>
+          <div class="cart-free-shipping-msg">
+            🎁 Agrega <strong>Q${missing}</strong> más para <strong>Envío GRATIS</strong> en Capital (Q600 Departamentos).
+          </div>
+        </div>
+      `;
+    }
+  }
+
   const itemsHtml = items.length === 0
     ? `
       <div class="cart-empty-state">
@@ -152,6 +195,7 @@ export function renderCartDrawer(items, totals) {
 
       ${items.length > 0 ? `
         <div class="cart-footer">
+          ${freeShippingHtml}
           <div class="cart-summary-card">
             <div class="summary-line">
               <span>Metros Totales Agrupados:</span>
@@ -171,9 +215,18 @@ export function renderCartDrawer(items, totals) {
                 <strong style="color: var(--color-success);">+Q${totals.cuttingTotalQ.toFixed(2)}</strong>
               </div>
             ` : ''}
+            <div class="summary-line">
+              <span>Envío / Flete:</span>
+              <strong style="color: ${grandTotal >= 400 ? 'var(--color-success)' : 'var(--text-muted)'};">
+                ${grandTotal >= 600 ? '🎉 GRATIS (Nacional)' : (grandTotal >= 400 ? '🎉 GRATIS (Capital)' : 'Por cotizar por asesor')}
+              </strong>
+            </div>
             <div class="summary-total-line">
               <span>TOTAL ESTIMADO:</span>
               <span class="grand-total-amount">Q${totals.grandTotalQ.toFixed(2)}</span>
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); text-align: center; margin-top: 0.35rem;">
+              * No incluye flete.
             </div>
           </div>
 

@@ -13,6 +13,9 @@ import {
   PRODUCTION_SUPPLIES_CATALOG,
 } from '../modules/inventory-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
+import { renderMetricsSkeleton, renderCardsSkeleton, renderTableSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 export const inventoryView = {
   path: '/inventario',
@@ -56,7 +59,7 @@ export const inventoryView = {
 
         <!-- Tarjetas de Resumen KPI de Bodega -->
         <div id="inventorySummaryContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-          <!-- Inyectado por renderSummaryKPIs() -->
+          ${inventoryStore.isLoading ? renderMetricsSkeleton(4) : ''}
         </div>
 
         <!-- Filtros de Categoría de Insumos -->
@@ -78,9 +81,13 @@ export const inventoryView = {
           </button>
         </div>
 
+        <!-- Alerta Offline si el API no responde -->
+        <div id="inventoryOfflineAlertContainer">
+        </div>
+
         <!-- Cuadrícula de Tarjetas de Insumos -->
         <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 3rem;">
-          <!-- Inyectado por renderInventoryGrid() -->
+          ${inventoryStore.isLoading ? renderCardsSkeleton(4) : ''}
         </div>
 
         <!-- SECCIÓN 2: HISTORIAL DE MOVIMIENTOS / KARDEX -->
@@ -125,7 +132,7 @@ export const inventoryView = {
                 </tr>
               </thead>
               <tbody id="kardexTableBody">
-                <!-- Inyectado por renderKardexTable() -->
+                ${inventoryStore.isLoading ? renderTableSkeleton(5, 9) : ''}
               </tbody>
             </table>
           </div>
@@ -429,7 +436,10 @@ export const inventoryView = {
     function renderSummaryKPIs() {
       const container = document.getElementById('inventorySummaryContainer');
       if (!container) return;
-
+      if (inventoryStore.isLoading) {
+        container.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
       const summary = inventoryStore.getInventorySummary();
 
       container.innerHTML = `
@@ -473,6 +483,15 @@ export const inventoryView = {
       const grid = document.getElementById('inventoryGrid');
       if (!grid) return;
 
+      const offlineAlertEl = document.getElementById('inventoryOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudo sincronizar el inventario con el backend.') : '';
+      }
+
+      if (inventoryStore.isLoading) {
+        grid.innerHTML = renderCardsSkeleton(6);
+        return;
+      }
       const allItems = inventoryStore.getItems();
       const filtered = allItems.filter(it => activeCategory === 'ALL' || it.category === activeCategory);
 
@@ -589,7 +608,10 @@ export const inventoryView = {
     function renderKardexTable() {
       const tbody = document.getElementById('kardexTableBody');
       if (!tbody) return;
-
+      if (inventoryStore.isLoading) {
+        tbody.innerHTML = renderTableSkeleton(4, 7);
+        return;
+      }
       const searchVal = kardexSearch?.value || '';
       const typeVal = kardexFilter?.value || 'ALL';
 

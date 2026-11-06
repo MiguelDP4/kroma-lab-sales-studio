@@ -243,6 +243,7 @@ export const INITIAL_SEED_DISPATCH = [
 export class DispatchStore {
   constructor() {
     this.listeners = [];
+    this.isLoading = false;
     this.dispatchNotes = this._loadNotes();
   }
 
@@ -319,7 +320,16 @@ export class DispatchStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.dispatch) {
         const res = await apiClient.dispatch.list();
@@ -331,12 +341,18 @@ export class DispatchStore {
             : [];
           this.dispatchNotes = [...apiNotes, ...localOnly];
           this._save();
-          this._notify();
           return this.getDispatchNotes();
         }
       }
     } catch (err) {
-      console.warn('[DispatchStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[DispatchStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
     return this.getDispatchNotes();
   }
@@ -362,6 +378,20 @@ export class DispatchStore {
         console.error('Error en listener de DispatchStore:', err);
       }
     });
+  }
+
+  clearDispatchCache() {
+    this.dispatchNotes = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_DISPATCH);
+      } catch (_) {}
+    }
+    this._notify();
+  }
+
+  clearCache() {
+    this.clearDispatchCache();
   }
 
   subscribe(listener) {

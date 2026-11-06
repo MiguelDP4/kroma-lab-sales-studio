@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ordersView } from '../src/js/views/orders-view.js';
 import { productionView } from '../src/js/views/production-view.js';
 import { clientsView } from '../src/js/views/clients-view.js';
@@ -10,6 +10,16 @@ import { inventoryView } from '../src/js/views/inventory-view.js';
 import { receivablesView } from '../src/js/views/receivables-view.js';
 import { dispatchView } from '../src/js/views/dispatch-view.js';
 import { softwareView } from '../src/js/views/software-view.js';
+import { quotesView } from '../src/js/views/quotes-view.js';
+import { accountView } from '../src/js/views/account-view.js';
+import { ordersStore } from '../src/js/modules/orders-store.js';
+import { productionStore } from '../src/js/modules/production-store.js';
+import { clientsStore } from '../src/js/modules/clients-store.js';
+import { inventoryStore } from '../src/js/modules/inventory-store.js';
+import { dispatchStore } from '../src/js/modules/dispatch-store.js';
+import { receivablesStore } from '../src/js/modules/receivables-store.js';
+import { quotesStore } from '../src/js/modules/quotes-store.js';
+import { usersStore } from '../src/js/modules/users-store.js';
 import { store } from '../src/js/store.js';
 
 describe('Vistas Modulares SPA', () => {
@@ -167,6 +177,8 @@ describe('Vistas Modulares SPA', () => {
       expect(html).toContain('stickerHeight');
       expect(html).toContain('stickerQty');
       expect(html).toContain('optCutting');
+      expect(html).toContain('quoterShippingPolicyBanner');
+      expect(html).toContain('quoterShippingIncentive');
     });
 
     it('mantiene la jerarquia visual: medidas -> canvas bobina -> uploader -> cantidad -> corte', () => {
@@ -214,6 +226,92 @@ describe('Vistas Modulares SPA', () => {
       expect(typeof cleanup).toBe('function');
       cleanup();
       document.body.removeChild(container);
+    });
+  });
+
+  describe('Skeleton Loaders en Vistas con isLoading = true', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+      ordersStore.isLoading = false;
+      productionStore.isLoading = false;
+      clientsStore.isLoading = false;
+      inventoryStore.isLoading = false;
+      dispatchStore.isLoading = false;
+      receivablesStore.isLoading = false;
+      quotesStore.isLoading = false;
+      usersStore.isLoading = false;
+      store.state.isLoading = false;
+    });
+
+    it('ordersView renderiza skeletons en métricas y tablas cuando ordersStore.isLoading es true', () => {
+      store.setUser({ id: '1', role: 'ADMIN' }, 'tok');
+      ordersStore.isLoading = true;
+      const html = ordersView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-table-row');
+    });
+
+    it('productionView renderiza skeleton kanban cuando productionStore.isLoading es true', () => {
+      productionStore.isLoading = true;
+      const html = productionView.render();
+      expect(html).toContain('skeleton-kanban-card');
+    });
+
+    it('clientsView renderiza skeletons en métricas y tablas cuando clientsStore.isLoading es true', () => {
+      clientsStore.isLoading = true;
+      const html = clientsView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-table-row');
+    });
+
+    it('inventoryView renderiza skeletons en métricas, tarjetas y kardex cuando inventoryStore.isLoading es true', () => {
+      inventoryStore.isLoading = true;
+      const html = inventoryView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-card');
+      expect(html).toContain('skeleton-table-row');
+    });
+
+    it('dispatchView renderiza skeletons en métricas y tarjetas cuando dispatchStore.isLoading es true', () => {
+      dispatchStore.isLoading = true;
+      const html = dispatchView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-card');
+    });
+
+    it('receivablesView renderiza skeletons en métricas, cuentas y pagos cuando receivablesStore.isLoading es true', () => {
+      receivablesStore.isLoading = true;
+      const html = receivablesView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-table-row');
+      expect(html).toContain('skeleton-card');
+    });
+
+    it('quotesView renderiza skeleton de tarjetas cuando quotesStore.isLoading es true', () => {
+      quotesStore.isLoading = true;
+      const html = quotesView.render();
+      expect(html).toContain('skeleton-card');
+    });
+
+    it('usersView renderiza skeletons en métricas y tablas cuando usersStore.isLoading es true', () => {
+      usersStore.isLoading = true;
+      const html = usersView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-table-row');
+    });
+
+    it('reportsView renderiza skeletons cuando ordersStore.isLoading es true', () => {
+      ordersStore.isLoading = true;
+      const html = reportsView.render();
+      expect(html).toContain('skeleton-metric-card');
+      expect(html).toContain('skeleton-table-row');
+    });
+
+    it('accountView renderiza profile skeleton cuando store.state.isLoading es true', () => {
+      store.state.isLoading = true;
+      const html = accountView.render();
+      expect(html).toContain('skeleton-circle');
+      expect(html).toContain('aria-label="Cargando perfil..."');
     });
   });
 });

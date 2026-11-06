@@ -10,6 +10,7 @@ import { store } from '../store.js';
 import { usersStore } from '../modules/users-store.js';
 import { ordersStore } from '../modules/orders-store.js';
 import { apiClient } from '../modules/api-client.js';
+import { clearAllApplicationCache } from '../modules/cache-cleaner.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -768,17 +769,19 @@ export async function registerWithRealAccount(userData) {
 }
 
 export async function handleLogout() {
-  store.clearUser();
-  if (ordersStore && typeof ordersStore.clearOrdersCache === 'function') {
-    ordersStore.clearOrdersCache();
-  }
-  if (typeof apiClient !== 'undefined' && apiClient.clearToken) {
-    apiClient.clearToken();
-  }
+  clearAllApplicationCache({ preserveTheme: true });
   showFeedback('Sesión finalizada. Has pasado al modo Visitante.', 'info');
   setTimeout(() => {
     closeUserProfileModal();
   }, 500);
+
+  if (typeof window !== 'undefined' && window.router && typeof window.router.navigate === 'function') {
+    const currentPath = window.location.pathname || '';
+    const protectedPrefixes = ['/orders', '/production', '/clients', '/receivables', '/inventory', '/dispatch', '/reports', '/profitability', '/users', '/software', '/account'];
+    if (protectedPrefixes.some(p => currentPath.startsWith(p))) {
+      window.router.navigate('/');
+    }
+  }
 
   try {
     if (typeof apiClient !== 'undefined' && apiClient.auth) {

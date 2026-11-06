@@ -98,6 +98,7 @@ class ClientsStore {
   constructor() {
     this.clients = [];
     this.listeners = new Set();
+    this.isLoading = false;
     this._loadClients();
   }
 
@@ -156,7 +157,16 @@ class ClientsStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.customers) {
         const res = await apiClient.customers.list();
@@ -168,12 +178,18 @@ class ClientsStore {
             : [];
           this.clients = [...apiClients, ...localOnly];
           this._saveClients();
-          this._notify();
           return this.clients;
         }
       }
     } catch (err) {
-      console.warn('[ClientsStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[ClientsStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
     return this.clients;
   }
@@ -202,6 +218,26 @@ class ClientsStore {
         console.error('Error en listener de clientsStore:', err);
       }
     });
+  }
+
+  clearClientsCache() {
+    this.clients = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_CLIENTS);
+      } catch (_) {}
+    }
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.clients);
+      } catch (err) {
+        console.error('Error en listener de clientsStore:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearClientsCache();
   }
 
   getClients() {

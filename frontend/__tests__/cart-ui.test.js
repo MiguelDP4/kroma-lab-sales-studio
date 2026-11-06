@@ -831,5 +831,152 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       expect(ordersStore.getOrders().length).toBe(initialOrders + 1);
       expect(window.open).toHaveBeenCalledWith(expect.stringContaining('api.whatsapp.com'), '_blank');
     });
+
+    it('permite alternar entre Envío a Domicilio y Recolección en Agencia en Checkout Modal', () => {
+      openCheckoutModal(cartStore.getTotals());
+
+      const radioHome = document.getElementById('deliveryTypeHome');
+      const radioAgency = document.getElementById('deliveryTypeAgency');
+      const agencyGroup = document.getElementById('deliveryAgencyGroup');
+      const agencyInput = document.getElementById('custAgencyName');
+      const addressLabel = document.getElementById('custAddressLabel');
+      const addressInput = document.getElementById('custAddress');
+
+      expect(radioHome.checked).toBe(true);
+      expect(agencyGroup.style.display).toBe('none');
+      expect(addressInput.required).toBe(true);
+
+      // Cambiar a Agencia
+      radioAgency.checked = true;
+      radioAgency.dispatchEvent(new Event('change'));
+
+      expect(agencyGroup.style.display).toBe('block');
+      expect(agencyInput.required).toBe(true);
+      expect(addressInput.required).toBe(false);
+      expect(addressLabel.textContent).toContain('Opcional');
+
+      // Regresar a Domicilio
+      radioHome.checked = true;
+      radioHome.dispatchEvent(new Event('change'));
+
+      expect(agencyGroup.style.display).toBe('none');
+      expect(addressInput.required).toBe(true);
+    });
+
+    it('actualiza reactivamente el banner de Envío Gratis según la región seleccionada', () => {
+      // Pedido de Q450 (Califica en Capital, no en Departamentos)
+      const mockTotals = {
+        totalItemsCount: 1,
+        totalStickers: 100,
+        totalBillableMeters: 3,
+        grandTotalQ: 450,
+      };
+      openCheckoutModal(mockTotals);
+
+      const zoneSelect = document.getElementById('deliveryZoneSelect');
+      const alertBox = document.getElementById('checkoutShippingAlert');
+
+      // Por defecto está en CAPITAL
+      expect(zoneSelect.value).toBe('CAPITAL');
+      expect(alertBox.textContent).toContain('¡Envío GRATIS!');
+
+      // Cambiar a INTERIOR (Q600 requerido)
+      zoneSelect.value = 'INTERIOR';
+      zoneSelect.dispatchEvent(new Event('change'));
+
+      expect(alertBox.textContent).toContain('Flete por confirmar');
+      expect(alertBox.textContent).toContain('Q150.00 más');
+    });
+
+    it('incluye datos de entrega en agencia y zona en el pedido generado', () => {
+      store.setUser({ role: 'ADMIN', name: 'Miguel Dubois' }, 'token');
+      const totals = cartStore.getTotals();
+      openCheckoutModal(totals);
+
+      document.getElementById('custName').value = 'Comercial Jalapa';
+      document.getElementById('custPhone').value = '+502 5900-1122';
+
+      const radioAgency = document.getElementById('deliveryTypeAgency');
+      radioAgency.checked = true;
+      radioAgency.dispatchEvent(new Event('change'));
+
+      document.getElementById('custAgencyName').value = 'Guatex Sucursal Jalapa';
+      document.getElementById('deliveryZoneSelect').value = 'INTERIOR';
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const latestOrder = ordersStore.getOrders()[0];
+      expect(latestOrder.customer.deliveryType).toBe('AGENCY');
+      expect(latestOrder.customer.deliveryZone).toBe('INTERIOR');
+      expect(latestOrder.customer.agencyName).toBe('Guatex Sucursal Jalapa');
+      expect(latestOrder.customer.address).toContain('Guatex Sucursal Jalapa');
+    });
+
+    it('cubre estados de envío gratis para pedidos >= Q600 en Departamentos y < Q400 en Capital', () => {
+      // 1. Pedido de Q700 en Departamentos
+      openCheckoutModal({ totalItemsCount: 1, totalStickers: 100, totalBillableMeters: 5, grandTotalQ: 700 });
+      const zoneSelect = document.getElementById('deliveryZoneSelect');
+      const alertBox = document.getElementById('checkoutShippingAlert');
+
+      zoneSelect.value = 'INTERIOR';
+      zoneSelect.dispatchEvent(new Event('change'));
+      expect(alertBox.textContent).toContain('¡Envío GRATIS!');
+      expect(alertBox.textContent).toContain('Departamentos');
+
+      // 2. Pedido de Q250 en Capital
+      openCheckoutModal({ totalItemsCount: 1, totalStickers: 50, totalBillableMeters: 1, grandTotalQ: 250 });
+      const alertBox2 = document.getElementById('checkoutShippingAlert');
+      expect(alertBox2.textContent).toContain('Flete por confirmar');
+      expect(alertBox2.textContent).toContain('Q150.00 más');
+    });
+
+    it('interactúa con los botones de confirmación de pedido (Ir a pedidos y Cerrar)', () => {
+      store.setUser({ role: 'CUSTOMER', name: 'Cliente Test', email: 'test@kroma.gt' }, 'tok');
+      openCheckoutModal(cartStore.getTotals());
+
+      document.getElementById('custName').value = 'Cliente Test';
+      document.getElementById('custPhone').value = '55551111';
+      document.getElementById('custAddress').value = 'Zona 10';
+
+      const form = document.getElementById('checkoutForm');
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      // Botón cerrar confirmación
+      const btnCloseConfirm = document.getElementById('btnCloseOrderConfirm');
+      expect(btnCloseConfirm).not.toBeNull();
+      btnCloseConfirm.click();
+      expect(document.getElementById('checkoutModal')).toBeNull();
+
+      // Botón ir a pedidos con router mock
+      window.router = { navigate: vi.fn() };
+      openCheckoutModal(cartStore.getTotals());
+      document.getElementById('custName').value = 'Cliente Test 2';
+      document.getElementById('custPhone').value = '55551111';
+      document.getElementById('custAddress').value = 'Zona 10';
+      document.getElementById('checkoutForm').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const btnGo = document.getElementById('btnGoToOrdersConfirm');
+      expect(btnGo).not.toBeNull();
+      btnGo.click();
+      expect(window.router.navigate).toHaveBeenCalledWith('/pedidos');
+      delete window.router;
+    });
+
+    it('renderiza badges de envío gratis en el Cart Drawer según escalas (>= Q600, >= Q400, < Q400)', () => {
+      const mockItem = [{ id: '1', title: 'Sticker', widthCm: 5, heightCm: 5, qty: 50, actualLinearMeters: 1 }];
+      
+      // Escala 1: Q650
+      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 5, tierRate: 115, materialTotalQ: 650, grandTotalQ: 650 });
+      expect(document.getElementById('cartDrawerContainer').textContent).toContain('todo el país');
+
+      // Escala 2: Q450
+      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 3, tierRate: 125, materialTotalQ: 450, grandTotalQ: 450 });
+      expect(document.getElementById('cartDrawerContainer').textContent).toContain('Envío GRATIS en Capital');
+
+      // Escala 3: Q200
+      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 1.5, tierRate: 150, materialTotalQ: 200, grandTotalQ: 200 });
+      expect(document.getElementById('cartDrawerContainer').textContent).toContain('para Envío GRATIS en Capital');
+    });
   });
 });

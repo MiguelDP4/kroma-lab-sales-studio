@@ -108,6 +108,7 @@ class QuotesStore {
   constructor() {
     this.quotes = [];
     this.listeners = new Set();
+    this.isLoading = false;
     this.loadFromStorage();
   }
 
@@ -167,6 +168,20 @@ class QuotesStore {
         localStorage.setItem(STORAGE_KEY_QUOTES, JSON.stringify(this.quotes));
       }
     } catch (_) {}
+  }
+
+  clearQuotesCache() {
+    this.quotes = [];
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY_QUOTES);
+      } catch (_) {}
+    }
+    this.notify();
+  }
+
+  clearCache() {
+    this.clearQuotesCache();
   }
 
   subscribe(listener) {
@@ -285,7 +300,17 @@ class QuotesStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this.notify();
+  }
+
   async syncWithApi() {
+    const startTime = Date.now();
+    if (!IS_TEST_ENV && apiClient.token) {
+      this.isLoading = true;
+      this.notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.quotes) {
         // Visitantes sin sesión iniciada no sincronizan cotizaciones del servidor
@@ -300,12 +325,23 @@ class QuotesStore {
           const localOnly = this.quotes.filter(q => !q.backendId && !apiIds.has(q.id) && !apiCodes.has(q.code));
           this.quotes = [...apiQuotes, ...localOnly];
           this.saveToStorage();
-          this.notify();
           return this.getQuotes();
         }
       }
     } catch (err) {
-      console.warn('[QuotesStore] Sincronización API no disponible:', err?.message || err);
+      if (!IS_TEST_ENV) {
+        console.warn('[QuotesStore] Sincronización API no disponible:', err?.message || err);
+      }
+    } finally {
+      if (!IS_TEST_ENV && apiClient.token) {
+        // Garantizar al menos 300ms para que la animación del skeleton sea perceptible
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 300) {
+          await new Promise(r => setTimeout(r, 300 - elapsed));
+        }
+        this.isLoading = false;
+        this.notify();
+      }
     }
     return this.getQuotes();
   }

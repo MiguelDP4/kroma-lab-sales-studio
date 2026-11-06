@@ -3,7 +3,9 @@ import {
   getTierRate, 
   getCuttingRate, 
   validateDimensions, 
-  calculateQuote 
+  calculateQuote,
+  checkFreeShippingEligibility,
+  calculateMaxStickersInMeters,
 } from '../src/js/modules/quoter-engine.js';
 import { BUSINESS_CONFIG } from '../src/shared/business-config.js';
 
@@ -128,5 +130,85 @@ describe('Quoter Engine — Cálculo Integral de Pedido', () => {
     expect(quote.isCuttingMinApplied).toBe(false);
     expect(quote.cuttingTotalQ).toBe(75.0);
     expect(quote.totalPriceQ).toBe(quote.materialPriceQ + 75.0);
+  });
+
+  describe('Políticas de Envío Gratis (checkFreeShippingEligibility)', () => {
+    it('evalúa envío gratis en Capital a partir de Q400', () => {
+      const under = checkFreeShippingEligibility(350, 'capital');
+      expect(under.isEligible).toBe(false);
+      expect(under.threshold).toBe(400);
+      expect(under.missingQ).toBe(50);
+
+      const exact = checkFreeShippingEligibility(400, 'capital');
+      expect(exact.isEligible).toBe(true);
+      expect(exact.missingQ).toBe(0);
+
+      const over = checkFreeShippingEligibility(550, 'capital');
+      expect(over.isEligible).toBe(true);
+      expect(over.missingQ).toBe(0);
+    });
+
+    it('evalúa envío gratis a Departamentos/Interior a partir de Q600', () => {
+      const under = checkFreeShippingEligibility(550, 'interior');
+      expect(under.isEligible).toBe(false);
+      expect(under.threshold).toBe(600);
+      expect(under.missingQ).toBe(50);
+
+      const exact = checkFreeShippingEligibility(600, 'interior');
+      expect(exact.isEligible).toBe(true);
+      expect(exact.missingQ).toBe(0);
+    });
+  });
+
+  describe('calculateMaxStickersInMeters — Cálculo de Capacidad Máxima por Metro', () => {
+    it('calcula la cantidad exacta para 5x5 cm en 1 metro sin sobrepasarse', () => {
+      // Bobina 28cm útiles, gap 0.3cm: (28 + 0.3) / (5 + 0.3) = 5 por fila
+      // 100cm largo, gap 0.3cm: (100 + 0.3) / (5 + 0.3) = floor(100.3 / 5.3) = 18 filas
+      // 18 filas * 5 por fila = 90 stickers
+      const maxStickers = calculateMaxStickersInMeters(5, 5, 1);
+      expect(maxStickers).toBe(90);
+
+      // Verificar que el largo físico no sobrepasa 100 cm (1 metro)
+      const physicalLengthCm = (18 * 5.3) - 0.3;
+      expect(physicalLengthCm).toBeLessThanOrEqual(100.0);
+    });
+
+    it('calcula la cantidad exacta para 10x10 cm en 1 metro sin sobrepasarse', () => {
+      // (28 + 0.3) / (10 + 0.3) = 2 por fila
+      // (100 + 0.3) / (10 + 0.3) = floor(100.3 / 10.3) = 9 filas
+      // 9 filas * 2 por fila = 18 stickers
+      const maxStickers = calculateMaxStickersInMeters(10, 10, 1);
+      expect(maxStickers).toBe(18);
+
+      const physicalLengthCm = (9 * 10.3) - 0.3;
+      expect(physicalLengthCm).toBeLessThanOrEqual(100.0);
+    });
+
+    it('calcula la cantidad para múltiples metros (ej. 2 metros)', () => {
+      // 5x5 cm en 2 metros (200 cm)
+      // (200 + 0.3) / (5 + 0.3) = floor(200.3 / 5.3) = 37 filas
+      // 37 filas * 5 = 185 stickers
+      const maxStickers = calculateMaxStickersInMeters(5, 5, 2);
+      expect(maxStickers).toBe(185);
+
+      const physicalLengthCm = (37 * 5.3) - 0.3;
+      expect(physicalLengthCm).toBeLessThanOrEqual(200.0);
+    });
+
+    it('retorna 0 si la altura del diseño sobrepasa el largo total de los metros solicitados', () => {
+      // 120 cm de alto en 1 metro (100 cm)
+      const maxStickers = calculateMaxStickersInMeters(5, 120, 1);
+      expect(maxStickers).toBe(0);
+    });
+
+    it('maneja valores por defecto y límites de bobina ante entradas nulas o atípicas', () => {
+      const defaultStickers = calculateMaxStickersInMeters(null, null, null);
+      // w=5, h=5, m=1 -> 90 stickers
+      expect(defaultStickers).toBe(90);
+
+      // Ancho mayor a 28 cm se acota a 28 cm
+      const clampedStickers = calculateMaxStickersInMeters(50, 5, 1);
+      expect(clampedStickers).toBe(18); // 1 por fila * 18 filas
+    });
   });
 });

@@ -118,11 +118,25 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
 * **Ancho Útil Imprimible (`printableWidthCm`):** `28.0 cm` (margen técnico de 1 cm por lado para tracción del film).
 * **Separación entre Stickers (`marginBetweenCm`):** `0.3 cm` (3 mm).
 * **Mínimo de Facturación:** `1.0 metro lineal` (`Q150.00`).
+* **Selección Autónoma de Medidas:** La plataforma no impone medidas predefinidas ni presets sugeridos; el cliente ingresa las dimensiones de su diseño según su necesidad exacta (ancho hasta 28 cm y alto libre).
+
+### Modos de Cotización: Por Stickers vs Por Metro
+El cotizador interactivo permite alternar dinámicamente entre dos modos mediante selector de radio buttons ergonómico:
+1. **Modo "Por stickers" (Comportamiento Estándar):**
+   * El cliente ingresa la cantidad exacta de piezas requeridas (`qty`).
+   * El sistema calcula las filas necesarias, el largo físico total y los metros lineales facturables.
+2. **Modo "Por metro" (Cálculo Autónomo de Capacidad):**
+   * El cliente ingresa los metros lineales que desea adquirir (`meters`, mínimo 1 m).
+   * La interfaz cambia automáticamente la etiqueta a *"Cantidad de metros"*.
+   * El motor calcula la cantidad máxima de stickers que caben en ese metraje sin sobrepasarse del largo físico contratado:
+     $$\text{rows} = \max\left(0, \left\lfloor \frac{\text{meters} \times 100.0 + \text{gap}}{\text{heightCm} + \text{gap}} \right\rfloor\right)$$
+     $$\text{maxStickers} = \text{rows} \times \text{stickersPerRow}$$
+   * La cotización, carrito, orden y WhatsApp preservan la estructura técnica de datos idéntica (`widthCm`, `heightCm`, `qty`, `linearMeters`), reflejando el número exacto de stickers a imprimir sin romper integraciones con backend ni taller.
 
 ### Fórmulas del Motor Matemático
 1. **Stickers por fila:**
    $$\text{stickersPerRow} = \max\left(1, \left\lfloor \frac{\text{printableWidthCm} + \text{gap}}{\text{widthCm} + \text{gap}} \right\rfloor\right)$$
-2. **Filas requeridas:**
+2. **Filas requeridas (en modo por stickers):**
    $$\text{rows} = \left\lceil \frac{\text{qty}}{\text{stickersPerRow}} \right\rceil$$
 3. **Largo físico en centímetros:**
    $$\text{lengthCm} = (\text{rows} \times (\text{heightCm} + \text{gap})) - \text{gap}$$
@@ -147,6 +161,22 @@ El motor de cálculo emula con precisión el funcionamiento de la impresora indu
   * `qty > 200`: `Q0.25` / pieza
   * **Tarifa Mínima de Corte:** `Q25.00` (si $\text{qty} \times \text{tarifa} < 25$, se cobra el piso de Q25).
 
+### Políticas de Envío, Flete y Entrega en Guatemala
+1. **Precios de Producción sin Flete Incluido:**
+   * Las cotizaciones públicas y pedidos generados en la plataforma cubren exclusivamente costos de impresión, barniz y corte.
+   * La cuota de envío se calcula de forma asistida por un operador utilizando las plataformas oficiales de los couriers (Forza Delivery Express, Guatex o Cargo Expreso) y se notifica vía WhatsApp.
+2. **Incentivo de Envío Gratis por Volumen:**
+   * **Ciudad de Guatemala / Área Metropolitana:** Pedidos con monto de producción $\ge \text{Q400.00}$ califican automáticamente para **Envío GRATIS**.
+   * **Departamentos / Interior del País:** Pedidos con monto de producción $\ge \text{Q600.00}$ califican automáticamente para **Envío GRATIS**.
+3. **Modalidades de Entrega Admitidas:**
+   * **Envío a Domicilio:** Entrega directa con motorista o courier en la dirección especificada por el cliente.
+   * **Recolección en Agencia (Ocurre):** Envío a la agencia o sucursal seleccionada por el cliente (Guatex, Caex o Forza).
+   * **Privacidad de Taller:** Por política de seguridad y privacidad conyugal, queda terminantemente deshabilitada la recolección física de clientes en el domicilio particular.
+4. **Condiciones Financieras y Términos de Pago:**
+   * **Anticipo Obligatorio del 50%:** Requerido para ingresar cualquier diseño a la cola de impresión de la Audley.
+   * **Saldo Restante del 50%:** Liquidado previo a la entrega del paquete al courier (o pago del 100% anticipado).
+   * **Cero Cobro Contra Entrega (COD):** No se realizan entregas con pago en destino para proteger la inversión en materiales y la exclusividad del trabajo gráfico personalizado.
+
 ---
 
 ## 5. Matriz Maestra de Roles y Permisos (RBAC)
@@ -169,8 +199,11 @@ El acceso sigue la directriz **Default-Deny**:
 | `CONFIG_PRICING_TIERS`| Modificar tarifas por metro del cotizador | `ADMIN` |
 
 ### Regla Específica de Visibilidad de Marca en Navbar:
-* **"KROMA LAB":** Visible universalmente para todos los usuarios (Visitantes, Clientes, Empleados y Administradores).
-* **"Sales Studio":** Oculto por defecto (`display: none`). **Únicamente visible cuando el usuario tiene rol `ADMIN` o `EMPLOYEE`**. Los clientes y visitantes no registrados jamás ven el texto "Sales Studio", manteniendo un perfil limpio hacia el consumidor.
+* **"KROMA LAB":** Visible universalmente para todos los usuarios (Visitantes, Clientes, Empleados y Administradores) en pantallas de 411px de ancho o superiores.
+* **"Sales Studio":** Oculto por defecto (`display: none`). **Únicamente visible cuando el usuario tiene rol `ADMIN` o `EMPLOYEE`** en pantallas de 411px o superiores.
+* **Comportamiento en Pantallas Menores de 411px (`< 411px` / `@media (max-width: 410px)`):**
+  * Se ocultan automáticamente todas las letras al lado del logo (`.brand-name { display: none !important; }`), dejando visible **únicamente el isotipo oficial SVG** de Kroma Lab para evitar saturación y desbordamientos en el topbar móvil.
+  * **Unificación de Tamaños de Botones:** Los 3 botones del lado derecho (`.cart-toggle-btn`, `.user-profile-chip` y `.theme-toggle-btn`) se configuran con dimensiones idénticas cuadradas/circulares (38 × 38 px en móviles compactos, 42 × 42 px en tablets) para una simetría visual y ergonomía táctil perfecta. En estos tamaños móviles, el nombre y flecha del chip de usuario se ocultan para mostrar sólo el avatar centrado.
 
 ---
 
@@ -198,11 +231,14 @@ kroma-lab-sales-studio/
 │   │       ├── router.js           # Enrutador SPA ligero con History API y guardias RBAC
 │   │       ├── store.js            # Estado reactivo global (usuario, token, tema)
 │   │       ├── components/
+│   │       │   ├── api-offline-alert.js # Alerta visual reactiva cuando el servidor API no responde
 │   │       │   ├── cart-drawer.js      # Componente interactivo de carrito (drawer lateral)
 │   │       │   ├── checkout-modal.js   # Modal de datos de entrega y facturación SAT
+│   │       │   ├── skeleton-loader.js  # Esqueletos animados (shimmer) para tablas, kanban, métricas y tarjetas
 │   │       │   └── user-profile-modal.js # Modal de autogestión de perfil de usuario y conmutador de cuentas
 │   │       ├── modules/
 │   │       │   ├── api-client.js       # Cliente HTTP REST tipado con JWT y fallback tolerante a fallos
+│   │       │   ├── cache-cleaner.js    # Limpieza exhaustiva de caché en memoria y borrado de localStorage en logout
 │   │       │   ├── quoter-engine.js    # Motor puro de cálculo matemático de cotización
 │   │       │   ├── cart-engine.js      # Motor consolidado multidiseño y escalas de mayoreo
 │   │       │   ├── cart-store.js       # Almacén reactivo de carrito con persistencia local
@@ -234,8 +270,10 @@ kroma-lab-sales-studio/
 │       ├── router.test.js          # 13 tests de enrutador SPA y guardias de rol
 │       ├── views.test.js           # 8 tests de renderizado de vistas modulares
 │       ├── app.test.js             # 24 tests de integración, roles, topbar, sidebar y WhatsApp
-│       ├── api-client.test.js      # 14 tests de cliente HTTP, tokens JWT y fallback
-│       └── setup.js                # Mock de Canvas para JSDOM
+│       ├── api-client.test.js      # 20 tests de cliente HTTP, tokens JWT, eventos de conexión y fallback
+│       ├── offline-banner.test.js  # 4 tests de detección offline, banner global y botón de reconexión
+│       ├── skeleton-loader.test.js # 11 tests de generación de esqueletos y accesibilidad (ARIA)
+│       ├── setup.js                # Mock de Canvas para JSDOM
 ├── backend/                        # API REST (TypeScript, Express, Prisma, Vitest)
 │   ├── package.json                # Scripts de ejecución, migraciones y test
 │   ├── tsconfig.json               # Configuración TypeScript ES2022 / CommonJS
@@ -251,7 +289,9 @@ kroma-lab-sales-studio/
 │   │   │   └── seed.ts             # Semilla inicial con usuarios, clientes e insumos
 │   │   ├── controllers/            # Controladores de auth, orders, customers, dispatch, inventory, receivables, workshop
 │   │   ├── middlewares/            # Autenticación JWT Bearer, RBAC y errorHandler centralizado
-│   │   └── routes/                 # Enrutadores REST montados en /api/*
+│   │   ├── routes/                 # Enrutadores REST montados en /api/*
+│   │   └── scripts/
+│   │       └── reset-password.ts   # Script utilitario para restablecer contraseñas locales con bcryptjs
 │   └── __tests__/                  # 80 pruebas unitarias e integración en Vitest + Supertest (> 85% coverage)
 └── shared/                         # Constantes maestras de negocio
     └── business-config.js
@@ -539,12 +579,58 @@ kroma-lab-sales-studio/
       * **Carlos Méndez:** Operador de Taller Audley (`EMPLOYEE`) con acceso a producción, pedidos, inventario, despacho y cobranza.
       * **Rodrigo Castillo (PromoGuate):** Cliente B2B VIP (`CUSTOMER`) con portal de autoservicio y seguimiento de pedidos.
       * **Visitante Anónimo:** Modo público (`VISITOR`) para cotizador y landing page comercial.
-  * **Cierre de Sesión Seguro (`store.clearUser()`):**
-    * Botón de cierre de sesión que restablece el estado a `VISITOR`, limpiando tokens y sincronizando de forma reactiva el topbar, el sidebar y las rutas protegidas.
+  * **Cierre de Sesión Seguro y Purga de Caché (`cache-cleaner.js` + `handleLogout()`):**
+    * Función centralizada `clearAllApplicationCache({ preserveTheme = true })` que limpia de manera exhaustiva el estado en memoria de todos los almacenes (`ordersStore`, `dispatchStore`, `inventoryStore`, `receivablesStore`, `productionStore`, `clientsStore`, `quotesStore`, `usersStore`, `cartStore`).
+    * Elimina todas las claves de almacenamiento local (`localStorage` y `sessionStorage`) asociadas a tablas de pedidos, carteras de clientes, movimientos de inventario, cotizaciones y tokens JWT.
+    * Si el usuario se encuentra navegando en una ruta protegida (`/pedidos`, `/produccion`, `/inventario`, `/clientes`, `/cobranza`, `/remisiones`, `/reportes`, `/rentabilidad`, `/usuarios`, `/mi-cuenta`), redirige automáticamente a la página de inicio (`/`) tras cerrar sesión.
+    * Garantiza un aislamiento absoluto de datos entre usuarios (evitando que un administrador vea transacciones de un cliente previo o viceversa en dispositivos compartidos).
+
+* **Sistema de Esqueletos de Carga y UX de Espera (`skeleton-loader.js`):**
+  * **Propósito y Arquitectura:** Proporciona marcadores de posición animados (*shimmer loading states*) para todas las páginas que requieren carga asíncrona de datos desde el backend API (pedidos, producción, inventario, clientes, cobranza, cotizaciones guardadas, reportes, usuarios y cuenta).
+  * **Prevención de Exposición de Datos Residuales:** Al abrir una vista o iniciar una sincronización de datos (`store.isLoading = true`), la interfaz presenta de inmediato el skeleton estructural correspondiente, garantizando que el usuario nunca perciba un flash de datos de sesiones anteriores ni pantallas vacías prematuras mientras se completan las peticiones de red.
+  * **Tokens del Sistema de Diseño en `theme.css`:**
+    * Modo Oscuro: `--skeleton-bg: #16203a`, `--skeleton-shimmer: rgba(28, 114, 147, 0.22)`.
+    * Modo Claro: `--skeleton-bg: #e2e8f0`, `--skeleton-shimmer: rgba(255, 255, 255, 0.70)`.
+  * **Animación e Inclusión Accesible (`views.css`):**
+    * Efecto shimmer acelerado por hardware mediante `@keyframes skeleton-shimmer` con gradiente lineal a 90 grados.
+    * Compatibilidad con accesibilidad para usuarios sensibles al movimiento mediante `@media (prefers-reduced-motion: reduce)` que pausa la animación continua y mantiene un fondo estático visible.
+    * Todos los esqueletos incorporan atributos ARIA semánticos (`role="status"`, `aria-busy="true"`, `aria-label="Cargando..."`).
+  * **Componentes Reutilizables Exportados:**
+    1. `renderMetricsSkeleton(count = 4)`: Cuadrícula de tarjetas KPI con líneas de título, valores simulados y avatares circulares.
+    2. `renderTableSkeleton(rows = 5, cols = 6)`: Filas y celdas tabulares adaptables con anchos alternados para emular contenido real.
+    3. `renderCardsSkeleton(count = 3)`: Tarjetas apiladas para el feed responsivo móvil (enfoque mobile-first).
+    4. `renderKanbanSkeleton(columns = 4, cardsPerCol = 2)`: Columnas de producción Audley con tarjetas de orden en proceso.
+    5. `renderChartSkeleton(heightPx = 220)`: Marco de gráfico analítico y barras verticales simuladas para analítica comercial.
+    6. `renderProfileSkeleton()`: Placeholder de ficha de usuario con avatar circular y cuadrícula de campos de formulario.
   * **Persistencia Reactiva y Notificaciones:**
     * Sincronizado bidireccionalmente con `usersStore` y `store.setUser()`. Al guardar, actualiza instantáneamente el chip visual, el avatar con iniciales y los datos en memoria/localStorage.
   * **Respaldo de Pruebas Unitarias:**
     * Cubierto con 21 pruebas unitarias dedicadas en `frontend/__tests__/user-profile-modal.test.js` (100% pass rate).
+
+* **Detección Reactiva de Desconexión del API y Banner Global (`#backendOfflineBanner` & `api-offline-alert.js`):**
+  * **Problema Resuelto:** Si el desarrollador o usuario ejecuta el frontend sin haber iniciado el backend (`npm run dev` en `backend/`), la aplicación solía fallar silenciosamente en segundo plano o mostrar tablas vacías sin ninguna explicación.
+  * **Detección Reactiva en `ApiClient` (`onConnectionChange`):**
+    * `ApiClient` implementa el patrón observador con `onConnectionChange(callback)` y `_notifyConnectionStatus(isOnline, error)`.
+    * En cada petición HTTP (`_request`) o chequeo de salud (`checkHealth`), si se detecta un error de red (`TypeError`, `fetch failed`, `Failed to fetch`, `NetworkError`, `ECONNREFUSED` o `navigator.onLine === false`), `apiClient` cambia su estado a `isOnline = false` y dispara las notificaciones inmediatamente a todos los suscriptores.
+    * Cuando el backend vuelve a responder, conmuta reactivamente a `isOnline = true` y oculta las alertas.
+  * **Banner Global Superior (`#backendOfflineBanner`):**
+    * Colocado directamente debajo del topbar en `index.html`.
+    * Diseño llamativo con gradiente ámbar/carmesí, borde de advertencia e icono `⚠️`.
+    * Mensaje explícito: *"El servidor API no responde: No se pudo establecer conexión con el backend en http://localhost:4000/api. Verifica que el servidor esté en ejecución (ejecuta npm run dev en la carpeta backend)."*
+    * Botón ergonómico táctil (área mínima de toque > 44px): `🔄 Reintentar conexión`, el cual ejecuta `apiClient.checkHealth()`, relanza la sincronización y refresca la vista activa.
+  * **Alertas Inline Contextuales en Vistas de Datos (`api-offline-alert.js`):**
+    * Componente reutilizable `renderApiOfflineAlert(message)` presente en las vistas que consultan el backend:
+      * `orders-view.js` (`#ordersOfflineAlertContainer`)
+      * `quotes-view.js` (`#quotesOfflineAlertContainer`)
+      * `clients-view.js` (`#clientsOfflineAlertContainer`)
+      * `inventory-view.js` (`#inventoryOfflineAlertContainer`)
+      * `dispatch-view.js` (`#dispatchOfflineAlertContainer`)
+      * `receivables-view.js` (`#receivablesOfflineAlertContainer`)
+      * `users-view.js` (`#usersOfflineAlertContainer`)
+    * Alerta al usuario en su propio espacio de trabajo sin romper la estructura de las tablas ni distorsionar los mensajes de filtros vacíos.
+  * **Script de Restablecimiento de Credenciales Locales (`backend/src/scripts/reset-password.ts`):**
+    * Permite restablecer contraseñas de cualquier cuenta (`migueldp4@gmail.com`) en la base de datos de desarrollo mediante `npx tsx src/scripts/reset-password.ts [email] [nueva_contraseña]`.
+    * Hashea de forma segura con `bcryptjs` (salt rounds: 10) y actualiza el registro en Neon/PostgreSQL.
 * **Especificación y Roadmap Técnico para Botón de Configuración de Taller (⚙️):**
   * **Botón de Configuración de Taller (⚙️) — Roles STAFF (`ADMIN` y `EMPLOYEE`):**
       * Retirado temporalmente del topbar para mantener la barra superior limpia mientras se concluye la maqueta frontend sin backend.
@@ -716,13 +802,19 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Reglas de color exacto `-webkit-print-color-adjust: exact !important` y `print-color-adjust: exact !important` para preservar el fondo de encabezados, logos SVG y badges de calidad.
    * Reglas de salto de página (`page-break-inside: avoid;`) en tablas de detalles de tiraje y remisión.
    * Detección automática en atajos de teclado (`Ctrl+P` / `Command+P`) redirigiendo la impresión al documento activo si un modal está abierto.
-11. **Pruebas Unitarias y Cobertura Global del Frontend:**
-   * **830 pruebas unitarias pasando al 100% en 39 suites** de Vitest.
+11. **Aislamiento de Sesión y Limpieza Integral de Caché (`cache-cleaner.js`):**
+   * Módulo centralizado `clearAllApplicationCache({ preserveTheme = true })` ejecutado inmediatamente al invocar `handleLogout()` (desde el menú dropdown de usuario, vista de cuenta o ante expiración HTTP 401).
+   * **Vaciado de memoria en todas las tablas y almacenes reactivos:** Invoca `clearOrdersCache()`, `clearDispatchCache()`, `clearInventoryCache()`, `clearReceivablesCache()`, `clearProductionCache()`, `clearClientsCache()`, `clearQuotesCache()`, `clearUsersCache()`, `clearCache()` de carrito y `resetCostsConfig()`.
+   * **Purga exhaustiva de almacenamiento local:** Ejecuta `localStorage.clear()` y `sessionStorage.clear()`, garantizando la eliminación total de pedidos, notas de despacho, kardex, pagos, cotizaciones y credenciales de la sesión anterior (preservando el tema visual claro/oscuro para evitar parpadeos de interfaz).
+   * **Prevención de desbordamiento entre roles:** Evita que al alternar entre usuarios (ej. un cliente y un administrador) el nuevo usuario visualice momentáneamente datos cacheados de la sesión previa antes de que responda el API.
+   * Redirección automática de seguridad a la ruta pública (`/`) si el usuario se encontraba dentro de una pantalla operativa protegida al cerrar sesión.
+12. **Pruebas Unitarias y Cobertura Global del Frontend:**
+   * **848 pruebas unitarias pasando al 100% en 40 suites** de Vitest.
    * **Cobertura de Código (> 85% obligatoria):**
-     * Declaraciones (Statements): **99.35%**
-     * Ramas (Branches): **85.13%**
-     * Funciones (Functions): **99.51%**
-     * Líneas (Lines): **99.35%**
+     * Declaraciones (Statements): **> 96%**
+     * Ramas (Branches): **> 85%**
+     * Funciones (Functions): **> 95%**
+     * Líneas (Lines): **> 96%**
 
 ---
 
@@ -833,3 +925,24 @@ Tras la auditoría E2E automatizada en producción con Playwright sobre `https:/
   3. Se blindó `backend/src/db/seed.ts` con una guarda estricta que aborta la ejecución si `process.env.NODE_ENV === 'production'`.
   4. Se removió cualquier dato personal o credencial real del archivo de semilla, configurando usuarios de prueba genéricos (`testadmin@kromalab.gt`) exclusivos para desarrollo local y suites automatizadas sobre la base de pruebas.
   5. Se purgó la base de datos de producción preservando únicamente la cuenta administrativa autorizada.
+
+---
+
+## 12. Suite Automatizada E2E con Playwright en Local (
+pm run test:e2e)
+
+En cumplimiento de la norma de doble revisión visual y control de calidad sobre http://localhost:3000:
+
+* **Script:** rontend/scripts/e2e-playwright.js.
+* **Comando:** 
+pm run test:e2e (ejecutado desde rontend/).
+* **Auto-arranque de Servicios:** Si el frontend (:3000) o el backend (:4000) están inactivos, el runner los detecta y los inicia en background automáticamente.
+* **Cobertura de la Suite E2E (17/17 pruebas passing):**
+  1. Carga limpia de la landing page con 0 excepciones no controladas y 0 errores en consola.
+  2. Cotizador interactivo UV DTF con simulador de bobina Audley (28 cm útiles) y recalculo reactivo de precios.
+  3. Auditoría visual Mobile-First en viewport de 375px (iPhone SE) con verificación estricta de cero desbordamiento horizontal (scrollWidth <= clientWidth + 3).
+  4. Flujo de autenticación con cuenta de Administrador (migueldp4@gmail.com).
+  5. Navegación SPA por vistas protegidas (/pedidos), skeletons de carga wireframe y tablas de datos.
+  6. Cierre de sesión (Logout) con purga total de localStorage y de caches de tablas (cero fuga de datos entre perfiles).
+  7. Detección reactiva de desconexión del backend API y despliegue del banner global de advertencia (#backendOfflineBanner).
+* **Capturas de Pantalla:** Se almacenan automáticamente en la carpeta raíz qa-results/ (ignorada en git).

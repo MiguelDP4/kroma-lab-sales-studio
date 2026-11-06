@@ -7,6 +7,7 @@
 import { store } from '../store.js';
 import { ordersStore, PAYMENT_STATUS, PRODUCTION_STATUS_LABELS } from '../modules/orders-store.js';
 import { clientsStore, CLIENT_TIERS } from '../modules/clients-store.js';
+import { renderMetricsSkeleton, renderTableSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
 import {
   REPORT_PERIODS,
   filterOrdersByPeriod,
@@ -83,7 +84,7 @@ export const reportsView = {
             <span>Facturación Comercial y Cobranza</span>
           </h2>
           <div id="financialMetricsGrid" class="orders-metrics-grid">
-            <!-- Inyectado por renderFinancialMetrics() -->
+            ${ordersStore.isLoading ? renderMetricsSkeleton(4) : ''}
           </div>
         </div>
 
@@ -94,7 +95,7 @@ export const reportsView = {
             <span>Consumo Industrial de Bobina Audley UV DTF (28 cm)</span>
           </h2>
           <div id="rollMetricsGrid" class="orders-metrics-grid">
-            <!-- Inyectado por renderRollMetrics() -->
+            ${ordersStore.isLoading ? renderMetricsSkeleton(4) : ''}
           </div>
         </div>
 
@@ -131,7 +132,7 @@ export const reportsView = {
                 </tr>
               </thead>
               <tbody id="topClientsTableBody">
-                <!-- Inyectado dinámicamente -->
+                ${(ordersStore.isLoading || clientsStore.isLoading) ? renderTableSkeleton(4, 7) : ''}
               </tbody>
             </table>
           </div>
@@ -193,6 +194,11 @@ export const reportsView = {
       const container = document.getElementById('financialMetricsGrid');
       if (!container) return;
 
+      if (ordersStore.isLoading) {
+        container.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
+
       const f = report.financials;
 
       container.innerHTML = `
@@ -235,6 +241,11 @@ export const reportsView = {
     function renderRollMetrics(report) {
       const container = document.getElementById('rollMetricsGrid');
       if (!container) return;
+
+      if (ordersStore.isLoading) {
+        container.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
 
       const r = report.audleyRoll;
 
@@ -315,6 +326,13 @@ export const reportsView = {
       const cardsContainer = document.getElementById('topClientsCardsContainer');
       const emptyState = document.getElementById('topClientsEmptyState');
       if (!tbody) return;
+
+      if (ordersStore.isLoading || clientsStore.isLoading) {
+        tbody.innerHTML = renderTableSkeleton(4, 7);
+        if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(3);
+        if (emptyState) emptyState.style.display = 'none';
+        return;
+      }
 
       const ranking = report.b2bPortfolio.topClientsRanking;
 
@@ -507,6 +525,10 @@ export const reportsView = {
     // Suscripción reactiva a cambios en pedidos y clientes
     const unsubOrders = ordersStore.subscribe(() => renderAll());
     const unsubClients = clientsStore.subscribe(() => renderAll());
+
+    // Sincronizar en segundo plano con el backend API
+    ordersStore.syncWithApi().catch(() => {});
+    clientsStore.syncWithApi().catch(() => {});
 
     // Render Inicial
     renderAll();

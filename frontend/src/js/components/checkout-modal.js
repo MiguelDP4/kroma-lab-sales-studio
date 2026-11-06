@@ -100,9 +100,55 @@ export function openCheckoutModal(cartTotals) {
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="custAddress">Dirección de Entrega o Recolección *</label>
-          <textarea id="custAddress" class="input-control" rows="2" required placeholder="Zona, Municipio (ej. Zona 10, Ciudad de Guatemala) o 'Recojo en taller San José el Placer / Villa Nueva'">${initialClient ? initialClient.address : (user.address || '')}</textarea>
+        <!-- SECCIÓN DE LOGÍSTICA Y ENVÍO EN GUATEMALA -->
+        <div class="delivery-config-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <div style="font-weight: 700; color: var(--cerulean); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem; font-size: 0.88rem;">
+            <span>🚚</span>
+            <span>Destino y Modalidad de Entrega</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.65rem;">
+            <label class="form-label" for="deliveryZoneSelect">Región de Destino *</label>
+            <select id="deliveryZoneSelect" class="input-control">
+              <option value="CAPITAL" selected>Capital y Área Metropolitana</option>
+              <option value="INTERIOR">Departamentos / Interior del País</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.65rem;">
+            <label class="form-label">Modalidad de Entrega *</label>
+            <div class="delivery-options-grid">
+              <label class="delivery-option-card active" id="deliveryCardHome">
+                <input type="radio" name="deliveryType" id="deliveryTypeHome" value="HOME" checked>
+                <div class="delivery-option-info">
+                  <span class="delivery-option-title">🏠 A Domicilio</span>
+                  <span class="delivery-option-desc">Entrega en tu dirección</span>
+                </div>
+              </label>
+              <label class="delivery-option-card" id="deliveryCardAgency">
+                <input type="radio" name="deliveryType" id="deliveryTypeAgency" value="AGENCY">
+                <div class="delivery-option-info">
+                  <span class="delivery-option-title">🏢 En Agencia</span>
+                  <span class="delivery-option-desc">Guatex / Caex / Forza</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Campo de Agencia (Guatex / Caex / Forza) -->
+          <div class="form-group" id="deliveryAgencyGroup" style="display: none; margin-top: 0.5rem;">
+            <label class="form-label" for="custAgencyName">Empresa y Sucursal de Agencia *</label>
+            <input type="text" id="custAgencyName" class="input-control" placeholder="Ej. Guatex Agencia Central Quetzaltenango o Caex Cobán">
+          </div>
+
+          <!-- Campo de Dirección de Entrega -->
+          <div class="form-group" id="deliveryAddressGroup" style="margin-top: 0.5rem; margin-bottom: 0;">
+            <label class="form-label" for="custAddress" id="custAddressLabel">Dirección de Entrega a Domicilio *</label>
+            <textarea id="custAddress" class="input-control" rows="2" required placeholder="Zona, Colonia, Calle/Avenida, Municipio y referencias de entrega">${initialClient ? initialClient.address : (user.address || '')}</textarea>
+          </div>
+
+          <!-- Banner Informativo de Envío Gratis o Flete por Cotizar -->
+          <div id="checkoutShippingAlert" class="checkout-shipping-alert"></div>
         </div>
 
         <div class="form-group">
@@ -121,17 +167,25 @@ export function openCheckoutModal(cartTotals) {
         <input type="hidden" id="checkSaveToClients" value="false">
         `}
         <!-- INFORMACIÓN DE PAGO BANCARIO Y SUBIDA DE BOLETA -->
-        <div class="checkout-bank-box" style="margin: 0.85rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
-            <strong style="font-size: 0.88rem; color: var(--cerulean); display: flex; align-items: center; gap: 0.35rem;">
+        <div class="checkout-bank-box">
+          <div class="checkout-bank-header">
+            <span class="checkout-bank-title">
               <span>💳</span>
               <span>Cuentas para Transferencia / Depósito</span>
-            </strong>
+            </span>
             <span class="badge" style="font-size: 0.72rem;">Anticipo 50% o Pago 100%</span>
           </div>
-          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0.65rem;">
-            <div>• <strong>Banco Industrial (Monetaria Q):</strong> <code style="user-select: all; font-weight: 700; color: var(--text-primary);">5371667253</code></div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Beneficiario: Miguel Angel Dubois / Kroma Lab</div>
+          <div class="checkout-bank-content">
+            <div class="checkout-bank-account">
+              <div>
+                <strong>Banco Industrial (Monetaria Q):</strong>
+                <div style="font-size: 0.74rem; color: var(--text-muted);">Beneficiario: Miguel Angel Dubois / Kroma Lab</div>
+              </div>
+              <code style="user-select: all; font-weight: 800; color: var(--cerulean); font-size: 0.95rem;">5371667253</code>
+            </div>
+            <div class="checkout-bank-policy">
+              🔒 <strong>Condiciones:</strong> 50% de anticipo para iniciar impresión en máquina Audley y saldo contra notificación de despacho (o 100% contado). Sin cobro contra entrega (COD).
+            </div>
           </div>
 
           <label class="form-label" for="checkoutReceiptInput" style="font-size: 0.82rem; margin-bottom: 0.25rem;">
@@ -307,6 +361,59 @@ export function openCheckoutModal(cartTotals) {
   const addressInput = document.getElementById('custAddress');
   const notesInput = document.getElementById('custNotes');
 
+  // Controladores de Envío y Destino
+  const zoneSelect = document.getElementById('deliveryZoneSelect');
+  const typeHome = document.getElementById('deliveryTypeHome');
+  const typeAgency = document.getElementById('deliveryTypeAgency');
+  const cardHome = document.getElementById('deliveryCardHome');
+  const cardAgency = document.getElementById('deliveryCardAgency');
+  const agencyGroup = document.getElementById('deliveryAgencyGroup');
+  const agencyInput = document.getElementById('custAgencyName');
+  const addressLabel = document.getElementById('custAddressLabel');
+  const shippingAlert = document.getElementById('checkoutShippingAlert');
+
+  function updateShippingAlert() {
+    if (!shippingAlert) return;
+    const zone = zoneSelect ? zoneSelect.value : 'CAPITAL';
+    const total = cartTotals?.grandTotalQ || 0;
+    const isCapital = zone === 'CAPITAL';
+    const isEligible = isCapital ? total >= 400 : total >= 600;
+
+    if (isEligible) {
+      shippingAlert.className = 'checkout-shipping-alert is-free';
+      shippingAlert.style.background = '';
+      shippingAlert.style.color = '';
+      shippingAlert.style.border = '';
+      shippingAlert.innerHTML = `🎉 <strong>¡Envío GRATIS!</strong> Tu pedido califica para entrega gratuita en ${isCapital ? 'Capital y Área Metropolitana' : 'Departamentos'}.`;
+    } else {
+      const missing = isCapital ? (400 - total).toFixed(2) : (600 - total).toFixed(2);
+      shippingAlert.className = 'checkout-shipping-alert';
+      shippingAlert.style.background = '';
+      shippingAlert.style.color = '';
+      shippingAlert.style.border = '';
+      shippingAlert.innerHTML = `🚚 <strong>Flete por confirmar:</strong> No incluido en este total. Un asesor verificará la cuota con el courier (Forza/Guatex/Caex). <em>(Agrega Q${missing} más para envío gratis).</em>`;
+    }
+  }
+
+  function handleDeliveryTypeChange() {
+    const isAgency = typeAgency && typeAgency.checked;
+    if (cardHome) cardHome.classList.toggle('active', !isAgency);
+    if (cardAgency) cardAgency.classList.toggle('active', isAgency);
+    if (agencyGroup) agencyGroup.style.display = isAgency ? 'block' : 'none';
+    if (agencyInput) agencyInput.required = isAgency;
+    if (addressLabel) {
+      addressLabel.textContent = isAgency ? 'Dirección o referencia de agencia (Opcional)' : 'Dirección de Entrega a Domicilio *';
+    }
+    if (addressInput) {
+      addressInput.required = !isAgency;
+    }
+  }
+
+  if (zoneSelect) zoneSelect.addEventListener('change', updateShippingAlert);
+  if (typeHome) typeHome.addEventListener('change', handleDeliveryTypeChange);
+  if (typeAgency) typeAgency.addEventListener('change', handleDeliveryTypeChange);
+  updateShippingAlert();
+
   function updateBadge(client) {
     if (!badgeContainer) return;
     if (!client) {
@@ -426,15 +533,27 @@ export function openCheckoutModal(cartTotals) {
       const linkedClient = linkedClientId ? clientsStore.getClientById(linkedClientId) : null;
       const companyName = linkedClient ? linkedClient.company : nameVal;
 
+      const deliveryType = (typeAgency && typeAgency.checked) ? 'AGENCY' : 'HOME';
+      const deliveryZone = zoneSelect ? zoneSelect.value : 'CAPITAL';
+      const agencyNameVal = agencyInput?.value?.trim() || '';
+      const isFreeShipping = (deliveryZone === 'CAPITAL' && cartTotals.grandTotalQ >= 400) ||
+                             (deliveryZone === 'INTERIOR' && cartTotals.grandTotalQ >= 600);
+
       const customer = {
         name: nameVal,
         company: companyName,
         phone: phoneVal,
         email: user.email || '',
         nit: nitVal,
-        address: addressVal,
+        address: deliveryType === 'AGENCY'
+          ? `Recolección en Agencia: ${agencyNameVal || addressVal}`
+          : addressVal,
         notes: notesVal,
         clientId: linkedClientId || null,
+        deliveryType,
+        deliveryZone,
+        agencyName: agencyNameVal,
+        freeShippingQualified: isFreeShipping,
       };
 
       if (cartTotals.items && Array.isArray(cartTotals.items)) {

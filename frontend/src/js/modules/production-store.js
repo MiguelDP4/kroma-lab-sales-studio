@@ -113,6 +113,7 @@ function mapOrderToProduction(order) {
 class ProductionStore {
   constructor() {
     this.listeners = new Set();
+    this.isLoading = false;
     this.state = this._loadState();
   }
 
@@ -177,6 +178,30 @@ class ProductionStore {
         console.error('Error en listener de producción:', err);
       }
     });
+  }
+
+  clearProductionCache() {
+    this.state = {
+      orders: [],
+      roll: { ...INITIAL_ROLL },
+    };
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_ORDERS);
+        window.localStorage.removeItem(STORAGE_KEY_ROLL);
+      } catch (_) {}
+    }
+    this.listeners.forEach(fn => {
+      try {
+        fn(this.state);
+      } catch (err) {
+        console.error('Error en listener de producción:', err);
+      }
+    });
+  }
+
+  clearCache() {
+    this.clearProductionCache();
   }
 
   /**
@@ -249,13 +274,29 @@ class ProductionStore {
     this._notify();
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this._notify();
+  }
+
   /**
    * Sincronización bajo demanda con la API del backend
    */
   async syncWithApi() {
-    if (typeof ordersStore !== 'undefined' && ordersStore.syncWithApi) {
-      await ordersStore.syncWithApi();
-      this.syncWithOrdersStore();
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this._notify();
+    }
+    try {
+      if (typeof ordersStore !== 'undefined' && ordersStore.syncWithApi) {
+        await ordersStore.syncWithApi();
+        this.syncWithOrdersStore();
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this._notify();
+      }
     }
   }
 

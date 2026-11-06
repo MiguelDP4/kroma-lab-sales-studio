@@ -249,4 +249,57 @@ describe('ApiClient — Cliente HTTP Frontend', () => {
     expect(global.fetch).toHaveBeenCalledTimes(5);
   });
 
+  it('notifica a los suscriptores cuando cambia el estado de conexión con onConnectionChange', async () => {
+    const statuses = [];
+    const unsubscribe = client.onConnectionChange((isOnline, err) => {
+      statuses.push({ isOnline, err });
+    });
+
+    // Estado inicial optimista notificado inmediatamente (evita parpadeo rojo en UI)
+    expect(statuses.length).toBe(1);
+    expect(statuses[0].isOnline).toBe(true);
+
+    // Petición exitosa notifica isOnline: true
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'ok' }),
+    });
+
+    await client._request('/ping');
+    expect(client.isOnline).toBe(true);
+    expect(statuses[statuses.length - 1].isOnline).toBe(true);
+
+    // Fallo de red notifica isOnline: false con error
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(client._request('/ping')).rejects.toThrow();
+    expect(client.isOnline).toBe(false);
+    expect(statuses[statuses.length - 1].isOnline).toBe(false);
+    expect(statuses[statuses.length - 1].err).toContain('Failed to fetch');
+
+    unsubscribe();
+  });
+
+  it('permite desuscribirse de onConnectionChange y no recibe nuevos eventos', () => {
+    let callCount = 0;
+    const unsubscribe = client.onConnectionChange(() => {
+      callCount++;
+    });
+    expect(callCount).toBe(1);
+
+    unsubscribe();
+    client._notifyConnectionStatus(true);
+    expect(callCount).toBe(1);
+  });
+
+  it('tolera errores lanzados dentro de los callbacks de los listeners sin romper la ejecución', () => {
+    client.onConnectionChange(() => {
+      throw new Error('Listener roto');
+    });
+
+    expect(() => {
+      client._notifyConnectionStatus(true);
+    }).not.toThrow();
+    expect(client.isOnline).toBe(true);
+  });
+
 });

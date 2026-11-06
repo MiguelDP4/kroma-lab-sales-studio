@@ -11,7 +11,7 @@ import { usersStore } from './modules/users-store.js';
  */
 
 import { store } from './store.js';
-import { calculateQuote } from './modules/quoter-engine.js';
+import { calculateQuote, calculateMaxStickersInMeters, getTierRate } from './modules/quoter-engine.js';
 import { drawRollCanvas, generateCanvasSnapshot } from './modules/roll-simulator.js';
 import { BUSINESS_CONFIG } from '../shared/business-config.js';
 import { Router } from './router.js';
@@ -22,6 +22,7 @@ import { initUserProfileModal, openUserProfileModal, closeUserProfileModal, hand
 import { initSaveQuoteModal, openSaveQuoteModal, closeSaveQuoteModal } from './components/save-quote-modal.js';
 import { initPrintListeners, printDocument } from './modules/print-helper.js';
 import { quotesStore } from './modules/quotes-store.js';
+import { clearAllApplicationCache } from './modules/cache-cleaner.js';
 
 import { quoterView } from './views/quoter-view.js';
 import { ordersView } from './views/orders-view.js';
@@ -69,6 +70,7 @@ export const routes = [
 export const router = new Router(routes, 'app');
 if (typeof window !== 'undefined') {
   window.router = router;
+  window.apiClient = apiClient;
 }
 
 export function purgeLegacyMockStorage(force = false) {
@@ -138,16 +140,60 @@ export async function initBackendSync() {
           }
         } catch (authErr) {
           if (authErr?.status === 401 || authErr?.message?.includes('401') || authErr?.message?.includes('No autenticado')) {
-            store.clearUser();
+            clearAllApplicationCache({ preserveTheme: true });
           }
         }
         // Carga bajo demanda (Lazy loading): no cargar masivamente todos los módulos en el arranque.
         // Cada vista (orders, quotes, clients, inventory, dispatch, receivables, users) sincroniza
         // sus datos en su respectivo onMount() únicamente cuando el usuario navega a ella.
       }
+    } else {
+      apiClient._notifyConnectionStatus(false, 'Servidor no responde');
     }
   } catch (err) {
+    apiClient._notifyConnectionStatus(false, err?.message || 'Servidor no responde');
     console.warn('[BackendSync] Servidor backend offline o no disponible:', err?.message || err);
+  }
+}
+
+export function initOfflineBanner() {
+  const banner = document.getElementById('backendOfflineBanner');
+  const urlDisplay = document.getElementById('backendOfflineUrl');
+  const retryBtn = document.getElementById('btnRetryBackendConnect');
+
+  if (urlDisplay && apiClient.baseUrl) {
+    urlDisplay.textContent = apiClient.baseUrl;
+  }
+
+  const updateBanner = (isOnline) => {
+    if (!banner) return;
+    banner.style.display = isOnline ? 'none' : 'block';
+  };
+
+  // Escuchar cambios reactivos en la conexión con el API
+  apiClient.onConnectionChange((isOnline) => {
+    updateBanner(isOnline);
+  });
+
+  if (retryBtn && !retryBtn.dataset.bound) {
+    retryBtn.dataset.bound = 'true';
+    retryBtn.addEventListener('click', async () => {
+      retryBtn.disabled = true;
+      const originalText = retryBtn.textContent;
+      retryBtn.textContent = '⏳ Conectando...';
+      try {
+        const res = await apiClient.checkHealth();
+        if (res && res.status === 'ok') {
+          await initBackendSync();
+          if (router && typeof router.handleRoute === 'function') {
+            router.handleRoute();
+          }
+        }
+      } finally {
+        retryBtn.disabled = false;
+        retryBtn.textContent = originalText;
+      }
+    });
   }
 }
 
@@ -296,6 +342,7 @@ export function initApp() {
   initTheme();
   initNavbarRoleSync();
   initUserDropdown();
+  initOfflineBanner();
   initMobileNav();
   initCartDrawer();
   initUserProfileModal();
@@ -671,19 +718,118 @@ export function initQuoter() {
   const keepAspectCheckbox = document.getElementById('optKeepAspectRatio');
   const btnRotate = document.getElementById('btnRotateImage');
   const aspectRatioRow = document.getElementById('aspectRatioRow');
+  const modeStickersRadio = document.getElementById('modeStickers');
+  const modeMetersRadio = document.getElementById('modeMeters');
+  const qtyLabelText = document.getElementById('qtyLabelText');
+  const qtyTipText = document.getElementById('qtyTipText');
+  const metersNotice = document.getElementById('metersCalculatedNotice');
+  const hintMetersVal = document.getElementById('hintMetersVal');
+  const hintStickersCount = document.getElementById('hintStickersCount');
 
   if (!widthInput || !heightInput || !qtyInput) return;
+
+  let currentQuoteMode = (modeMetersRadio && modeMetersRadio.checked) ? 'meters' : 'stickers';
+  let lastStickerQty = 50;
+  let lastMetersQty = 1;
 
   function handleCalculate() {
     const w = parseFloat(widthInput.value) || 5;
     const h = parseFloat(heightInput.value) || 5;
-    const q = parseInt(qtyInput.value, 10) || 50;
     const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+    const isMeters = modeMetersRadio ? modeMetersRadio.checked : (currentQuoteMode === 'meters');
+
+    let q = 50;
+    if (isMeters) {
+      const meters = Math.max(1, parseFloat(qtyInput.value) || 1);
+      const calculatedMaxStickers = calculateMaxStickersInMeters(w, h, meters);
+      q = Math.max(1, calculatedMaxStickers);
+
+      if (metersNotice) {
+        metersNotice.style.display = 'block';
+        if (calculatedMaxStickers === 0) {
+          metersNotice.innerHTML = `⚠️ <strong>Diseño demasiado grande:</strong> Con ${h} cm de alto no cabe ninguna pieza en ${meters} metro(s). Reduce el alto o incrementa los metros.`;
+        } else {
+          metersNotice.innerHTML = `🎯 <strong>Cálculo por metro:</strong> En <span id="hintMetersVal">${meters}</span> m caben <strong id="hintStickersCount">${calculatedMaxStickers}</strong> stickers sin sobrepasar el material.`;
+        }
+      }
+    } else {
+      q = parseInt(qtyInput.value, 10) || 50;
+      if (metersNotice) {
+        metersNotice.style.display = 'none';
+      }
+    }
 
     const quote = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+
+    if (isMeters) {
+      const requestedMeters = Math.max(1, parseFloat(qtyInput.value) || 1);
+      quote.isUnderMin = false;
+      if (quote.billableMeters < requestedMeters) {
+        quote.billableMeters = requestedMeters;
+        quote.tierRate = getTierRate(requestedMeters);
+        quote.materialPriceQ = Number((requestedMeters * quote.tierRate).toFixed(2));
+        quote.totalPriceQ = Number((quote.materialPriceQ + quote.cuttingTotalQ).toFixed(2));
+        quote.unitPriceQ = Number((quote.totalPriceQ / quote.qty).toFixed(2));
+      }
+    }
+
     store.setActiveQuote(quote);
     renderQuoteResults(quote);
     redrawRollCanvas();
+  }
+
+  function setQuoteMode(mode) {
+    currentQuoteMode = mode;
+    const isMeters = mode === 'meters';
+
+    if (modeStickersRadio) modeStickersRadio.checked = !isMeters;
+    if (modeMetersRadio) modeMetersRadio.checked = isMeters;
+
+    const labelStickers = modeStickersRadio ? modeStickersRadio.closest('.radio-label') : null;
+    const labelMeters = modeMetersRadio ? modeMetersRadio.closest('.radio-label') : null;
+    if (labelStickers) labelStickers.classList.toggle('is-active', !isMeters);
+    if (labelMeters) labelMeters.classList.toggle('is-active', isMeters);
+
+    if (isMeters) {
+      const currentVal = parseInt(qtyInput.value, 10);
+      if (!isNaN(currentVal) && currentVal > 0) {
+        lastStickerQty = currentVal;
+      }
+      if (qtyLabelText) qtyLabelText.textContent = 'Cantidad de metros';
+      if (qtyTipText) qtyTipText.textContent = 'Metros lineales';
+      qtyInput.min = '1';
+      qtyInput.step = '1';
+      qtyInput.max = '500';
+      qtyInput.value = String(lastMetersQty || 1);
+      if (metersNotice) metersNotice.style.display = 'block';
+    } else {
+      const currentVal = parseFloat(qtyInput.value);
+      if (!isNaN(currentVal) && currentVal > 0) {
+        lastMetersQty = currentVal;
+      }
+      if (qtyLabelText) qtyLabelText.textContent = 'Cantidad de stickers';
+      if (qtyTipText) qtyTipText.textContent = 'Piezas totales';
+      qtyInput.min = '1';
+      qtyInput.step = '1';
+      qtyInput.max = '10000';
+      const activeCalculatedQty = store.state.activeQuote?.qty || lastStickerQty || 50;
+      qtyInput.value = String(activeCalculatedQty);
+      if (metersNotice) metersNotice.style.display = 'none';
+    }
+
+    handleCalculate();
+  }
+
+  if (modeStickersRadio) {
+    modeStickersRadio.addEventListener('change', () => {
+      if (modeStickersRadio.checked) setQuoteMode('stickers');
+    });
+  }
+
+  if (modeMetersRadio) {
+    modeMetersRadio.addEventListener('change', () => {
+      if (modeMetersRadio.checked) setQuoteMode('meters');
+    });
   }
 
   widthInput.addEventListener('input', () => {
@@ -754,18 +900,6 @@ export function initQuoter() {
       handleCalculate();
     });
   }
-
-  // Configurar botones de presets rápidos
-  const presetChips = document.querySelectorAll('.btn-chip[data-w]');
-  presetChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      presetChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      widthInput.value = chip.dataset.w;
-      heightInput.value = chip.dataset.h;
-      handleCalculate();
-    });
-  });
 
   // Zona de Carga de Archivos de Impresión (Dropzone)
   let currentAttachedFile = null;
@@ -1062,11 +1196,6 @@ export function initQuoter() {
   const btnAddToCart = document.getElementById('btnAddToCart');
   if (btnAddToCart) {
     btnAddToCart.addEventListener('click', async () => {
-      const w = parseFloat(widthInput.value) || 5;
-      const h = parseFloat(heightInput.value) || 5;
-      const q = parseInt(qtyInput.value, 10) || 50;
-      const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
-
       // Estrategia 1 (Lazy Upload): Si hay un archivo seleccionado y aún no se ha subido a R2, subir ahora
       if (currentRawFile && currentAttachedFile && !currentAttachedFile.fileUrl) {
         if (progressWrap && progressBar && progressPercent) {
@@ -1103,7 +1232,17 @@ export function initQuoter() {
         }
       }
 
-      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
+      const calculated = store.state.activeQuote || calculateQuote({
+        widthCm: parseFloat(widthInput.value) || 5,
+        heightCm: parseFloat(heightInput.value) || 5,
+        qty: parseInt(qtyInput.value, 10) || 50,
+        includeCutting: cuttingCheckbox ? cuttingCheckbox.checked : false,
+      });
+      const w = calculated.widthCm;
+      const h = calculated.heightCm;
+      const q = calculated.qty;
+      const cut = calculated.includeCutting;
+
       const rollCanvas = document.getElementById('rollCanvas');
       const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
       let canvasSnapshotUrl = null;
@@ -1146,12 +1285,17 @@ export function initQuoter() {
   const btnSaveQuote = document.getElementById('btnSaveQuote');
   if (btnSaveQuote) {
     btnSaveQuote.addEventListener('click', () => {
-      const w = parseFloat(widthInput.value) || 5;
-      const h = parseFloat(heightInput.value) || 5;
-      const q = parseInt(qtyInput.value, 10) || 50;
-      const cut = cuttingCheckbox ? cuttingCheckbox.checked : false;
+      const calculated = store.state.activeQuote || calculateQuote({
+        widthCm: parseFloat(widthInput.value) || 5,
+        heightCm: parseFloat(heightInput.value) || 5,
+        qty: parseInt(qtyInput.value, 10) || 50,
+        includeCutting: cuttingCheckbox ? cuttingCheckbox.checked : false,
+      });
+      const w = calculated.widthCm;
+      const h = calculated.heightCm;
+      const q = calculated.qty;
+      const cut = calculated.includeCutting;
 
-      const calculated = calculateQuote({ widthCm: w, heightCm: h, qty: q, includeCutting: cut });
       const rollCanvas = document.getElementById('rollCanvas');
       const canvasSnapshot = generateCanvasSnapshot(rollCanvas, calculated);
 
@@ -1230,6 +1374,16 @@ export function renderQuoteResults(quote) {
   setEl('canvasStats', `${quote.stickersPerRow} por fila (${(quote.stickersPerRow * quote.widthCm).toFixed(1)} cm)`);
   setEl('resUnitHint', `Costo aprox: Q${quote.unitPriceQ.toFixed(2)} por sticker ${quote.includeCutting ? '(impreso y cortado)' : ''}`);
 
+  // Actualizar aviso de flete en total-box
+  const totalFreightNoticeEl = document.getElementById('totalFreightNotice');
+  if (totalFreightNoticeEl) {
+    if (quote.totalPriceQ >= 600) {
+      totalFreightNoticeEl.innerHTML = `<span class="freight-notice-badge freight-free">🎉 Califica para Envío GRATIS</span>`;
+    } else {
+      totalFreightNoticeEl.innerHTML = `<span class="freight-notice-badge">📦 No incluye flete</span>`;
+    }
+  }
+
   // Task 17: Notificación de fila no aprovechada completamente
   const rowOptNotice = document.getElementById('rowOptimizationNotice');
   const qtyInputEl = document.getElementById('stickerQty');
@@ -1303,6 +1457,26 @@ export function renderQuoteResults(quote) {
       noticeBox.style.display = 'none';
     }
   }
+
+  // Actualizar aviso dinámico de incentivo de envío gratis
+  const incentiveEl = document.getElementById('quoterShippingIncentiveText');
+  const progressBar = document.getElementById('quoterShippingProgressBar');
+  if (incentiveEl) {
+    if (quote.totalPriceQ >= 600) {
+      if (progressBar) progressBar.style.width = '100%';
+      incentiveEl.innerHTML = '🎉 <strong>¡Felicidades!</strong> Esta cotización califica para <strong>Envío GRATIS</strong> en todo el país.';
+    } else if (quote.totalPriceQ >= 400) {
+      const pct = Math.min(100, Math.round((quote.totalPriceQ / 600) * 100));
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      const missingDepartamentos = (600 - quote.totalPriceQ).toFixed(2);
+      incentiveEl.innerHTML = `🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missingDepartamentos}</strong> más para envío gratis a Departamentos.`;
+    } else {
+      const pct = Math.min(100, Math.round((quote.totalPriceQ / 400) * 100));
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      const missingCapital = (400 - quote.totalPriceQ).toFixed(2);
+      incentiveEl.innerHTML = `🎁 <strong>¡Envío GRATIS!</strong> Agrega <strong>Q${missingCapital}</strong> más para Capital (o <strong>Q${(600 - quote.totalPriceQ).toFixed(2)}</strong> para Departamentos).`;
+    }
+  }
 }
 
 /**
@@ -1339,6 +1513,7 @@ export function sendWhatsAppQuote(quote) {
     clientArtText +
     snapText +
     `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
+    `• *Envío:* Por coordinar según tu dirección o agencia (¡Envío gratis desde Q400 en Capital y Q600 en Departamentos!).\n\n` +
     `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 
   const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;

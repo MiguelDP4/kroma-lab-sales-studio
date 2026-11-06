@@ -46,7 +46,31 @@ export class ApiClient {
   constructor(baseUrl = getApiBaseUrl()) {
     this.baseUrl = baseUrl;
     this.token = this._loadToken();
-    this.isOnline = false;
+    this.isOnline = true;
+    this.connectionListeners = new Set();
+    this.lastError = null;
+  }
+
+  onConnectionChange(callback) {
+    if (typeof callback === 'function') {
+      this.connectionListeners.add(callback);
+      try {
+        callback(this.isOnline, this.lastError);
+      } catch (_) {}
+    }
+    return () => this.connectionListeners.delete(callback);
+  }
+
+  _notifyConnectionStatus(isOnline, error = null) {
+    this.isOnline = Boolean(isOnline);
+    this.lastError = error;
+    for (const listener of this.connectionListeners) {
+      try {
+        listener(this.isOnline, this.lastError);
+      } catch (err) {
+        console.error('[ApiClient] Error en listener de conexión:', err);
+      }
+    }
   }
 
   _loadToken() {
@@ -113,6 +137,9 @@ export class ApiClient {
 
       const data = await res.json().catch(() => ({}));
 
+      // Si el servidor respondió, la conexión HTTP con el backend está activa
+      this._notifyConnectionStatus(true, null);
+
       if (!res.ok) {
         const error = new Error(data.message || `Error HTTP ${res.status}`);
         error.status = res.status;
@@ -120,11 +147,17 @@ export class ApiClient {
         throw error;
       }
 
-      this.isOnline = true;
       return data;
     } catch (err) {
-      if (err.name === 'TypeError' || err.message?.includes('fetch')) {
-        this.isOnline = false;
+      const isNetworkErr = err.name === 'TypeError' ||
+        err.message?.includes('fetch') ||
+        err.message?.includes('NetworkError') ||
+        err.message?.includes('Failed to fetch') ||
+        err.code === 'ECONNREFUSED' ||
+        (typeof navigator !== 'undefined' && navigator.onLine === false);
+
+      if (isNetworkErr) {
+        this._notifyConnectionStatus(false, err.message || 'El servidor API no responde');
       }
       throw err;
     }
@@ -134,11 +167,12 @@ export class ApiClient {
   async checkHealth() {
     try {
       const res = await this._request('/health');
-      this.isOnline = res.status === 'ok';
+      const isOk = res && res.status === 'ok';
+      this._notifyConnectionStatus(isOk, isOk ? null : 'API health status not ok');
       return res;
     } catch (err) {
-      this.isOnline = false;
-      return { status: 'error', database: 'disconnected', error: err.message };
+      this._notifyConnectionStatus(false, err?.message || 'El servidor API no responde');
+      return { status: 'error', database: 'disconnected', error: err?.message || 'Error de conexión' };
     }
   }
 

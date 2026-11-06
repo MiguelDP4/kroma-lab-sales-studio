@@ -9,6 +9,7 @@ import { dispatchStore, DELIVERY_METHODS, PACKAGE_TYPES } from '../modules/dispa
 import { ORDER_STATUS } from '../../shared/business-config.js';
 import { renderDispatchSheetHtml } from './dispatch-view.js';
 import { printDocument } from '../modules/print-helper.js';
+import { renderKanbanSkeleton } from '../components/skeleton-loader.js';
 
 const IS_TEST_ENV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -53,7 +54,7 @@ export const productionView = {
 
       <!-- Tablero Kanban de 4 Estaciones -->
       <div class="kanban-board-grid" id="kanbanBoardGrid">
-        <!-- Renderizado dinámico por renderKanbanColumns() -->
+        ${productionStore.isLoading ? renderKanbanSkeleton(4, 2) : ''}
       </div>
     </div>
 
@@ -656,6 +657,10 @@ export const productionView = {
     // Render de las Columnas del Tablero Kanban
     function renderKanbanColumns() {
       if (!boardGrid) return;
+      if (productionStore.isLoading) {
+        boardGrid.innerHTML = renderKanbanSkeleton(4, 2);
+        return;
+      }
       const state = productionStore.getState();
       const orders = state.orders;
 

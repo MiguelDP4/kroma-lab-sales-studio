@@ -13,6 +13,9 @@ import {
 } from '../modules/receivables-store.js';
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABELS } from '../modules/orders-store.js';
 import { downloadCSV } from '../modules/reports-engine.js';
+import { renderMetricsSkeleton, renderTableSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
+import { apiClient } from '../modules/api-client.js';
+import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
 
 export const receivablesView = {
   path: '/cobranza',
@@ -56,7 +59,7 @@ export const receivablesView = {
 
         <!-- Tarjetas de Resumen KPI de Cobranza -->
         <div id="receivablesSummaryContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
-          <!-- Inyectado por renderSummaryKPIs() -->
+          ${receivablesStore.isLoading ? renderMetricsSkeleton(4) : ''}
         </div>
 
         <!-- Barra de Cuentas Bancarias de Taller -->
@@ -108,6 +111,10 @@ export const receivablesView = {
             </div>
           </div>
 
+          <!-- Alerta Offline si el API no responde -->
+          <div id="receivablesOfflineAlertContainer">
+          </div>
+
           <div class="mobile-scroll-hint receivables-mobile-scroll-hint">Desliza para ver columnas de saldo, mora y cobranza ↔</div>
           <div class="orders-table-container receivables-table-wrapper">
             <table class="orders-table receivables-table">
@@ -124,14 +131,14 @@ export const receivablesView = {
                 </tr>
               </thead>
               <tbody id="receivablesTableBody">
-                <!-- Inyectado por renderReceivablesTable() -->
+                ${receivablesStore.isLoading ? renderTableSkeleton(4, 8) : ''}
               </tbody>
             </table>
           </div>
 
           <!-- Tarjetas de Cobranza Estilo Despacho (<= 1200px) -->
           <div id="receivablesCardsContainer" class="receivables-cards-grid dispatch-cards-grid">
-            <!-- Inyectado por renderReceivablesTable() -->
+            ${receivablesStore.isLoading ? renderCardsSkeleton(3) : ''}
           </div>
           <div id="receivablesEmptyState" class="kanban-empty-col" style="display: none; margin: 1.5rem 0;">
             No se encontraron cuentas por cobrar con los filtros seleccionados.
@@ -543,7 +550,10 @@ export const receivablesView = {
     function renderSummaryKPIs() {
       const container = document.getElementById('receivablesSummaryContainer');
       if (!container) return;
-
+      if (receivablesStore.isLoading) {
+        container.innerHTML = renderMetricsSkeleton(4);
+        return;
+      }
       const summary = receivablesStore.getReceivablesSummary();
 
       container.innerHTML = `
@@ -586,6 +596,18 @@ export const receivablesView = {
       const cardsContainer = document.getElementById('receivablesCardsContainer');
       const emptyState = document.getElementById('receivablesEmptyState');
       if (!tbody) return;
+
+      const offlineAlertEl = document.getElementById('receivablesOfflineAlertContainer');
+      if (offlineAlertEl) {
+        offlineAlertEl.innerHTML = !apiClient.isOnline ? renderApiOfflineAlert('No se pudieron consultar las cuentas por cobrar del backend.') : '';
+      }
+
+      if (receivablesStore.isLoading) {
+        tbody.innerHTML = renderTableSkeleton(5, 7);
+        if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(3);
+        if (emptyState) emptyState.style.display = 'none';
+        return;
+      }
 
       const searchVal = searchInput?.value || '';
       const statusVal = statusFilter?.value || 'DEBT_ONLY';
@@ -837,6 +859,13 @@ export const receivablesView = {
       const cardsContainer = document.getElementById('paymentsCardsContainer');
       const emptyState = document.getElementById('paymentsEmptyState');
       if (!tbody) return;
+
+      if (receivablesStore.isLoading) {
+        tbody.innerHTML = renderTableSkeleton(4, 6);
+        if (cardsContainer) cardsContainer.innerHTML = renderCardsSkeleton(2);
+        if (emptyState) emptyState.style.display = 'none';
+        return;
+      }
 
       const payments = receivablesStore.getPayments();
 

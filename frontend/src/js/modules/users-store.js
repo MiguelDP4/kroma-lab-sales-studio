@@ -89,6 +89,7 @@ class UsersStore {
   constructor() {
     this.users = [];
     this.listeners = new Set();
+    this.isLoading = false;
     this.loadFromStorage();
   }
 
@@ -140,7 +141,16 @@ class UsersStore {
     };
   }
 
+  setLoading(loading) {
+    this.isLoading = Boolean(loading);
+    this.notify();
+  }
+
   async syncWithApi() {
+    if (!IS_TEST_ENV) {
+      this.isLoading = true;
+      this.notify();
+    }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.auth) {
         const res = await apiClient.auth.listUsers();
@@ -152,12 +162,18 @@ class UsersStore {
             : [];
           this.users = [...apiUsers, ...localOnly];
           this.saveToStorage();
-          this.notify();
           return this.getUsers();
         }
       }
     } catch (err) {
-      console.warn('[UsersStore] Sincronización API no disponible:', err.message);
+      if (!IS_TEST_ENV) {
+        console.warn('[UsersStore] Sincronización API no disponible:', err.message);
+      }
+    } finally {
+      if (!IS_TEST_ENV) {
+        this.isLoading = false;
+        this.notify();
+      }
     }
     return this.getUsers();
   }
@@ -168,6 +184,20 @@ class UsersStore {
         localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(this.users));
       }
     } catch (_) {}
+  }
+
+  clearUsersCache() {
+    this.users = [];
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY_USERS);
+      } catch (_) {}
+    }
+    this.notify();
+  }
+
+  clearCache() {
+    this.clearUsersCache();
   }
 
   subscribe(listener) {

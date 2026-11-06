@@ -38,6 +38,13 @@
   text-transform: uppercase;
 }
 
+.navbar-brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    BARRA DE NAVEGACIÓN SUPERIOR Y TOPBAR DESPEJADO
    ========================================================================== */
@@ -109,7 +116,8 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.35rem 0.8rem;
-  min-height: 44px;
+  min-height: 42px;
+  height: 42px;
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
@@ -119,6 +127,7 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   user-select: none;
+  box-sizing: border-box;
 }
 
 .user-profile-chip:hover {
@@ -547,6 +556,59 @@
   background: rgba(28, 114, 147, 0.12);
 }
 
+/* Selector de Modo de Cotización (Por stickers vs Por metro) */
+.quote-mode-radios {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.quote-mode-radios .radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.95rem;
+  min-height: 44px;
+  background: var(--bg-surface-elevated);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  user-select: none;
+  flex: 1;
+  min-width: 130px;
+}
+
+.quote-mode-radios .radio-label:has(input:checked),
+.quote-mode-radios .radio-label.is-active {
+  border-color: var(--cerulean);
+  background: rgba(2, 132, 199, 0.08);
+  color: var(--cerulean);
+}
+
+.quote-mode-radios .radio-label input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--cerulean);
+  cursor: pointer;
+  margin: 0;
+}
+
+.meters-calculated-hint {
+  margin-top: 0.6rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--cerulean);
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  border-left: 3px solid var(--cerulean);
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+}
+
 /* Tarjeta de Acabado de Corte */
 .cutting-option-card {
   background: var(--bg-surface-elevated);
@@ -777,6 +839,46 @@
   font-weight: 600;
 }
 
+.total-freight-notice {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.freight-notice-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--powder-blue);
+  background: rgba(158, 179, 194, 0.1);
+  border: 1px solid rgba(158, 179, 194, 0.25);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+.freight-notice-badge.freight-free {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="light"] .freight-notice-badge {
+  color: var(--regal-navy);
+  background: rgba(27, 59, 111, 0.06);
+  border-color: rgba(27, 59, 111, 0.18);
+}
+
+html[data-theme="light"] .freight-notice-badge.freight-free {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+  border-color: rgba(5, 150, 105, 0.25);
+}
+
 .minimum-notice {
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.35);
@@ -911,12 +1013,17 @@
   border-radius: var(--radius-full);
   width: 42px;
   height: 42px;
-  display: flex;
+  min-width: 42px;
+  min-height: 42px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   position: relative;
   transition: all var(--transition-fast);
+  box-sizing: border-box;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .cart-toggle-btn:hover {
@@ -2125,14 +2232,22 @@
     gap: 0.5rem;
   }
 
-  #userChipName {
-    display: none;
+  #userChipName,
+  #userChipArrow {
+    display: none !important;
   }
 
-  .user-profile-chip {
-    padding: 0.35rem 0.5rem;
-    min-width: 44px;
+  .user-profile-chip,
+  .cart-toggle-btn,
+  .theme-toggle-btn {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0 !important;
     justify-content: center;
+    border-radius: var(--radius-full);
+    box-sizing: border-box;
   }
 
   .mobile-scroll-hint {
@@ -2308,9 +2423,14 @@
 
   .theme-toggle-btn,
   .cart-toggle-btn,
-  .mobile-nav-toggle {
+  .user-profile-chip,
+  .mobile-nav-toggle,
+  .sidebar-toggle-btn {
     width: 38px;
     height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0 !important;
   }
 
   .role-pill-indicator {
@@ -2344,6 +2464,47 @@
   .orders-metrics-grid,
   .clients-metrics-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   TOPBAR RESPONSIVO COMPACTO: PANTALLAS MENORES DE 411PX (< 411px)
+   Oculta las letras al lado del logo (KROMA LAB SALES STUDIO), dejando sólo el logo.
+   Garantiza que el botón del carrito, chip de usuario y tema sean idénticos en tamaño.
+   ========================================================================== */
+@media (max-width: 410px) {
+  .brand-name {
+    display: none !important;
+  }
+
+  .brand-logo {
+    gap: 0 !important;
+  }
+
+  .navbar-container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .navbar-brand-wrapper {
+    gap: 0.45rem !important;
+  }
+
+  .navbar-actions-group {
+    gap: 0.35rem;
+  }
+
+  .theme-toggle-btn,
+  .cart-toggle-btn,
+  .user-profile-chip,
+  .mobile-nav-toggle,
+  .sidebar-toggle-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
   }
 }
 
@@ -3150,3 +3311,475 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ==========================================================================
+   POLÍTICAS Y LOGÍSTICA DE ENVÍO (COTIZADOR, CARRITO Y CHECKOUT)
+   ========================================================================== */
+.shipping-policy-banner {
+  background: rgba(28, 114, 147, 0.08);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--cerulean);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  margin-top: 1rem;
+}
+
+.shipping-policy-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 0.35rem;
+}
+
+.shipping-policy-desc {
+  margin: 0 0 0.55rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.shipping-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.shipping-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.shipping-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cerulean), var(--color-success));
+  border-radius: var(--radius-full);
+  transition: width 0.35s ease;
+}
+
+.shipping-progress-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Badge y Barra de Envío en Carrito */
+.cart-free-shipping-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cart-free-shipping-card.is-qualified {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.cart-free-shipping-msg {
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.cart-free-shipping-card.is-qualified .cart-free-shipping-msg {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+/* Selector de Modalidad de Entrega (Segmented Cards) en Checkout */
+.delivery-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 480px) {
+  .delivery-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.delivery-option-card {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-height: 48px;
+  user-select: none;
+}
+
+.delivery-option-card:hover {
+  border-color: var(--cerulean);
+  background: rgba(28, 114, 147, 0.05);
+}
+
+.delivery-option-card.active {
+  border-color: var(--cerulean);
+  background: rgba(28, 114, 147, 0.12);
+  box-shadow: 0 0 0 1px var(--cerulean);
+}
+
+.delivery-option-card input[type="radio"] {
+  accent-color: var(--cerulean);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.delivery-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.delivery-option-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.delivery-option-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Alerta de Envío en Checkout */
+.checkout-shipping-alert {
+  margin-top: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  border: 1px solid var(--border-color);
+  background: rgba(28, 114, 147, 0.06);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.checkout-shipping-alert.is-free {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+/* Caja de Pago Bancario en Checkout */
+.checkout-bank-box {
+  margin: 0.85rem 0;
+  padding: 0.9rem;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.checkout-bank-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.checkout-bank-title {
+  font-size: 0.88rem;
+  color: var(--cerulean);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.checkout-bank-content {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.checkout-bank-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.75rem;
+  margin: 0.35rem 0;
+}
+
+.checkout-bank-policy {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   SKELETON LOADER & UX DE ESPERA
+   ========================================================================== */
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-bg) 0%,
+    var(--skeleton-shimmer) 50%,
+    var(--skeleton-bg) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s infinite ease-in-out;
+}
+
+.skeleton-box {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-bg) 0%,
+    var(--skeleton-shimmer) 50%,
+    var(--skeleton-bg) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s infinite ease-in-out;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-line {
+  display: block;
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-bg) 0%,
+    var(--skeleton-shimmer) 50%,
+    var(--skeleton-bg) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s infinite ease-in-out;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-circle {
+  display: inline-block;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-bg) 0%,
+    var(--skeleton-shimmer) 50%,
+    var(--skeleton-bg) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s infinite ease-in-out;
+}
+
+.skeleton-metric-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.skeleton-table-cell {
+  padding: 1rem 0.75rem;
+}
+
+.skeleton-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--card-shadow);
+}
+
+.skeleton-kanban-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer,
+  .skeleton-box,
+  .skeleton-line,
+  .skeleton-circle {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* ==========================================================================
+   BANNER GLOBAL Y ALERTAS: EL SERVIDOR API NO RESPONDE (OFFLINE / ERROR DE RED)
+   ========================================================================== */
+.backend-offline-banner {
+  display: none;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.18));
+  border-bottom: 2px solid #ef4444;
+  padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 999;
+  animation: fadeInOffline 0.25s ease-out;
+}
+
+@keyframes fadeInOffline {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.backend-offline-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.backend-offline-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.backend-offline-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.backend-offline-title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #dc2626;
+  margin-bottom: 0.15rem;
+}
+
+[data-theme="dark"] .backend-offline-title {
+  color: #f87171;
+}
+
+.backend-offline-desc {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.backend-offline-desc code {
+  background: var(--bg-surface-elevated);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--baltic-blue);
+}
+
+.btn-retry-backend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-retry-backend:hover {
+  background: var(--bg-surface-elevated);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-retry-backend:active {
+  transform: scale(0.97);
+}
+
+/* Alerta inline para vistas de datos */
+.api-offline-inline-alert {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.14));
+  border: 1px solid #ef4444;
+  border-radius: var(--radius-md, 8px);
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.api-offline-inline-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 250px;
+}
+
+.api-offline-inline-content strong {
+  display: block;
+  color: #dc2626;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .api-offline-inline-content strong {
+  color: #f87171;
+}
+
+.api-offline-inline-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+
+
