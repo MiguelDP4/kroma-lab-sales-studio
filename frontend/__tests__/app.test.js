@@ -355,6 +355,11 @@ describe('App — Inicialización y DOM', () => {
       mockQuote.totalPriceQ = 200;
       renderQuoteResults(mockQuote);
       expect(document.getElementById('quoterShippingIncentiveText').textContent).toContain('para Capital');
+      expect(document.getElementById('totalFreightNotice').textContent).toContain('No incluye flete');
+
+      mockQuote.totalPriceQ = 650;
+      renderQuoteResults(mockQuote);
+      expect(document.getElementById('totalFreightNotice').textContent).toContain('Califica para Envío GRATIS');
     });
 
     it('agrega el diseño al carrito y muestra toast en la esquina inferior derecha sin abrir el drawer (Task 16)', () => {

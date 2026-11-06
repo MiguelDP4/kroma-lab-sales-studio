@@ -839,6 +839,46 @@
   font-weight: 600;
 }
 
+.total-freight-notice {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.freight-notice-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--powder-blue);
+  background: rgba(158, 179, 194, 0.1);
+  border: 1px solid rgba(158, 179, 194, 0.25);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+.freight-notice-badge.freight-free {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="light"] .freight-notice-badge {
+  color: var(--regal-navy);
+  background: rgba(27, 59, 111, 0.06);
+  border-color: rgba(27, 59, 111, 0.18);
+}
+
+html[data-theme="light"] .freight-notice-badge.freight-free {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+  border-color: rgba(5, 150, 105, 0.25);
+}
+
 .minimum-notice {
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.35);
