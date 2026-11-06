@@ -1374,6 +1374,16 @@ export function renderQuoteResults(quote) {
   setEl('canvasStats', `${quote.stickersPerRow} por fila (${(quote.stickersPerRow * quote.widthCm).toFixed(1)} cm)`);
   setEl('resUnitHint', `Costo aprox: Q${quote.unitPriceQ.toFixed(2)} por sticker ${quote.includeCutting ? '(impreso y cortado)' : ''}`);
 
+  // Actualizar aviso de flete en total-box
+  const totalFreightNoticeEl = document.getElementById('totalFreightNotice');
+  if (totalFreightNoticeEl) {
+    if (quote.totalPriceQ >= 600) {
+      totalFreightNoticeEl.innerHTML = `<span class="freight-notice-badge freight-free">🎉 Califica para Envío GRATIS</span>`;
+    } else {
+      totalFreightNoticeEl.innerHTML = `<span class="freight-notice-badge">📦 No incluye flete</span>`;
+    }
+  }
+
   // Task 17: Notificación de fila no aprovechada completamente
   const rowOptNotice = document.getElementById('rowOptimizationNotice');
   const qtyInputEl = document.getElementById('stickerQty');

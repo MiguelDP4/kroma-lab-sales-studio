@@ -201,6 +201,9 @@ async function runFullQASuite() {
 
       const totalPriceText = await page.$eval('#resTotalPrice', (el) => el.textContent.trim());
       assert(totalPriceText.includes('Q150'), 'Cálculo correcto de 50 stickers de 5x5 cm a Q150.00 mínimo', `Total: ${totalPriceText}`);
+
+      const freightNoticeText = await page.$eval('#totalFreightNotice', (el) => el.textContent.trim());
+      assert(freightNoticeText.includes('No incluye flete'), 'Insignia estética de flete visible en total box', `Texto: ${freightNoticeText}`);
     }
 
     // 2. Modo de cotización: Por stickers vs Por metro

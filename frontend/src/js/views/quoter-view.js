@@ -217,6 +217,9 @@ export const quoterView = {
               <div class="total-label">Total Estimado en Quetzales</div>
               <div class="total-price" id="resTotalPrice">Q150.00</div>
               <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q3.00 por sticker</div>
+              <div class="total-freight-notice" id="totalFreightNotice">
+                <span class="freight-notice-badge">📦 No incluye flete</span>
+              </div>
             </div>
 
             <!-- Aviso de Política de Envíos y Gancho de Envío Gratis -->
