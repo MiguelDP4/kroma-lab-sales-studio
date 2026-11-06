@@ -139,16 +139,16 @@ export const inventoryView = {
         </div>
 
         <!-- MODAL 1: REGISTRAR COMPRA / ENTRADA -->
-        <div id="restockModal" class="modal-backdrop" style="display: none;">
-          <div class="modal-card" style="width: min(540px, 94vw);">
+        <div id="restockModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
+          <div class="modal-card" style="width: min(560px, 94vw); max-height: 90vh; overflow-y: auto;">
             <div class="modal-header">
               <div>
-                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;">➕ Registrar Entrada / Compra</h2>
+                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;">➕ Registrar Entrada / Factura</h2>
                 <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0;">
-                  Ingresa las existencias y datos de compra para alimentar el Kardex.
+                  Ingresa las existencias, datos de factura y configura las alertas de stock.
                 </p>
               </div>
-              <button type="button" class="btn-close-modal" id="btnCloseRestockModal">✕</button>
+              <button type="button" class="btn-close-modal" id="btnCloseRestockModal" aria-label="Cerrar modal">✕</button>
             </div>
 
             <form id="formRestock">
@@ -157,28 +157,84 @@ export const inventoryView = {
                 <select id="restockItemId" class="input-control" style="min-height: 44px;" required>
                   <!-- Inyectado dinámicamente -->
                 </select>
+                <span id="restockUnitLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;"></span>
+              </div>
+
+              <!-- Contenedor desplegable para crear un insumo nuevo personalizado -->
+              <div id="restockCustomFields" style="display: none; background: rgba(59, 130, 246, 0.08); border: 1px dashed var(--cerulean); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                  <label class="form-label" for="restockCustomName" style="font-weight: 700;">Nombre del Nuevo Insumo:</label>
+                  <input type="text" id="restockCustomName" class="input-control" placeholder="Ej: Film DTF UV Especial Dorado" style="min-height: 44px;">
+                </div>
+                <div class="input-row">
+                  <div class="form-group">
+                    <label class="form-label" for="restockCustomCategory" style="font-weight: 700;">Categoría:</label>
+                    <select id="restockCustomCategory" class="input-control" style="min-height: 44px;">
+                      <option value="FILM">📜 Bobinas de Film</option>
+                      <option value="INK">🎨 Tintas UV</option>
+                      <option value="BLADE">✂️ Navajas y Corte</option>
+                      <option value="MAINTENANCE">🧼 Mantenimiento</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="restockCustomUnit" style="font-weight: 700;">Unidad de Medida:</label>
+                    <select id="restockCustomUnit" class="input-control" style="min-height: 44px;">
+                      <option value="m">Metros lineales (m)</option>
+                      <option value="L">Litros (L)</option>
+                      <option value="ml">Mililitros (ml)</option>
+                      <option value="uds">Unidades (uds)</option>
+                      <option value="kg">Kilogramos (kg)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div class="input-row">
                 <div class="form-group">
-                  <label class="form-label" for="restockQuantity" style="font-weight: 700;">Cantidad a Ingresar:</label>
-                  <input type="number" id="restockQuantity" class="input-control" placeholder="Ej: 100" min="0.1" step="any" style="min-height: 44px;" required>
-                  <span id="restockUnitLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; display: block;"></span>
+                  <label class="form-label" for="restockQuantity" style="font-weight: 700;">Cantidad Comprada:</label>
+                  <input type="number" id="restockQuantity" class="input-control" placeholder="Ej: 100" min="0.01" step="any" style="min-height: 44px;" required>
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="restockCostQ" style="font-weight: 700;">Costo Total Pagado (Q):</label>
-                  <input type="number" id="restockCostQ" class="input-control" placeholder="Ej: 600.00" min="0" step="0.5" style="min-height: 44px;">
+                  <label class="form-label" for="restockCostQ" style="font-weight: 700;">Costo Total Factura (Q):</label>
+                  <input type="number" id="restockCostQ" class="input-control" placeholder="Ej: 600.00" min="0" step="any" style="min-height: 44px;">
                 </div>
               </div>
 
               <div class="input-row">
                 <div class="form-group">
                   <label class="form-label" for="restockSupplier" style="font-weight: 700;">Proveedor:</label>
-                  <input type="text" id="restockSupplier" class="input-control" placeholder="" style="min-height: 44px;">
+                  <input type="text" id="restockSupplier" class="input-control" placeholder="Ej: Audley Guatemala" style="min-height: 44px;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="restockInvoice" style="font-weight: 700;">No. Factura / Recibo:</label>
-                  <input type="text" id="restockInvoice" class="input-control" placeholder="" style="min-height: 44px;">
+                  <input type="text" id="restockInvoice" class="input-control" placeholder="Ej: FAC-8921" style="min-height: 44px;">
+                </div>
+              </div>
+
+              <!-- SECCIÓN: ALERTAS DE STOCK CONFIGURABLES POR MIGUEL -->
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+                <div style="font-weight: 800; font-size: 0.92rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+                  <span>🔔</span>
+                  <span>Configuración de Alertas de Stock</span>
+                </div>
+                <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 0.75rem; line-height: 1.4;">
+                  Tú decides los límites: ingresa la cantidad exacta para encender la alerta crítica roja (🔴) y el nivel óptimo verde (🟢).
+                </p>
+                <div class="input-row">
+                  <div class="form-group">
+                    <label class="form-label" for="restockCriticalThreshold" style="font-weight: 700; color: #ef4444; font-size: 0.82rem;">
+                      🔴 Cantidad Nivel Crítico:
+                    </label>
+                    <input type="number" id="restockCriticalThreshold" class="input-control" placeholder="Ej: 20" min="0" step="any" style="min-height: 44px;">
+                    <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Rojo cuando el stock sea ≤ este valor.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="restockOptimalThreshold" style="font-weight: 700; color: #10b981; font-size: 0.82rem;">
+                      🟢 Cantidad Nivel Óptimo:
+                    </label>
+                    <input type="number" id="restockOptimalThreshold" class="input-control" placeholder="Ej: 50" min="0" step="any" style="min-height: 44px;">
+                    <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Verde si el stock es ≥ este valor (🟡 en el rango medio).</span>
+                  </div>
                 </div>
               </div>
 
@@ -196,7 +252,7 @@ export const inventoryView = {
         </div>
 
         <!-- MODAL 2: AJUSTE FÍSICO / MERMA DE TALLER -->
-        <div id="adjustStockModal" class="modal-backdrop" style="display: none;">
+        <div id="adjustStockModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
           <div class="modal-card" style="width: min(500px, 94vw);">
             <div class="modal-header">
               <div>
@@ -205,7 +261,7 @@ export const inventoryView = {
                   Actualiza el stock real tras un conteo físico o reporte de merma técnica.
                 </p>
               </div>
-              <button type="button" class="btn-close-modal" id="btnCloseAdjustModal">✕</button>
+              <button type="button" class="btn-close-modal" id="btnCloseAdjustModal" aria-label="Cerrar modal">✕</button>
             </div>
 
             <form id="formAdjustStock">
@@ -248,7 +304,61 @@ export const inventoryView = {
           </div>
         </div>
 
-        <!-- MODAL 3: CONFIRMACIÓN DE ELIMINACIÓN DE INSUMO (Modelo Consistente) -->
+        <!-- MODAL 3: CONFIGURACIÓN INDIVIDUAL DE ALERTAS DE STOCK -->
+        <div id="configureAlertsModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
+          <div class="modal-card" style="width: min(500px, 94vw);">
+            <div class="modal-header">
+              <div>
+                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;">⚙️ Configurar Alertas de Stock</h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0;">
+                  Define la cantidad que activa el estado crítico y el óptimo para este insumo.
+                </p>
+              </div>
+              <button type="button" class="btn-close-modal" id="btnCloseAlertsModal" aria-label="Cerrar modal">✕</button>
+            </div>
+
+            <form id="formConfigureAlerts">
+              <input type="hidden" id="alertItemId">
+
+              <div style="background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border-color);">
+                <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Insumo Seleccionado:</span>
+                <div id="alertItemNameDisplay" style="font-weight: 800; font-size: 1.05rem; color: var(--cerulean);"></div>
+                <div id="alertCurrentStockDisplay" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;"></div>
+              </div>
+
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="alertCriticalInput" style="font-weight: 700; color: #ef4444;">🔴 Cantidad Nivel Crítico:</label>
+                  <input type="number" id="alertCriticalInput" class="input-control" min="0" step="any" style="min-height: 44px;" required>
+                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Alerta roja si el stock es ≤ a esta cantidad.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="alertOptimalInput" style="font-weight: 700; color: #10b981;">🟢 Cantidad Nivel Óptimo:</label>
+                  <input type="number" id="alertOptimalInput" class="input-control" min="0" step="any" style="min-height: 44px;" required>
+                  <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Alerta verde si el stock es ≥ a esta cantidad.</span>
+                </div>
+              </div>
+
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="alertUnitCostInput" style="font-weight: 700;">Costo Ref. Unitario (Q):</label>
+                  <input type="number" id="alertUnitCostInput" class="input-control" min="0" step="any" style="min-height: 44px;">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="alertSupplierInput" style="font-weight: 700;">Proveedor Preferido:</label>
+                  <input type="text" id="alertSupplierInput" class="input-control" style="min-height: 44px;">
+                </div>
+              </div>
+
+              <div class="modal-actions-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary" id="btnCancelAlertsModal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveAlerts">Guardar Configuración</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- MODAL 4: CONFIRMACIÓN DE ELIMINACIÓN DE INSUMO (Modelo Consistente) -->
         <div id="deleteInventoryModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
           <div class="modal-card" style="width: min(440px, 94vw);">
             <div class="modal-header">
@@ -279,6 +389,8 @@ export const inventoryView = {
     // Elementos de Modales
     const restockModal = document.getElementById('restockModal');
     const adjustModal = document.getElementById('adjustStockModal');
+    const alertsModal = document.getElementById('configureAlertsModal');
+    const deleteModal = document.getElementById('deleteInventoryModal');
 
     const btnOpenRestock = document.getElementById('btnOpenRestockModal');
     const btnCloseRestock = document.getElementById('btnCloseRestockModal');
@@ -286,10 +398,21 @@ export const inventoryView = {
     const formRestock = document.getElementById('formRestock');
     const restockItemSelect = document.getElementById('restockItemId');
     const restockUnitLabel = document.getElementById('restockUnitLabel');
+    const restockCustomFields = document.getElementById('restockCustomFields');
 
     const btnCloseAdjust = document.getElementById('btnCloseAdjustModal');
     const btnCancelAdjust = document.getElementById('btnCancelAdjustModal');
     const formAdjust = document.getElementById('formAdjustStock');
+
+    const btnCloseAlerts = document.getElementById('btnCloseAlertsModal');
+    const btnCancelAlerts = document.getElementById('btnCancelAlertsModal');
+    const formAlerts = document.getElementById('formConfigureAlerts');
+
+    const btnCloseDelete = document.getElementById('btnCloseDeleteInventoryModal');
+    const btnCancelDelete = document.getElementById('btnCancelDeleteInventoryModal');
+    const btnConfirmDelete = document.getElementById('btnConfirmDeleteInventory');
+    const deleteInventoryItemId = document.getElementById('deleteInventoryItemId');
+    const deleteInventoryItemName = document.getElementById('deleteInventoryItemName');
 
     const btnExportCSV = document.getElementById('btnExportKardexCSV');
     const kardexSearch = document.getElementById('kardexSearchInput');
@@ -302,36 +425,82 @@ export const inventoryView = {
       }
     }
 
-    // Poblar selector de insumos en modal de reabastecimiento (con catálogo oficial y existentes)
-    function populateRestockSelect() {
+    // Poblar selector de insumos en modal de reabastecimiento (existentes + catálogo base + opción nuevo)
+    function populateRestockSelect(selectedId = null) {
       if (!restockItemSelect) return;
       const catalog = PRODUCTION_SUPPLIES_CATALOG || [];
       const items = inventoryStore.getItems();
       const optionsMap = new Map();
-      catalog.forEach(c => {
-        const current = items.find(i => i.id === c.id);
-        const stockText = current ? ` (${current.currentStock.toFixed(1)} ${current.unit} actuales)` : ' (Nuevo registro)';
-        optionsMap.set(c.id, `<option value="${c.id}">${c.name}${stockText}</option>`);
-      });
+
+      // Insumos ya dados de alta en el sistema
       items.forEach(it => {
-        if (!optionsMap.has(it.id)) {
-          optionsMap.set(it.id, `<option value="${it.id}">${it.name} (${it.currentStock.toFixed(1)} ${it.unit} disponibles)</option>`);
+        optionsMap.set(it.id, `<option value="${it.id}">📦 ${it.name} (${it.currentStock.toFixed(1)} ${it.unit} disponibles)</option>`);
+      });
+
+      // Insumos del catálogo estándar de taller
+      catalog.forEach(c => {
+        if (!optionsMap.has(c.id)) {
+          optionsMap.set(c.id, `<option value="${c.id}">📋 ${c.name} (Catálogo oficial de taller)</option>`);
         }
       });
-      restockItemSelect.innerHTML = Array.from(optionsMap.values()).join('');
-      updateRestockUnitLabel();
+
+      const optionsHtml = [
+        '<option value="" disabled>-- Selecciona un Insumo o Crea uno Nuevo --</option>',
+        '<option value="__CUSTOM__">✨ + Crear Nuevo Insumo Personalizado...</option>',
+        Array.from(optionsMap.values()).join(''),
+      ].join('');
+
+      restockItemSelect.innerHTML = optionsHtml;
+      if (selectedId) {
+        restockItemSelect.value = selectedId;
+      } else if (items.length > 0) {
+        restockItemSelect.value = items[0].id;
+      } else {
+        restockItemSelect.value = catalog[0]?.id || '__CUSTOM__';
+      }
+      updateRestockFields();
     }
 
-    function updateRestockUnitLabel() {
-      if (!restockUnitLabel || !restockItemSelect) return;
-      const id = restockItemSelect.value;
-      const it = inventoryStore.getItemById(id) || (PRODUCTION_SUPPLIES_CATALOG || []).find(c => c.id === id);
-      if (it) {
-        restockUnitLabel.textContent = `Unidad de medida: ${it.unit} (Presentación común: ${it.packageSize} ${it.unit})`;
+    function updateRestockFields() {
+      if (!restockItemSelect) return;
+      const val = restockItemSelect.value;
+      const isCustom = val === '__CUSTOM__';
+      const critInput = document.getElementById('restockCriticalThreshold');
+      const optInput = document.getElementById('restockOptimalThreshold');
+      const supplierInput = document.getElementById('restockSupplier');
+      const costInput = document.getElementById('restockCostQ');
+
+      if (restockCustomFields) {
+        restockCustomFields.style.display = isCustom ? 'block' : 'none';
+      }
+
+      if (isCustom) {
+        if (restockUnitLabel) {
+          restockUnitLabel.textContent = 'Unidad de medida definida en el formulario.';
+        }
+        if (critInput && critInput.value === '') critInput.value = 10;
+        if (optInput && optInput.value === '') optInput.value = 25;
+      } else {
+        const it = inventoryStore.getItemById(val) || (PRODUCTION_SUPPLIES_CATALOG || []).find(c => c.id === val);
+        if (it) {
+          if (restockUnitLabel) {
+            restockUnitLabel.textContent = `Unidad de medida: ${it.unit} (Presentación común: ${it.packageSize || 100} ${it.unit})`;
+          }
+          if (supplierInput && it.supplier && !supplierInput.value) {
+            supplierInput.value = it.supplier;
+          }
+          if (critInput) {
+            critInput.value = it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minThreshold || 10);
+          }
+          if (optInput) {
+            const crit = parseFloat(critInput.value) || 10;
+            optInput.value = it.optimalThreshold !== undefined ? it.optimalThreshold : Math.round(crit * 1.5);
+          }
+        }
       }
     }
 
-    if (restockItemSelect) restockItemSelect.addEventListener('change', updateRestockUnitLabel);
+    if (restockItemSelect) restockItemSelect.addEventListener('change', updateRestockFields);
 
     if (btnOpenRestock) {
       btnOpenRestock.addEventListener('click', () => {
@@ -342,30 +511,71 @@ export const inventoryView = {
     if (btnCloseRestock) btnCloseRestock.addEventListener('click', () => toggleModal(restockModal, false));
     if (btnCancelRestock) btnCancelRestock.addEventListener('click', () => toggleModal(restockModal, false));
 
+    // Envío del formulario de registro de compra/entrada
     if (formRestock) {
       formRestock.addEventListener('submit', (e) => {
         e.preventDefault();
-        const itemId = restockItemSelect?.value;
-        const qty = parseFloat(document.getElementById('restockQuantity')?.value) || 0;
-        const cost = parseFloat(document.getElementById('restockCostQ')?.value) || 0;
-        const supplier = document.getElementById('restockSupplier')?.value || '';
-        const invoice = document.getElementById('restockInvoice')?.value || '';
-        const notes = document.getElementById('restockNotes')?.value || '';
+        const selectedValue = restockItemSelect?.value;
+        const isCustom = selectedValue === '__CUSTOM__';
 
-        inventoryStore.recordRestock({
-          itemId,
-          quantity: qty,
-          costTotalQ: cost,
-          supplier,
-          invoiceNumber: invoice,
-          notes,
-        });
+        const customName = document.getElementById('restockCustomName')?.value.trim();
+        const customCategory = document.getElementById('restockCustomCategory')?.value;
+        const customUnit = document.getElementById('restockCustomUnit')?.value;
+
+        if (isCustom && !customName) {
+          showInventoryToast('⚠️ Por favor ingresa el nombre del nuevo insumo.');
+          return;
+        }
+
+        const qty = parseFloat(document.getElementById('restockQuantity')?.value) || 0;
+        if (qty <= 0) {
+          showInventoryToast('⚠️ La cantidad ingresada debe ser mayor a 0.');
+          return;
+        }
+
+        const cost = parseFloat(document.getElementById('restockCostQ')?.value) || 0;
+        const supplier = document.getElementById('restockSupplier')?.value.trim() || '';
+        const invoice = document.getElementById('restockInvoice')?.value.trim() || '';
+        const notes = document.getElementById('restockNotes')?.value.trim() || '';
+
+        const critVal = document.getElementById('restockCriticalThreshold')?.value;
+        const optVal = document.getElementById('restockOptimalThreshold')?.value;
+        const minStockThreshold = critVal !== '' && !isNaN(parseFloat(critVal)) ? parseFloat(critVal) : undefined;
+        const optimalThreshold = optVal !== '' && !isNaN(parseFloat(optVal)) ? parseFloat(optVal) : undefined;
+
+        if (isCustom) {
+          inventoryStore.createItem({
+            name: customName,
+            category: customCategory,
+            unit: customUnit,
+            currentStock: qty,
+            minStockThreshold: minStockThreshold !== undefined ? minStockThreshold : 10,
+            optimalThreshold: optimalThreshold !== undefined ? optimalThreshold : (minStockThreshold ? minStockThreshold * 2 : 25),
+            unitCostQ: qty > 0 ? (cost / qty) : 0,
+            supplier,
+            invoiceNumber: invoice,
+            notes,
+          });
+        } else {
+          inventoryStore.recordRestock({
+            itemId: selectedValue,
+            quantity: qty,
+            costTotalQ: cost,
+            supplier,
+            invoiceNumber: invoice,
+            notes,
+            minStockThreshold,
+            optimalThreshold,
+          });
+        }
 
         formRestock.reset();
         toggleModal(restockModal, false);
+        showInventoryToast('✅ Factura e insumo registrados exitosamente.');
       });
     }
 
+    // Modal Ajuste Físico
     if (btnCloseAdjust) btnCloseAdjust.addEventListener('click', () => toggleModal(adjustModal, false));
     if (btnCancelAdjust) btnCancelAdjust.addEventListener('click', () => toggleModal(adjustModal, false));
 
@@ -386,6 +596,64 @@ export const inventoryView = {
 
         formAdjust.reset();
         toggleModal(adjustModal, false);
+        showInventoryToast('✅ Ajuste físico guardado en el inventario.');
+      });
+    }
+
+    // Modal Configuración de Alertas
+    if (btnCloseAlerts) btnCloseAlerts.addEventListener('click', () => toggleModal(alertsModal, false));
+    if (btnCancelAlerts) btnCancelAlerts.addEventListener('click', () => toggleModal(alertsModal, false));
+
+    if (formAlerts) {
+      formAlerts.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const itemId = document.getElementById('alertItemId')?.value;
+        const crit = parseFloat(document.getElementById('alertCriticalInput')?.value);
+        const opt = parseFloat(document.getElementById('alertOptimalInput')?.value);
+        const unitCostQ = parseFloat(document.getElementById('alertUnitCostInput')?.value);
+        const supplier = document.getElementById('alertSupplierInput')?.value.trim();
+
+        if (isNaN(crit) || crit < 0) {
+          showInventoryToast('⚠️ La cantidad crítica debe ser un número mayor o igual a 0.');
+          return;
+        }
+        if (isNaN(opt) || opt <= crit) {
+          showInventoryToast('⚠️ La cantidad óptima debe ser estrictamente mayor a la cantidad crítica.');
+          return;
+        }
+
+        inventoryStore.updateItemAlerts(itemId, {
+          minStockThreshold: crit,
+          optimalThreshold: opt,
+          unitCostQ: !isNaN(unitCostQ) ? unitCostQ : undefined,
+          supplier: supplier || undefined,
+        });
+
+        toggleModal(alertsModal, false);
+        showInventoryToast('✅ Umbrales de alerta configurados exitosamente.');
+      });
+    }
+
+    // Modal Eliminación de Insumo
+    if (btnCloseDelete) btnCloseDelete.addEventListener('click', () => toggleModal(deleteModal, false));
+    if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => toggleModal(deleteModal, false));
+
+    if (btnConfirmDelete) {
+      btnConfirmDelete.addEventListener('click', async () => {
+        const id = deleteInventoryItemId?.value;
+        if (!id) return;
+        try {
+          btnConfirmDelete.disabled = true;
+          btnConfirmDelete.textContent = '⏳ Eliminando...';
+          await inventoryStore.deleteItem(id);
+          showInventoryToast('✅ Insumo eliminado permanentemente de la base de datos.');
+          toggleModal(deleteModal, false);
+        } catch (err) {
+          showInventoryToast(`❌ Error al eliminar insumo: ${err.message || 'Error del servidor'}`);
+        } finally {
+          btnConfirmDelete.disabled = false;
+          btnConfirmDelete.textContent = 'Eliminar Permanentemente';
+        }
       });
     }
 
@@ -400,7 +668,7 @@ export const inventoryView = {
       }, 3500);
     }
 
-    // Exportación a CSV (Sin alterar dimensiones ni texto de los botones para evitar saltos visuales)
+    // Exportación a CSV
     if (btnExportCSV) {
       btnExportCSV.addEventListener('click', () => {
         try {
@@ -540,24 +808,35 @@ export const inventoryView = {
                 <div style="width: ${item.stockPercent}%; height: 100%; background: ${meta.color}; border-radius: var(--radius-full); transition: width 0.4s ease;"></div>
               </div>
 
-              <!-- Metadatos de Taller -->
-              <div style="font-size: 0.78rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
-                <div>Umbral Mínimo: <strong>${item.minThreshold} ${item.unit}</strong></div>
+              <!-- Metadatos de Taller con Alertas Configurables -->
+              <div style="font-size: 0.78rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 0.35rem 0.5rem; border-radius: 4px;">
+                  <span style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.7rem;">Alertas Configuradas:</span>
+                  <button type="button" class="btn-config-alerts" data-item-id="${item.id}" style="background: none; border: none; color: var(--cerulean); font-weight: 700; font-size: 0.75rem; cursor: pointer; padding: 0; text-decoration: underline;">
+                    ⚙️ Configurar
+                  </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; font-size: 0.75rem;">
+                  <div>🔴 Crítico: <strong>≤ ${item.minStockThreshold} ${item.unit}</strong></div>
+                  <div>🟢 Óptimo: <strong>≥ ${item.optimalThreshold} ${item.unit}</strong></div>
+                </div>
                 <div>Costo Ref: <strong>Q${item.costPerUnitQ.toFixed(2)} / ${item.unit}</strong></div>
-                <div>Proveedor: <span style="color: var(--text-primary);">${item.supplier}</span></div>
-                <div>Ubicación: <span style="color: var(--text-muted);">${item.location}</span></div>
+                <div>Proveedor: <span style="color: var(--text-primary);">${item.supplier || 'No asignado'}</span></div>
               </div>
             </div>
 
-            <!-- Botones de Acción Táctiles (44px) -->
-            <div style="display: flex; gap: 0.5rem;">
-              <button type="button" class="btn btn-secondary btn-quick-restock" data-item-id="${item.id}" style="flex: 1; min-height: 44px; font-size: 0.82rem; padding: 0.4rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+            <!-- Botones de Acción Táctiles (44px mínimos) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 44px 44px; gap: 0.35rem; margin-top: auto;">
+              <button type="button" class="btn btn-secondary btn-quick-restock" data-item-id="${item.id}" style="min-height: 44px; font-size: 0.8rem; padding: 0.4rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;" title="Registrar Entrada">
                 <span>➕</span>
                 <span>Entrada</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-quick-adjust" data-item-id="${item.id}" style="flex: 1; min-height: 44px; font-size: 0.82rem; padding: 0.4rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+              <button type="button" class="btn btn-secondary btn-quick-adjust" data-item-id="${item.id}" style="min-height: 44px; font-size: 0.8rem; padding: 0.4rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;" title="Ajuste Físico de Stock">
                 <span>✏️</span>
                 <span>Ajuste</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-config-alerts" data-item-id="${item.id}" style="color: var(--cerulean); border-color: rgba(59, 130, 246, 0.3); min-height: 44px; min-width: 44px; padding: 0.4rem; display: flex; align-items: center; justify-content: center;" title="Configurar Alertas">
+                <span>⚙️</span>
               </button>
               <button type="button" class="btn btn-secondary btn-delete-inventory-item" data-item-id="${item.id}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); min-height: 44px; min-width: 44px; padding: 0.4rem; display: flex; align-items: center; justify-content: center;" title="Eliminar Insumo">
                 <span>🗑️</span>
@@ -571,9 +850,7 @@ export const inventoryView = {
       grid.querySelectorAll('.btn-quick-restock').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-item-id');
-          populateRestockSelect();
-          if (restockItemSelect) restockItemSelect.value = id;
-          updateRestockUnitLabel();
+          populateRestockSelect(id);
           toggleModal(restockModal, true);
         });
       });
@@ -592,6 +869,23 @@ export const inventoryView = {
         });
       });
 
+      grid.querySelectorAll('.btn-config-alerts').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-item-id');
+          const it = inventoryStore.getItemById(id);
+          if (!it) return;
+
+          document.getElementById('alertItemId').value = it.id;
+          document.getElementById('alertItemNameDisplay').textContent = it.name;
+          document.getElementById('alertCurrentStockDisplay').textContent = `Stock actual: ${it.currentStock.toFixed(1)} ${it.unit}`;
+          document.getElementById('alertCriticalInput').value = it.minStockThreshold !== undefined ? it.minStockThreshold : 10;
+          document.getElementById('alertOptimalInput').value = it.optimalThreshold !== undefined ? it.optimalThreshold : 25;
+          document.getElementById('alertUnitCostInput').value = it.costPerUnitQ || '';
+          document.getElementById('alertSupplierInput').value = it.supplier || '';
+          toggleModal(alertsModal, true);
+        });
+      });
+
       // Eliminar insumo con modal consistente
       grid.querySelectorAll('.btn-delete-inventory-item').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -600,7 +894,7 @@ export const inventoryView = {
           if (!it) return;
           if (deleteInventoryItemId) deleteInventoryItemId.value = id;
           if (deleteInventoryItemName) deleteInventoryItemName.textContent = it.name;
-          toggleModal(deleteInventoryModal, true);
+          toggleModal(deleteModal, true);
         });
       });
     }
@@ -686,6 +980,8 @@ export const inventoryView = {
       unsub();
       toggleModal(restockModal, false);
       toggleModal(adjustModal, false);
+      toggleModal(alertsModal, false);
+      toggleModal(deleteModal, false);
     };
   },
 };

@@ -392,4 +392,50 @@ describe('Inventory View — Interfaz de Control de Inventario y Stock de Taller
     expect(wrapper.className).toContain('orders-table-container');
     expect(wrapper.style.overflowX).toBe('auto');
   });
+
+  it('abre el modal de configuración de alertas de stock y actualiza los límites del insumo', () => {
+    const grid = document.getElementById('inventoryGrid');
+    const alertBtn = grid.querySelector('.btn-config-alerts[data-item-id="film_a"]');
+    expect(alertBtn).not.toBeNull();
+
+    alertBtn.click();
+    const modal = document.getElementById('configureAlertsModal');
+    expect(modal.style.display).toBe('block');
+
+    const critInput = document.getElementById('alertCriticalInput');
+    const optInput = document.getElementById('alertOptimalInput');
+    const costInput = document.getElementById('alertUnitCostInput');
+    const supplierInput = document.getElementById('alertSupplierInput');
+
+    critInput.value = '40';
+    optInput.value = '90';
+    costInput.value = '12.5';
+    supplierInput.value = 'Audley Express Guatemala';
+
+    const form = document.getElementById('formConfigureAlerts');
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+
+    expect(modal.style.display).toBe('none');
+
+    const updated = inventoryStore.getItemById('film_a');
+    expect(updated.minStockThreshold).toBe(40);
+    expect(updated.optimalThreshold).toBe(90);
+    expect(updated.costPerUnitQ).toBe(12.5);
+    expect(updated.supplier).toBe('Audley Express Guatemala');
+  });
+
+  it('abre el modal de confirmación de eliminación y elimina el insumo al confirmar', () => {
+    const grid = document.getElementById('inventoryGrid');
+    const deleteBtn = grid.querySelector('.btn-delete-inventory-item[data-item-id="cleaning_flush"]');
+    expect(deleteBtn).not.toBeNull();
+
+    deleteBtn.click();
+    const modal = document.getElementById('deleteInventoryModal');
+    expect(modal.style.display).toBe('block');
+
+    const confirmBtn = document.getElementById('btnConfirmDeleteInventory');
+    confirmBtn.click();
+
+    expect(inventoryStore.getItemById('cleaning_flush')).toBeNull();
+  });
 });

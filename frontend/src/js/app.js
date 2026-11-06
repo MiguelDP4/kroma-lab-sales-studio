@@ -711,6 +711,10 @@ function initNavbarRoleSync() {
 }
 
 export function initQuoter() {
+  if (typeof window !== 'undefined') {
+    window.__initQuoter = initQuoter;
+  }
+  if (typeof document === 'undefined') return;
   const widthInput = document.getElementById('stickerWidth');
   const heightInput = document.getElementById('stickerHeight');
   const qtyInput = document.getElementById('stickerQty');

@@ -28,6 +28,7 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  cart              Cart?
   paymentsRecorded  Payment[]
   kardexMovements   InventoryMovement[]
 }
@@ -95,6 +96,7 @@ model Order {
   paymentReceiptUrl      String?
   paymentReceiptFileName String?
 
+  items          OrderItem[]
   dispatchNotes  DispatchNote[]
   payments       Payment[]
 
@@ -132,6 +134,7 @@ model Quote {
   notes              String?
   source             String?  // "web", "whatsapp", "direct"
 
+  items              OrderItem[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -245,4 +248,44 @@ model WorkshopConfig {
   monthlyNetTargetQ     Float    @default(20000.0)
 
   updatedAt             DateTime @updatedAt
+}
+
+model Cart {
+  id         String      @id @default(cuid())
+  userId     String?     @unique
+  user       User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId  String?     @unique
+  items      OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model OrderItem {
+  id                 String    @id @default(cuid())
+  orderId            String?
+  order              Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quoteId            String?
+  quote              Quote?    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  cartId             String?
+  cart               Cart?     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  title              String
+  widthCm            Float
+  heightCm           Float
+  qty                Int
+  rotationDeg        Int       @default(0)
+  rows               Int       @default(1)
+  stickersPerRow     Int       @default(1)
+  includeCutting     Boolean   @default(false)
+
+  fileUrl            String?
+  fileName           String?
+  fileInfo           String?
+  previewUrl         String?
+  canvasSnapshot     String?
+  canvasSnapshotUrl  String?
+  actualLinearMeters Float     @default(0.0)
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }

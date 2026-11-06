@@ -378,9 +378,19 @@ class InventoryStore {
     }
     try {
       if (typeof apiClient !== 'undefined' && apiClient.inventory) {
-        const res = await apiClient.inventory.list();
-        if (res && res.success && Array.isArray(res.items)) {
-          if (!IS_TEST_ENV && res.items.length === 0) {
+        const [invRes, kardexRes] = await Promise.all([
+          apiClient.inventory.list().catch(err => {
+            console.warn('[InventoryStore] Error al listar inventario:', err);
+            return null;
+          }),
+          apiClient.inventory.listKardex().catch(err => {
+            console.warn('[InventoryStore] Error al listar kardex:', err);
+            return null;
+          }),
+        ]);
+
+        if (invRes && invRes.success && Array.isArray(invRes.items)) {
+          if (!IS_TEST_ENV && invRes.items.length === 0) {
             this.items = [];
             this.kardex = [];
             if (typeof window !== 'undefined' && window.localStorage) {
@@ -390,26 +400,59 @@ class InventoryStore {
             this._notify();
             return [];
           }
-          if (res.items.length > 0) {
-            res.items.forEach(backendItem => {
-              const codeLower = (backendItem.code || '').toLowerCase();
-              const local = this.items.find(i => 
-                i.id.toLowerCase() === codeLower || 
-                i.backendId === backendItem.id ||
-                codeLower.includes(i.id.toLowerCase()) ||
-                i.id.toLowerCase().includes(codeLower.replace(/_/g, ''))
-              );
-              if (local) {
-                local.backendId = backendItem.id;
-                local.currentStock = Number(backendItem.currentStock);
-                local.costPerUnitQ = Number(backendItem.unitCostQ);
-                local.minThreshold = Number(backendItem.minStockThreshold);
-              }
+
+          if (invRes.items.length > 0) {
+            this.items = invRes.items.map(bItem => {
+              const crit = Number(bItem.minStockThreshold !== undefined ? bItem.minStockThreshold : 10);
+              const optRatio = Number(bItem.optimalRatio || 1.5);
+              const opt = bItem.optimalThreshold !== undefined ? Number(bItem.optimalThreshold) : (crit * optRatio);
+              return {
+                id: bItem.code ? bItem.code.toLowerCase() : bItem.id,
+                backendId: bItem.id,
+                code: bItem.code,
+                name: bItem.name,
+                category: bItem.category || 'FILM',
+                unit: bItem.unit || 'm',
+                currentStock: Number(bItem.currentStock || 0),
+                minStockThreshold: crit,
+                minThreshold: crit,
+                optimalRatio: optRatio,
+                optimalThreshold: opt,
+                packageSize: crit > 0 ? crit * 2 : 100,
+                costPerUnitQ: Number(bItem.unitCostQ || 0),
+                supplier: bItem.supplier || '',
+                location: bItem.location || 'Taller Audley UV DTF',
+                lastRestockedAt: bItem.updatedAt || new Date().toISOString(),
+              };
             });
             this._save();
           }
-          return this.getItems();
         }
+
+        if (kardexRes && kardexRes.success && Array.isArray(kardexRes.movements)) {
+          this.kardex = kardexRes.movements.map(m => {
+            const qty = Number(m.qtyDelta || 0);
+            return {
+              id: m.movCode || m.id,
+              timestamp: m.createdAt || new Date().toISOString(),
+              itemId: m.item ? (m.item.code ? m.item.code.toLowerCase() : m.item.id) : m.itemId,
+              itemName: m.item ? m.item.name : 'Insumo UV DTF',
+              type: m.type,
+              quantity: qty,
+              unit: m.item?.unit || '',
+              previousStock: Number(m.newStock || 0) - qty,
+              newStock: Number(m.newStock || 0),
+              costTotalQ: Number(m.totalCostQ || 0),
+              supplier: m.notes?.includes('Proveedor: ') ? m.notes.replace('Proveedor: ', '') : '',
+              invoiceNumber: m.reference || 'S/N',
+              referenceOrderId: m.type === 'OUT_PRODUCTION' ? m.reference : null,
+              notes: m.notes || '',
+            };
+          });
+          this._save();
+        }
+
+        return this.getItems();
       }
     } catch (err) {
       if (!IS_TEST_ENV) {
@@ -481,20 +524,28 @@ class InventoryStore {
    */
   getItems() {
     return this.items.map(item => {
+      const criticalThreshold = Number(item.minStockThreshold !== undefined ? item.minStockThreshold : (item.minThreshold !== undefined ? item.minThreshold : 0));
+      const optimalThreshold = Number(item.optimalThreshold !== undefined ? item.optimalThreshold : (criticalThreshold * (item.optimalRatio || 1.5)));
+
       let status = STOCK_STATUS.OPTIMAL;
-      if (item.currentStock <= item.minThreshold) {
+      if (item.currentStock <= criticalThreshold) {
         status = STOCK_STATUS.CRITICAL;
-      } else if (item.currentStock <= item.minThreshold * 1.5) {
+      } else if (item.currentStock < optimalThreshold) {
         status = STOCK_STATUS.LOW;
+      } else {
+        status = STOCK_STATUS.OPTIMAL;
       }
 
-      // Porcentaje relativo respecto al doble del umbral mínimo o el tamaño del paquete
-      const maxReference = Math.max(item.packageSize * 2, item.minThreshold * 3);
-      const stockPercent = Math.min(100, Math.round((item.currentStock / maxReference) * 100));
+      // Porcentaje relativo respecto al umbral óptimo o doble de crítico
+      const maxReference = Math.max(optimalThreshold * 1.25, criticalThreshold * 2, 10);
+      const stockPercent = Math.min(100, Math.max(0, Math.round((item.currentStock / maxReference) * 100)));
       const totalValueQ = item.currentStock * item.costPerUnitQ;
 
       return {
         ...item,
+        minStockThreshold: criticalThreshold,
+        minThreshold: criticalThreshold,
+        optimalThreshold,
         status,
         statusMeta: STOCK_STATUS_META[status],
         stockPercent,
@@ -505,53 +556,197 @@ class InventoryStore {
 
   getItemById(id) {
     const enriched = this.getItems();
-    return enriched.find(it => it.id === id) || null;
+    return enriched.find(it => it.id === id || it.backendId === id) || null;
   }
 
   deleteItem(itemId) {
-    const idx = this.items.findIndex(it => it.id === itemId);
+    const item = this.items.find(it => it.id === itemId || it.backendId === itemId);
+    const targetId = item?.backendId || itemId;
+
+    const idx = this.items.findIndex(it => it.id === itemId || it.backendId === itemId);
     if (idx !== -1) {
       this.items.splice(idx, 1);
+      this.kardex = this.kardex.filter(m => m.itemId !== itemId && (!item || m.itemId !== item.id));
       this._save();
       this._notify();
+
+      if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.inventory && item?.backendId) {
+        apiClient.inventory.deleteItem(targetId).catch(err => {
+          console.warn('[InventoryStore] Error eliminando insumo en API:', err);
+        });
+      }
       return true;
     }
     return false;
   }
 
   /**
-   * Registra una compra o ingreso de insumos al taller (Entrada al Kardex).
+   * Crea un nuevo insumo en la base de datos y registra su inventario inicial.
+   */
+  createItem({
+    name,
+    category = 'FILM',
+    unit = 'm',
+    currentStock = 0,
+    minStockThreshold = 10,
+    optimalThreshold = 25,
+    unitCostQ = 0,
+    supplier = '',
+    invoiceNumber = '',
+    notes = '',
+  }) {
+    const id = `item_${Date.now()}`;
+    const newItem = {
+      id,
+      name,
+      category,
+      unit,
+      currentStock: Number(currentStock),
+      minStockThreshold: Number(minStockThreshold),
+      minThreshold: Number(minStockThreshold),
+      optimalThreshold: Number(optimalThreshold),
+      packageSize: Number(minStockThreshold) * 2 || 100,
+      costPerUnitQ: Number(unitCostQ),
+      supplier,
+      location: 'Taller Audley UV DTF',
+      lastRestockedAt: new Date().toISOString(),
+    };
+    this.items.push(newItem);
+
+    if (Number(currentStock) > 0) {
+      this.kardex.unshift({
+        id: `MOV-${Date.now().toString().slice(-6)}`,
+        timestamp: new Date().toISOString(),
+        itemId: id,
+        itemName: name,
+        type: 'IN_PURCHASE',
+        quantity: Number(currentStock),
+        unit,
+        previousStock: 0,
+        newStock: Number(currentStock),
+        costTotalQ: Number(currentStock) * Number(unitCostQ),
+        supplier,
+        invoiceNumber: invoiceNumber || 'S/N',
+        notes: notes || 'Alta inicial de insumo',
+      });
+    }
+    this._save();
+    this._notify();
+
+    if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.inventory) {
+      apiClient.inventory.createItem({
+        name,
+        category,
+        unit,
+        currentStock: Number(currentStock),
+        minStockThreshold: Number(minStockThreshold),
+        optimalThreshold: Number(optimalThreshold),
+        unitCostQ: Number(unitCostQ),
+        supplier,
+        invoiceNumber,
+        notes,
+      }).then(res => {
+        if (res?.item?.id) {
+          newItem.backendId = res.item.id;
+          this._save();
+        }
+      }).catch(err => {
+        console.warn('[InventoryStore] Error al crear insumo en API:', err);
+      });
+    }
+
+    return newItem;
+  }
+
+  /**
+   * Actualiza los umbrales de alerta crítica y óptima configurados por el usuario.
+   */
+  updateItemAlerts(itemId, { minStockThreshold, optimalThreshold, unitCostQ, supplier, name }) {
+    const item = this.items.find(it => it.id === itemId || it.backendId === itemId);
+    if (!item) return null;
+
+    if (minStockThreshold !== undefined) {
+      item.minStockThreshold = Number(minStockThreshold);
+      item.minThreshold = Number(minStockThreshold);
+    }
+    if (optimalThreshold !== undefined) item.optimalThreshold = Number(optimalThreshold);
+    if (unitCostQ !== undefined) item.costPerUnitQ = Number(unitCostQ);
+    if (supplier !== undefined) item.supplier = supplier;
+    if (name !== undefined) item.name = name;
+    this._save();
+    this._notify();
+
+    if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.inventory && item.backendId) {
+      const payload = {
+        minStockThreshold: item.minStockThreshold,
+        optimalThreshold: item.optimalThreshold,
+      };
+      if (item.costPerUnitQ !== undefined) payload.unitCostQ = item.costPerUnitQ;
+      if (item.supplier !== undefined) payload.supplier = item.supplier;
+      if (item.name !== undefined) payload.name = item.name;
+
+      apiClient.inventory.updateItem(item.backendId, payload).catch(err => {
+        console.warn('[InventoryStore] Error al actualizar alertas en API:', err);
+      });
+    }
+
+    return item;
+  }
+
+  /**
+   * Registra una compra o ingreso de insumos al taller (Entrada al Kardex con persistencia en API).
    */
   recordRestock({
     itemId,
+    name,
+    category,
+    unit,
     quantity,
     costTotalQ = 0,
     supplier = '',
     invoiceNumber = '',
     notes = '',
     date = null,
+    minStockThreshold,
+    optimalThreshold,
   }) {
-    let item = this.items.find(it => it.id === itemId);
+    let item = this.items.find(it => it.id === itemId || it.backendId === itemId);
+    const qty = Math.max(0, parseFloat(quantity) || 0);
+    if (qty <= 0) return null;
+    const costTotal = Math.max(0, parseFloat(costTotalQ) || 0);
+    const unitCost = qty > 0 && costTotal > 0 ? (costTotal / qty) : (item ? item.costPerUnitQ : 0);
+
     if (!item) {
       const template = PRODUCTION_SUPPLIES_CATALOG.find(s => s.id === itemId);
-      if (!template) return null;
+      if (!template && !name) return null;
       item = {
-        ...template,
+        id: itemId,
+        name: name || (template ? template.name : itemId),
+        category: category || (template ? template.category : 'FILM'),
+        unit: unit || (template ? template.unit : 'm'),
         currentStock: 0,
+        minStockThreshold: minStockThreshold !== undefined ? Number(minStockThreshold) : 10,
+        minThreshold: minStockThreshold !== undefined ? Number(minStockThreshold) : 10,
+        optimalThreshold: optimalThreshold !== undefined ? Number(optimalThreshold) : 25,
+        packageSize: minStockThreshold !== undefined ? Number(minStockThreshold) * 2 : 100,
+        costPerUnitQ: unitCost,
         supplier: supplier || '',
-        location: template.location || 'Taller Audley',
+        location: 'Taller Audley UV DTF',
         lastRestockedAt: date || new Date().toISOString(),
       };
       this.items.push(item);
     }
 
-    const qty = Math.max(0, parseFloat(quantity) || 0);
-    if (qty <= 0) return null;
-
     const previousStock = item.currentStock;
     item.currentStock += qty;
     item.lastRestockedAt = date || new Date().toISOString();
     if (supplier) item.supplier = supplier;
+    if (unitCost > 0) item.costPerUnitQ = unitCost;
+    if (minStockThreshold !== undefined) {
+      item.minStockThreshold = Number(minStockThreshold);
+      item.minThreshold = Number(minStockThreshold);
+    }
+    if (optimalThreshold !== undefined) item.optimalThreshold = Number(optimalThreshold);
 
     const movement = {
       id: `MOV-${Date.now().toString().slice(-6)}`,
@@ -563,23 +758,57 @@ class InventoryStore {
       unit: item.unit,
       previousStock,
       newStock: item.currentStock,
-      costTotalQ: parseFloat(costTotalQ) || (qty * item.costPerUnitQ),
+      costTotalQ: costTotal || (qty * item.costPerUnitQ),
       supplier: supplier || item.supplier,
       invoiceNumber: invoiceNumber || 'S/N',
       notes: notes || 'Reabastecimiento de insumo en taller',
     };
 
     this.kardex.unshift(movement);
+    this._save();
     this._notify();
 
-    if (typeof apiClient !== 'undefined' && apiClient.inventory && item.backendId) {
-      apiClient.inventory.recordRestock({
-        itemId: item.backendId,
-        quantity: qty,
-        unitCostQ: item.costPerUnitQ,
-        reference: invoiceNumber || supplier || 'S/N',
-        notes: notes || 'Reabastecimiento de insumo en taller',
-      }).catch(() => {});
+    if (typeof apiClient !== 'undefined' && apiClient.inventory) {
+      if (!item.backendId) {
+        if (!IS_TEST_ENV) {
+          apiClient.inventory.createItem({
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            currentStock: item.currentStock,
+            minStockThreshold: item.minStockThreshold,
+            optimalThreshold: item.optimalThreshold,
+            unitCostQ: item.costPerUnitQ,
+            supplier: item.supplier,
+            invoiceNumber: movement.invoiceNumber,
+            notes: movement.notes,
+          }).then(res => {
+            if (res?.item?.id) {
+              item.backendId = res.item.id;
+              this._save();
+            }
+          }).catch(err => {
+            console.warn('[InventoryStore] Error creando insumo en API:', err);
+          });
+        }
+      } else {
+        apiClient.inventory.recordRestock({
+          itemId: item.backendId,
+          quantity: qty,
+          unitCostQ: item.costPerUnitQ,
+          reference: invoiceNumber || supplier || 'S/N',
+          notes: notes || 'Reabastecimiento de insumo en taller',
+        }).catch(() => {});
+
+        if (minStockThreshold !== undefined || optimalThreshold !== undefined) {
+          apiClient.inventory.updateItem(item.backendId, {
+            minStockThreshold: item.minStockThreshold,
+            optimalThreshold: item.optimalThreshold,
+            unitCostQ: item.costPerUnitQ,
+            supplier: item.supplier,
+          }).catch(() => {});
+        }
+      }
     }
 
     return movement;
@@ -595,7 +824,7 @@ class InventoryStore {
     notes = '',
     date = null,
   }) {
-    const item = this.items.find(it => it.id === itemId);
+    const item = this.items.find(it => it.id === itemId || it.backendId === itemId);
     if (!item) return null;
 
     const stock = Math.max(0, parseFloat(newStock) || 0);
@@ -621,6 +850,7 @@ class InventoryStore {
     };
 
     this.kardex.unshift(movement);
+    this._save();
     this._notify();
 
     if (typeof apiClient !== 'undefined' && apiClient.inventory && item.backendId) {
@@ -794,6 +1024,7 @@ class InventoryStore {
       const matchesQuery = !q ||
         m.itemName.toLowerCase().includes(q) ||
         (m.referenceOrderId && m.referenceOrderId.toLowerCase().includes(q)) ||
+        (m.invoiceNumber && m.invoiceNumber.toLowerCase().includes(q)) ||
         (m.notes && m.notes.toLowerCase().includes(q)) ||
         (m.supplier && m.supplier.toLowerCase().includes(q));
 

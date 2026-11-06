@@ -711,8 +711,11 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 | **Despacho** | `GET /api/dispatch` | Listado de remisiones de taller y hojas de despacho |
 | **Despacho** | `POST /api/dispatch` | Emisión de nueva remisión con folio `REM-YYYY-XXX` |
 | **Despacho** | `PUT /api/dispatch/:id/status` | Actualización logística (al marcar `DELIVERED`, la orden pasa a `COMPLETED`) |
-| **Inventario** | `GET /api/inventory` | Existencias de insumos UV DTF y semáforo de criticidad |
-| **Inventario** | `POST /api/inventory/restock` | Registro de compra y entrada `IN_PURCHASE` en Kardex |
+| **Inventario** | `GET /api/inventory` | Existencias de insumos UV DTF y semáforo de criticidad configurable |
+| **Inventario** | `POST /api/inventory` | Creación de nuevo insumo personalizado con inventario inicial y alertas configurables |
+| **Inventario** | `PUT /api/inventory/:id` | Modificación de umbrales de stock crítico (🔴), óptimo (🟢), costos y proveedor |
+| **Inventario** | `DELETE /api/inventory/:id` | Eliminación permanente de insumo del taller y su histórico de movimientos |
+| **Inventario** | `POST /api/inventory/restock` | Registro de compra / factura y entrada `IN_PURCHASE` en Kardex |
 | **Inventario** | `POST /api/inventory/adjust` | Ajuste de merma/calibración y entrada `ADJUSTMENT` en Kardex |
 | **Inventario** | `GET /api/inventory/kardex` | Histórico inmutable de movimientos de insumos |
 | **Cobranza** | `GET /api/receivables` | Cuentas por cobrar con clasificación de antigüedad (0-7d, 8-15d, >15d) |
@@ -769,8 +772,11 @@ Se completó la migración de datos mock a persistencia real mediante una capa d
    * Método `syncWithApi()`: mapea clientes de cartera (`GET /api/customers`) con expediente 360°, clasificación de tiers (`VIP`, `RECURRENTE`, `NUEVO`) y sectores guatemaltecos.
    * `createClient()` y `updateClient()`: emiten mutaciones a `POST /api/customers` y `PUT /api/customers/:id`.
 4. **`inventoryStore` (`inventory-store.js`):**
-   * Método `syncWithApi()`: consulta `GET /api/inventory` para sincronizar existencias de los 7 insumos clave de la Audley (Film A, Film B, CMYK, Blanco, Barniz 3D, Navajas, Solvente).
-   * `recordRestock()` y `recordManualAdjustment()`: emiten `POST /api/inventory/restock` y `POST /api/inventory/adjust` registrando movimientos formales en el Kardex.
+   * Método `syncWithApi()`: consulta simultáneamente `GET /api/inventory` y `GET /api/inventory/kardex` para sincronizar existencias de los insumos de taller y movimientos del Kardex con la base de datos real.
+   * `createItem()`: emite `POST /api/inventory` para dar de alta insumos personalizados con stock inicial y umbrales configurables.
+   * `updateItemAlerts()`: emite `PUT /api/inventory/:id` permitiendo al usuario definir exactamente las cantidades para stock Crítico (🔴) y Óptimo (🟢).
+   * `recordRestock()` y `recordManualAdjustment()`: emiten `POST /api/inventory/restock` y `POST /api/inventory/adjust` registrando compras/facturas y conteos físicos en el Kardex.
+   * `deleteItem()`: emite `DELETE /api/inventory/:id` eliminando de forma segura el insumo y sus movimientos asociados.
 5. **`receivablesStore` (`receivables-store.js`):**
    * Método `syncWithApi()`: consulta `GET /api/receivables/payments` para sincronizar cobros y abonos bancarios conciliados.
    * `recordPayment()` y `deletePayment()`: ejecutan `POST /api/receivables/payments` y `DELETE /api/receivables/payments/:id` con amortización y restitución automática de deuda de orden.

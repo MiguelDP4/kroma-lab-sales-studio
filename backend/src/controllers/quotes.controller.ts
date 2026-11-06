@@ -78,12 +78,12 @@ export async function listQuotes(req: AuthenticatedRequest, res: Response, next:
     if (search && search.trim()) {
       const q = search.trim();
       searchConditions.push(
-        { code: { contains: q, mode: 'insensitive' } },
-        { projectName: { contains: q, mode: 'insensitive' } },
-        { leadName: { contains: q, mode: 'insensitive' } },
-        { leadPhone: { contains: q, mode: 'insensitive' } },
-        { leadEmail: { contains: q, mode: 'insensitive' } },
-        { companyName: { contains: q, mode: 'insensitive' } },
+        { code: { contains: q } },
+        { projectName: { contains: q } },
+        { leadName: { contains: q } },
+        { leadPhone: { contains: q } },
+        { leadEmail: { contains: q } },
+        { companyName: { contains: q } },
       );
     }
 
@@ -94,7 +94,7 @@ export async function listQuotes(req: AuthenticatedRequest, res: Response, next:
         select: { customerId: true, email: true },
       });
       const customerConditions: any[] = [
-        { leadEmail: { equals: req.user.email, mode: 'insensitive' } },
+        { leadEmail: { equals: req.user.email } },
       ];
       if (dbUser?.customerId) {
         const customer = await prisma.customer.findUnique({
@@ -102,7 +102,7 @@ export async function listQuotes(req: AuthenticatedRequest, res: Response, next:
           select: { email: true },
         });
         if (customer?.email && customer.email.toLowerCase() !== req.user.email.toLowerCase()) {
-          customerConditions.push({ leadEmail: { equals: customer.email, mode: 'insensitive' } });
+          customerConditions.push({ leadEmail: { equals: customer.email } });
         }
       }
 

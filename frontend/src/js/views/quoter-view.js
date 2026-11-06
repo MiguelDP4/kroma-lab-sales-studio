@@ -2,8 +2,6 @@
  * Vista Principal: Hero + Cotizador Interactivo UV DTF + Simulador de Bobina
  */
 
-import { initQuoter } from '../app.js';
-
 export const quoterView = {
   path: '/',
   name: 'quoter',
@@ -262,6 +260,14 @@ export const quoterView = {
     </section>
   `,
   onMount: () => {
-    initQuoter();
+    if (typeof window !== 'undefined' && typeof window.__initQuoter === 'function') {
+      window.__initQuoter();
+    } else if (typeof document !== 'undefined') {
+      import('../app.js').then(m => {
+        if (typeof document !== 'undefined' && m.initQuoter) {
+          m.initQuoter();
+        }
+      });
+    }
   }
 };

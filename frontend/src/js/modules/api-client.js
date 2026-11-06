@@ -362,6 +362,23 @@ export class ApiClient {
     list: async () => {
       return this._request('/inventory');
     },
+    createItem: async (data) => {
+      return this._request('/inventory', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    updateItem: async (id, data) => {
+      return this._request(`/inventory/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    deleteItem: async (id) => {
+      return this._request(`/inventory/${id}`, {
+        method: 'DELETE',
+      });
+    },
     recordRestock: async (data) => {
       return this._request('/inventory/restock', {
         method: 'POST',

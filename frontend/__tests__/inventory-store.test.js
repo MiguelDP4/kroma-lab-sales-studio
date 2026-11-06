@@ -253,4 +253,80 @@ describe('Inventory Store — Almacén Reactivo de Insumos UV DTF', () => {
       }).not.toThrow();
     });
   });
+
+  describe('createItem, updateItemAlerts y deleteItem — Gestión Dinámica y Alertas Configurables', () => {
+    it('permite crear un nuevo insumo con stock inicial y lo agrega al inventario y kardex', () => {
+      const newItem = inventoryStore.createItem({
+        name: 'Film DTF Glitter Dorado',
+        category: 'FILM',
+        unit: 'm',
+        currentStock: 50,
+        minStockThreshold: 15,
+        optimalThreshold: 40,
+        unitCostQ: 18.5,
+        supplier: 'DTF Supplies GT',
+        invoiceNumber: 'FAC-7788',
+        notes: 'Insumo especial premium',
+      });
+
+      expect(newItem).toBeDefined();
+      expect(newItem.name).toBe('Film DTF Glitter Dorado');
+      expect(newItem.currentStock).toBe(50);
+      expect(newItem.minStockThreshold).toBe(15);
+      expect(newItem.optimalThreshold).toBe(40);
+
+      const found = inventoryStore.getItemById(newItem.id);
+      expect(found).not.toBeNull();
+      expect(found.status).toBe(STOCK_STATUS.OPTIMAL);
+
+      const movements = inventoryStore.getKardexMovements({ search: 'FAC-7788' });
+      expect(movements.length).toBeGreaterThan(0);
+      expect(movements[0].itemName).toBe('Film DTF Glitter Dorado');
+      expect(movements[0].quantity).toBe(50);
+    });
+
+    it('permite actualizar los umbrales configurables de alerta crítica y óptima', () => {
+      const item = inventoryStore.getItemById('film_a');
+      expect(item).not.toBeNull();
+
+      const updated = inventoryStore.updateItemAlerts('film_a', {
+        minStockThreshold: 50,
+        optimalThreshold: 100,
+        unitCostQ: 8.5,
+        supplier: 'Audley Direct GT',
+      });
+
+      expect(updated.minStockThreshold).toBe(50);
+      expect(updated.optimalThreshold).toBe(100);
+      expect(updated.costPerUnitQ).toBe(8.5);
+      expect(updated.supplier).toBe('Audley Direct GT');
+
+      // Si el stock actual es 185m y el óptimo es 100, sigue en OPTIMAL
+      const enriched = inventoryStore.getItemById('film_a');
+      expect(enriched.optimalThreshold).toBe(100);
+      expect(enriched.minStockThreshold).toBe(50);
+
+      // Si bajamos el stock a 60 (entre 50 y 100), debe pasar a LOW
+      enriched.currentStock = 60;
+      inventoryStore.items = [enriched];
+      expect(inventoryStore.getItemById('film_a').status).toBe(STOCK_STATUS.LOW);
+
+      // Si bajamos el stock a 40 (<= 50), debe pasar a CRITICAL
+      enriched.currentStock = 40;
+      inventoryStore.items = [enriched];
+      expect(inventoryStore.getItemById('film_a').status).toBe(STOCK_STATUS.CRITICAL);
+    });
+
+    it('elimina un insumo del almacén y limpia sus movimientos asociados', () => {
+      const initialCount = inventoryStore.getItems().length;
+      const res = inventoryStore.deleteItem('cleaning_flush');
+
+      expect(res).toBe(true);
+      expect(inventoryStore.getItemById('cleaning_flush')).toBeNull();
+      expect(inventoryStore.getItems().length).toBe(initialCount - 1);
+
+      // Eliminar ID inexistente retorna false
+      expect(inventoryStore.deleteItem('non_existent')).toBe(false);
+    });
+  });
 });
