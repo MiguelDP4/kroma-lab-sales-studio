@@ -4,13 +4,12 @@ Plataforma web híbrida B2B de ventas, cotizador interactivo en tiempo real y si
 
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vanilla JS](https://img.shields.io/badge/Frontend-Vanilla_ES_Modules-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/)
-[![Prisma ORM](https://img.shields.io/badge/ORM-Prisma_6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_Neon-4169E1?logo=postgresql&logoColor=white)](https://neon.tech/)
-[![Cloudflare Pages](https://img.shields.io/badge/Hosting-Cloudflare_Pages-F38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)
-[![Cloudflare R2](https://img.shields.io/badge/Storage-Cloudflare_R2_%240_Egress-F38020?logo=cloudflare&logoColor=white)](https://www.cloudflare.com/products/r2/)
-[![Playwright E2E](https://img.shields.io/badge/E2E-Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
-[![Vitest](https://img.shields.io/badge/Testing-Vitest_%3E85%25-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vanilla JS](https://img.shields.io/badge/Frontend-Vanilla_JS-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/)
+[![Prisma ORM](https://img.shields.io/badge/ORM-Prisma-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://neon.tech/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages_%26_R2-F38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)
+[![Playwright](https://img.shields.io/badge/E2E-Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-Passing-2EA44F?logo=vitest&logoColor=white)](https://vitest.dev/)
 
 ---
 
