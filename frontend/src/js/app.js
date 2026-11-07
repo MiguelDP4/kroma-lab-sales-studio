@@ -1478,7 +1478,7 @@ export function renderQuoteResults(quote) {
 
     if (quote.totalPriceQ >= dep) {
       if (progressBar) progressBar.style.width = '100%';
-      incentiveEl.innerHTML = '🎉 <strong>¡Felicidades!</strong> Esta cotización califica para <strong>Envío GRATIS</strong> en todo el país.';
+      incentiveEl.innerHTML = '🎉 Esta cotización califica para <strong>Envío GRATIS</strong> en todo el país.';
     } else if (quote.totalPriceQ >= cap) {
       const pct = Math.min(100, Math.round((quote.totalPriceQ / dep) * 100));
       if (progressBar) progressBar.style.width = `${pct}%`;

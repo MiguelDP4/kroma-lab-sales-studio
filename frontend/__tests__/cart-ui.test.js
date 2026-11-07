@@ -963,18 +963,18 @@ describe('Cart UI — Componentes de Carrito y Checkout', () => {
       delete window.router;
     });
 
-    it('renderiza badges de envío gratis en el Cart Drawer según escalas (>= Q600, >= Q400, < Q400)', () => {
+    it('renderiza badges de envío gratis en el Cart Drawer según escalas (>= Q1000 interior, >= Q575 capital, < Q575)', () => {
       const mockItem = [{ id: '1', title: 'Sticker', widthCm: 5, heightCm: 5, qty: 50, actualLinearMeters: 1 }];
       
-      // Escala 1: Q650
-      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 5, tierRate: 115, materialTotalQ: 650, grandTotalQ: 650 });
+      // Escala 1: Q1050 (Nacional / Todo el país)
+      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 10, tierRate: 105, materialTotalQ: 1050, grandTotalQ: 1050 });
       expect(document.getElementById('cartDrawerContainer').textContent).toContain('todo el país');
 
-      // Escala 2: Q450
-      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 3, tierRate: 125, materialTotalQ: 450, grandTotalQ: 450 });
+      // Escala 2: Q650 (Envío gratis solo en Capital)
+      renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 5, tierRate: 115, materialTotalQ: 650, grandTotalQ: 650 });
       expect(document.getElementById('cartDrawerContainer').textContent).toContain('Envío GRATIS en Capital');
 
-      // Escala 3: Q200
+      // Escala 3: Q200 (Falta para Capital)
       renderCartDrawer(mockItem, { items: mockItem, totalBillableMeters: 1.5, tierRate: 150, materialTotalQ: 200, grandTotalQ: 200 });
       expect(document.getElementById('cartDrawerContainer').textContent).toContain('para Envío GRATIS en Capital');
     });
