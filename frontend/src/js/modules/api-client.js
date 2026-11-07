@@ -523,6 +523,21 @@ export class ApiClient {
     },
   };
 
+  // --- Parámetros y Configuración del Sistema (SystemSetting) ---
+  settings = {
+    getShippingSettings: async () => {
+      return this._request('/settings/shipping');
+    },
+    getAll: async () => {
+      return this._request('/settings');
+    },
+    update: async (settingsData) => {
+      return this._request('/settings', {
+        method: 'PUT',
+        body: JSON.stringify(settingsData),
+      });
+    },
+  };
 }
 
 export const apiClient = new ApiClient();

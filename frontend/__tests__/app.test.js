@@ -344,11 +344,11 @@ describe('App — Inicialización y DOM', () => {
       expect(document.getElementById('minimumNotice').style.display).toBe('block');
 
       // Probar incentivos dinámicos de envío gratis
-      mockQuote.totalPriceQ = 650;
+      mockQuote.totalPriceQ = 1050;
       renderQuoteResults(mockQuote);
       expect(document.getElementById('quoterShippingIncentiveText').textContent).toContain('todo el país');
 
-      mockQuote.totalPriceQ = 450;
+      mockQuote.totalPriceQ = 650;
       renderQuoteResults(mockQuote);
       expect(document.getElementById('quoterShippingIncentiveText').textContent).toContain('Envío GRATIS en Capital');
 

@@ -319,6 +319,7 @@ kroma-lab-sales-studio/
     * `/reportes`: `reportsView` (`EMPLOYEE`, `ADMIN`)
     * `/rentabilidad`: `profitabilityView` (`EMPLOYEE`, `ADMIN`)
     * `/usuarios`: `usersView` (`ADMIN`)
+    * `/settings` y `/configuracion`: `settingsView` (`ADMIN`) — Panel exclusivo en Sidebar Drawer para gestión de parámetros clave-valor (`SystemSetting`) y umbrales de flete gratuito.
     * `/software`, `/spot-studio`, `/preprensa`: `softwareView` (`VISITOR`, `CUSTOMER`, `EMPLOYEE`, `ADMIN`)
 * **Carrito de Compras Multidiseño (`cart-store.js` + `cart-engine.js` + `cart-drawer.js`):**
   * Permite al cliente acumular múltiples piezas y medidas en un solo pedido.
@@ -684,6 +685,7 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 5. **`InventoryItem` & `InventoryMovement`:** Catálogo de 7 insumos industriales para la Audley (Film A, Film B, CMYK, Blanco, Barniz 3D, Navajas, Solvente), semáforo de existencias (Óptimo, Bajo, Crítico) y Kardex inmutable.
 6. **`Payment`:** Transacciones de abono y liquidación (`PAY-YYYY-XXX`), métodos de pago parametrizados, conciliación de cuentas bancarias (BI, BAC, Banrural) y recálculo automático de deuda.
 7. **`WorkshopConfig`:** Parámetros maestros de la máquina Audley (ancho imprimible 28.00 cm, ancho bobina 30.00 cm), escalas de tarifas por metro lineal (Q130, Q120, Q115, Q105, Q95), cuentas bancarias y meta mensual.
+8. **`SystemSetting`:** Tabla clave-valor (`key: String @id`, `value: String`, `updatedAt: DateTime`, `createdAt: DateTime`) para almacenar configuraciones operativas dinámicas y extensibles del sistema. Inicializada mediante seeding idempotente con `FREE_SHIPPING_THRESHOLD` (Q575 para Ciudad de Guatemala, equivalente a ~5 metros lineales) y `FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL` (Q1,000 para Departamentos / Interior, equivalente a ~10 metros lineales).
 
 ### Catálogo de Endpoints REST (`/api/*`)
 
@@ -729,6 +731,9 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 | **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización y sus `OrderItem` asociados. **Requiere autenticación**: Propietario o Staff. Retorna 403 Forbidden ante cotizaciones ajenas. |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
+| **Configuración** | `GET /api/settings/shipping` | Lectura pública de umbrales dinámicos de envío gratis para el cotizador (`capital`, `interior`) |
+| **Configuración** | `GET /api/settings` | Listado completo de parámetros clave-valor del sistema (`ADMIN`) |
+| **Configuración** | `PUT /api/settings` | Actualización idempotente de parámetros del sistema mediante arreglo o mapa de claves (`ADMIN`) |
 | **Almacenamiento** | `GET /api/storage/status` | Estado operativo de almacenamiento (R2 o fallback local) y límites |
 | **Almacenamiento** | `POST /api/storage/presigned-url` | Generación de Pre-signed URL S3 (`PUT`) para subida directa cliente a R2 |
 | **Almacenamiento** | `POST /api/storage/confirm-upload` | Confirmación y vinculación de asset a `Order` o `Quote` |

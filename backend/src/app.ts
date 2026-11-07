@@ -12,6 +12,7 @@ import workshopRoutes from './routes/workshop.routes';
 import quotesRoutes from './routes/quotes.routes';
 import storageRoutes from './routes/storage.routes';
 import cartRoutes from './routes/cart.routes';
+import settingsRoutes from './routes/settings.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { prisma } from './db/prisma';
 
@@ -78,6 +79,7 @@ export function createApp(): Express {
   app.use('/api/quotes', quotesRoutes);
   app.use('/api/storage', storageRoutes);
   app.use('/api/cart', cartRoutes);
+  app.use('/api/settings', settingsRoutes);
 
   // Manejador centralizado de errores
   app.use(errorHandler);

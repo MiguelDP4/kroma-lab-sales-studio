@@ -234,7 +234,7 @@ export const quoterView = {
                   <div class="shipping-progress-fill" id="quoterShippingProgressBar" style="width: 25%;"></div>
                 </div>
                 <div class="shipping-progress-text">
-                  <span id="quoterShippingIncentiveText">¡Envío GRATIS en pedidos desde Q400 en Capital y Q600 en Departamentos!</span>
+                  <span id="quoterShippingIncentiveText">¡Envío GRATIS en pedidos desde Q575 en Capital y Q1000 en Departamentos!</span>
                 </div>
               </div>
             </div>

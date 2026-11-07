@@ -133,28 +133,28 @@ describe('Quoter Engine — Cálculo Integral de Pedido', () => {
   });
 
   describe('Políticas de Envío Gratis (checkFreeShippingEligibility)', () => {
-    it('evalúa envío gratis en Capital a partir de Q400', () => {
+    it('evalúa envío gratis en Capital a partir de Q575', () => {
       const under = checkFreeShippingEligibility(350, 'capital');
       expect(under.isEligible).toBe(false);
-      expect(under.threshold).toBe(400);
-      expect(under.missingQ).toBe(50);
+      expect(under.threshold).toBe(575);
+      expect(under.missingQ).toBe(225);
 
-      const exact = checkFreeShippingEligibility(400, 'capital');
+      const exact = checkFreeShippingEligibility(575, 'capital');
       expect(exact.isEligible).toBe(true);
       expect(exact.missingQ).toBe(0);
 
-      const over = checkFreeShippingEligibility(550, 'capital');
+      const over = checkFreeShippingEligibility(650, 'capital');
       expect(over.isEligible).toBe(true);
       expect(over.missingQ).toBe(0);
     });
 
-    it('evalúa envío gratis a Departamentos/Interior a partir de Q600', () => {
-      const under = checkFreeShippingEligibility(550, 'interior');
+    it('evalúa envío gratis a Departamentos/Interior a partir de Q1000', () => {
+      const under = checkFreeShippingEligibility(850, 'interior');
       expect(under.isEligible).toBe(false);
-      expect(under.threshold).toBe(600);
-      expect(under.missingQ).toBe(50);
+      expect(under.threshold).toBe(1000);
+      expect(under.missingQ).toBe(150);
 
-      const exact = checkFreeShippingEligibility(600, 'interior');
+      const exact = checkFreeShippingEligibility(1000, 'interior');
       expect(exact.isEligible).toBe(true);
       expect(exact.missingQ).toBe(0);
     });

@@ -35,6 +35,23 @@ export async function seedDatabase() {
     },
   });
 
+  // 1.1 Configuración de Parámetros del Sistema (SystemSetting - Idempotente por clave)
+  const defaultSettings = [
+    { key: 'FREE_SHIPPING_THRESHOLD', value: '575' },
+    { key: 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL', value: '1000' },
+  ];
+
+  for (const setting of defaultSettings) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: {
+        key: setting.key,
+        value: setting.value,
+      },
+    });
+  }
+
   // 2. Insumos de Inventario de Taller UV DTF (7 insumos clave)
   const items = [
     {

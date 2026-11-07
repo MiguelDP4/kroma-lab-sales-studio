@@ -244,6 +244,9 @@ async function runFullQASuite() {
     const shippingBanner = await page.$('#quoterShippingPolicyBanner');
     assert(shippingBanner !== null, 'Banner informativo de política de envíos en Guatemala visible');
 
+    const incentiveText = await page.$eval('#quoterShippingIncentiveText', (el) => el.textContent.trim());
+    assert(incentiveText.includes('Q575') || incentiveText.includes('Q1000') || incentiveText.includes('Capital'), 'Texto de incentivo de envío gratis configurado correctamente');
+
     // 5. Enlace comercial a WhatsApp
     const btnQuoteWhatsApp = await page.$('#btnQuoteWhatsApp');
     assert(btnQuoteWhatsApp !== null, 'Botón de consulta rápida por WhatsApp comercial disponible');
@@ -632,6 +635,37 @@ async function runFullQASuite() {
     assert(usersMounted, 'Panel de Administración de Usuarios y Matriz de Roles (Admin/Employee) montado');
 
     await page.screenshot({ path: path.join(QA_RESULTS_DIR, 'qa-10-users-view.png'), fullPage: true });
+
+    // ==========================================================================
+    // FASE 14.1: CONFIGURACIÓN DEL SISTEMA (/settings - SOLO ADMIN)
+    // ==========================================================================
+    console.log('\n======================================================');
+    console.log('⚙️ FASE 14.1: Configuración del Sistema & Umbrales de Envío (/settings)');
+    console.log('======================================================');
+
+    // Verificar que el enlace está en el sidebar y NO en el topbar
+    const sidebarLinkExists = await page.evaluate(() => {
+      const sidebarLink = document.querySelector('#navRoleLinks a[href="/settings"]');
+      return !!sidebarLink;
+    });
+    assert(sidebarLinkExists, 'Enlace a Configuración visible en el Sidebar Drawer para rol ADMIN');
+
+    const topbarLinkExists = await page.evaluate(() => {
+      const topbarLink = document.querySelector('.navbar a[href="/settings"]');
+      return !!topbarLink;
+    });
+    assert(!topbarLinkExists, 'Topbar despejado: el enlace a Configuración NO está en la barra superior');
+
+    await page.evaluate(() => window.router.navigate('/settings'));
+    await page.waitForSelector('#setting_input_FREE_SHIPPING_THRESHOLD', { timeout: 6000 }).catch(() => null);
+
+    const settingsMounted = await page.evaluate(() => {
+      return document.body.innerHTML.includes('Configuración del Sistema') &&
+             document.body.innerHTML.includes('FREE_SHIPPING_THRESHOLD');
+    });
+    assert(settingsMounted, 'Vista de Configuración montada con tabla de parámetros (SystemSetting)');
+
+    await page.screenshot({ path: path.join(QA_RESULTS_DIR, 'qa-10b-settings-view.png'), fullPage: true });
 
     // ==========================================================================
     // FASE 15: CONFIGURACIÓN DE CUENTA Y PERFIL (/cuenta)

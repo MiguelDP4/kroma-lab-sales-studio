@@ -38,6 +38,7 @@ import { quotesView } from './views/quotes-view.js';
 import { softwareView } from './views/software-view.js';
 import { accountView } from './views/account-view.js';
 import { verifyEmailView } from './views/verify-email-view.js';
+import { settingsView } from './views/settings-view.js';
 
 export const routes = [
   quoterView,
@@ -56,10 +57,11 @@ export const routes = [
   dispatchView,
   { ...dispatchView, path: '/remisiones' },
   usersView,
+  settingsView,
+  { ...settingsView, path: '/configuracion' },
   accountView,
   { ...accountView, path: '/cuenta' },
   { ...accountView, path: '/perfil' },
-  { ...accountView, path: '/configuracion' },
   verifyEmailView,
   { ...verifyEmailView, path: '/confirmar-correo' },
   softwareView,
@@ -350,6 +352,7 @@ export function initApp() {
   initPrintListeners();
   router.init();
   initBackendSync();
+  loadDynamicShippingSettings();
 }
 
 /**
@@ -631,6 +634,10 @@ export function syncNavbarRole(role) {
         <a href="/usuarios" class="nav-link" data-link>
           <span class="nav-link-icon">👤</span>
           <span>Usuarios</span>
+        </a>
+        <a href="/settings" class="nav-link" data-link>
+          <span class="nav-link-icon">⚙️</span>
+          <span>Configuración</span>
         </a>
         ` : ''}
       `;
@@ -1378,10 +1385,10 @@ export function renderQuoteResults(quote) {
   setEl('canvasStats', `${quote.stickersPerRow} por fila (${(quote.stickersPerRow * quote.widthCm).toFixed(1)} cm)`);
   setEl('resUnitHint', `Costo aprox: Q${quote.unitPriceQ.toFixed(2)} por sticker ${quote.includeCutting ? '(impreso y cortado)' : ''}`);
 
-  // Actualizar aviso de flete en total-box
+  // Actualizar aviso de flete en total-box según umbral de envío gratis
   const totalFreightNoticeEl = document.getElementById('totalFreightNotice');
   if (totalFreightNoticeEl) {
-    if (quote.totalPriceQ >= 600) {
+    if (quote.totalPriceQ >= currentShippingThresholds.capital) {
       totalFreightNoticeEl.innerHTML = `<span class="freight-notice-badge freight-free">🎉 Califica para Envío GRATIS</span>`;
     } else {
       totalFreightNoticeEl.innerHTML = `<span class="freight-notice-badge">📦 No incluye flete</span>`;
@@ -1462,25 +1469,61 @@ export function renderQuoteResults(quote) {
     }
   }
 
-  // Actualizar aviso dinámico de incentivo de envío gratis
+  // Actualizar aviso dinámico de incentivo de envío gratis según umbrales configurables
   const incentiveEl = document.getElementById('quoterShippingIncentiveText');
   const progressBar = document.getElementById('quoterShippingProgressBar');
   if (incentiveEl) {
-    if (quote.totalPriceQ >= 600) {
+    const cap = currentShippingThresholds.capital;
+    const dep = currentShippingThresholds.interior;
+
+    if (quote.totalPriceQ >= dep) {
       if (progressBar) progressBar.style.width = '100%';
       incentiveEl.innerHTML = '🎉 <strong>¡Felicidades!</strong> Esta cotización califica para <strong>Envío GRATIS</strong> en todo el país.';
-    } else if (quote.totalPriceQ >= 400) {
-      const pct = Math.min(100, Math.round((quote.totalPriceQ / 600) * 100));
+    } else if (quote.totalPriceQ >= cap) {
+      const pct = Math.min(100, Math.round((quote.totalPriceQ / dep) * 100));
       if (progressBar) progressBar.style.width = `${pct}%`;
-      const missingDepartamentos = (600 - quote.totalPriceQ).toFixed(2);
+      const missingDepartamentos = (dep - quote.totalPriceQ).toFixed(2);
       incentiveEl.innerHTML = `🎉 <strong>¡Envío GRATIS en Capital!</strong> Agrega <strong>Q${missingDepartamentos}</strong> más para envío gratis a Departamentos.`;
     } else {
-      const pct = Math.min(100, Math.round((quote.totalPriceQ / 400) * 100));
+      const pct = Math.min(100, Math.round((quote.totalPriceQ / cap) * 100));
       if (progressBar) progressBar.style.width = `${pct}%`;
-      const missingCapital = (400 - quote.totalPriceQ).toFixed(2);
-      incentiveEl.innerHTML = `🎁 <strong>¡Envío GRATIS!</strong> Agrega <strong>Q${missingCapital}</strong> más para Capital (o <strong>Q${(600 - quote.totalPriceQ).toFixed(2)}</strong> para Departamentos).`;
+      const missingCapital = (cap - quote.totalPriceQ).toFixed(2);
+      const missingDepartamentos = (dep - quote.totalPriceQ).toFixed(2);
+      incentiveEl.innerHTML = `🎁 <strong>¡Envío GRATIS!</strong> Agrega <strong>Q${missingCapital}</strong> más para Capital (o <strong>Q${missingDepartamentos}</strong> para Departamentos).`;
     }
   }
+}
+
+/**
+ * Umbrales de envío gratis dinámicos (leídos de la tabla SystemSetting vía API)
+ */
+export const currentShippingThresholds = {
+  capital: BUSINESS_CONFIG.freeShippingThresholds.capital || 575,
+  interior: BUSINESS_CONFIG.freeShippingThresholds.interior || 1000,
+};
+
+export async function loadDynamicShippingSettings() {
+  try {
+    const res = await apiClient.settings.getShippingSettings();
+    if (res && res.success && res.shipping) {
+      currentShippingThresholds.capital = Number(res.shipping.capital) || 575;
+      currentShippingThresholds.interior = Number(res.shipping.interior) || 1000;
+      BUSINESS_CONFIG.freeShippingThresholds.capital = currentShippingThresholds.capital;
+      BUSINESS_CONFIG.freeShippingThresholds.interior = currentShippingThresholds.interior;
+      if (typeof window !== 'undefined' && window.__currentQuote) {
+        updateQuoterUI(window.__currentQuote);
+      }
+    }
+  } catch (err) {
+    console.warn('[App] No se pudieron obtener umbrales dinámicos de envío:', err);
+  }
+  return currentShippingThresholds;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('kroma-settings-updated', () => {
+    loadDynamicShippingSettings();
+  });
 }
 
 /**
@@ -1517,7 +1560,7 @@ export function sendWhatsAppQuote(quote) {
     clientArtText +
     snapText +
     `• *TOTAL ESTIMADO:* Q${quote.totalPriceQ.toFixed(2)}\n\n` +
-    `• *Envío:* Por coordinar según tu dirección o agencia (¡Envío gratis desde Q400 en Capital y Q600 en Departamentos!).\n\n` +
+    `• *Envío:* Por coordinar según tu dirección o agencia (¡Envío gratis desde Q${currentShippingThresholds.capital} en Capital y Q${currentShippingThresholds.interior} en Departamentos!).\n\n` +
     `¿Qué disponibilidad tienen para entrega esta semana? Muchas gracias.`;
 
   const url = `https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent(text)}`;

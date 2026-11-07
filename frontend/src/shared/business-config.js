@@ -21,10 +21,10 @@ export const BUSINESS_CONFIG = {
   currencySymbol: "Q",
   currencyCode: "GTQ",
 
-  // Políticas de entrega y flete en Guatemala
+  // Políticas de entrega y flete en Guatemala (Valores de contingencia por defecto)
   freeShippingThresholds: {
-    capital: 400.0,   // Q400 para Ciudad de Guatemala / Área Metropolitana
-    interior: 600.0,  // Q600 para Departamentos / Interior de la República
+    capital: 575.0,   // Q575 para Ciudad de Guatemala / Área Metropolitana (equivalente a 5 metros)
+    interior: 1000.0, // Q1000 para Departamentos / Interior de la República (equivalente a 10 metros)
   },
 
   // Política estricta de pagos para trabajos personalizados UV DTF

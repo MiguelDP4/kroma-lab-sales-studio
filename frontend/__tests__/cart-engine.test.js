@@ -246,20 +246,20 @@ describe('Cart Engine — Cálculos Consolidados de Carrito UV DTF', () => {
   });
 
   describe('Cálculo de Envío Gratis Consolidado (checkCartFreeShipping)', () => {
-    it('calcula faltantes y elegibilidad para Capital (Q400) e Interior (Q600)', () => {
+    it('calcula faltantes y elegibilidad para Capital (Q575) e Interior (Q1000)', () => {
       const resUnder = checkCartFreeShipping(300);
       expect(resUnder.eligibleCapital).toBe(false);
       expect(resUnder.eligibleInterior).toBe(false);
-      expect(resUnder.missingCapital).toBe(100);
-      expect(resUnder.missingInterior).toBe(300);
+      expect(resUnder.missingCapital).toBe(275);
+      expect(resUnder.missingInterior).toBe(700);
 
-      const resCapitalOk = checkCartFreeShipping(450);
+      const resCapitalOk = checkCartFreeShipping(600);
       expect(resCapitalOk.eligibleCapital).toBe(true);
       expect(resCapitalOk.eligibleInterior).toBe(false);
       expect(resCapitalOk.missingCapital).toBe(0);
-      expect(resCapitalOk.missingInterior).toBe(150);
+      expect(resCapitalOk.missingInterior).toBe(400);
 
-      const resAllOk = checkCartFreeShipping(650);
+      const resAllOk = checkCartFreeShipping(1050);
       expect(resAllOk.eligibleCapital).toBe(true);
       expect(resAllOk.eligibleInterior).toBe(true);
       expect(resAllOk.missingCapital).toBe(0);
