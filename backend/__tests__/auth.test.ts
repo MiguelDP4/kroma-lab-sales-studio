@@ -5,6 +5,7 @@ import { createApp } from '../src/app';
 import { seedDatabase } from '../src/db/seed';
 import { signToken } from '../src/middlewares/auth';
 import { getMe, updateProfile } from '../src/controllers/auth.controller';
+import { emailService } from '../src/services/email.service';
 
 const app = createApp();
 
@@ -347,5 +348,149 @@ describe('Auth API (/api/auth)', () => {
     expect(verifyRes.status).toBe(200);
     expect(verifyRes.body.success).toBe(true);
     expect(verifyRes.body.user.email).toBe(targetEmail);
+  });
+
+  describe('Flujo "Olvidé mi contraseña" y Cambio Obligatorio', () => {
+    it('genera y envía contraseña temporal si el correo existe, bloquea rutas hasta cambiarla y desbloquea tras el cambio', async () => {
+      const recoveryEmail = `recovery_${Date.now()}@kromalab.gt`;
+      await request(app)
+        .post('/api/auth/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Usuario Recuperación',
+          email: recoveryEmail,
+          password: 'InitialPassword123!',
+          role: 'CUSTOMER',
+        });
+
+      let capturedTempPw = '';
+      const mailSpy = vi
+        .spyOn(emailService, 'sendTemporaryPasswordEmail')
+        .mockImplementation(async (_email, _name, tempPw) => {
+          capturedTempPw = tempPw;
+          return true;
+        });
+
+      // 1. Correo inexistente responde 200 sin enviar correo
+      const unknownRes = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'noexiste_en_bd@kromalab.gt' });
+      expect(unknownRes.status).toBe(200);
+      expect(mailSpy).not.toHaveBeenCalled();
+
+      // 2. Correo existente genera contraseña temporal y la envía por correo
+      const forgotRes = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: recoveryEmail });
+      expect(forgotRes.status).toBe(200);
+      expect(forgotRes.body.success).toBe(true);
+      expect(mailSpy).toHaveBeenCalledTimes(1);
+      expect(capturedTempPw.startsWith('Kroma!')).toBe(true);
+
+      // 3. Login con contraseña temporal retorna mustChangePassword = true
+      const loginTempRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: recoveryEmail, password: capturedTempPw });
+      expect(loginTempRes.status).toBe(200);
+      expect(loginTempRes.body.user.mustChangePassword).toBe(true);
+      const tempToken = loginTempRes.body.token;
+
+      // 4. Rutas protegidas se bloquean con 403 mientras mustChangePassword sea true
+      const blockedRes = await request(app)
+        .get('/api/orders')
+        .set('Authorization', `Bearer ${tempToken}`);
+      expect(blockedRes.status).toBe(403);
+      expect(blockedRes.body.mustChangePassword).toBe(true);
+
+      // /api/auth/me sí sigue accesible para validar el estado pendiente
+      const meForcedRes = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${tempToken}`);
+      expect(meForcedRes.status).toBe(200);
+      expect(meForcedRes.body.user.mustChangePassword).toBe(true);
+
+      // 5. Rechaza reutilizar la misma contraseña temporal
+      const samePwRes = await request(app)
+        .post('/api/auth/force-change-password')
+        .set('Authorization', `Bearer ${tempToken}`)
+        .send({ newPassword: capturedTempPw, confirmPassword: capturedTempPw });
+      expect(samePwRes.status).toBe(400);
+
+      // 6. Rechaza si confirmPassword no coincide
+      const mismatchRes = await request(app)
+        .post('/api/auth/force-change-password')
+        .set('Authorization', `Bearer ${tempToken}`)
+        .send({ newPassword: 'MiNuevaClave2026!', confirmPassword: 'OtraClave2026!' });
+      expect(mismatchRes.status).toBe(400);
+
+      // 7. Cambio obligatorio exitoso emite nuevo token sin bloqueo
+      const forceOkRes = await request(app)
+        .post('/api/auth/force-change-password')
+        .set('Authorization', `Bearer ${tempToken}`)
+        .send({ newPassword: 'MiNuevaClave2026!', confirmPassword: 'MiNuevaClave2026!' });
+      expect(forceOkRes.status).toBe(200);
+      expect(forceOkRes.body.success).toBe(true);
+      expect(forceOkRes.body.user.mustChangePassword).toBe(false);
+      expect(forceOkRes.body.token).toBeTruthy();
+
+      // 8. Login posterior con la nueva clave ya no exige cambio y permite continuar
+      const finalLoginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: recoveryEmail, password: 'MiNuevaClave2026!' });
+      expect(finalLoginRes.status).toBe(200);
+      expect(finalLoginRes.body.user.mustChangePassword).toBe(false);
+
+      const allowedRes = await request(app)
+        .get('/api/orders')
+        .set('Authorization', `Bearer ${finalLoginRes.body.token}`);
+      expect(allowedRes.status).toBe(200);
+
+      mailSpy.mockRestore();
+    });
+
+    it('retorna 500 en /api/auth/forgot-password si falla el servicio de correo', async () => {
+      const failEmail = `failmail_${Date.now()}@kromalab.gt`;
+      await request(app)
+        .post('/api/auth/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Falla Correo',
+          email: failEmail,
+          password: 'InitialPassword123!',
+          role: 'CUSTOMER',
+        });
+
+      const mailSpy = vi
+        .spyOn(emailService, 'sendTemporaryPasswordEmail')
+        .mockResolvedValueOnce(false);
+
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: failEmail });
+
+      expect(res.status).toBe(500);
+      expect(res.body.success).toBe(false);
+      mailSpy.mockRestore();
+    });
+
+    it('emailService.sendTemporaryPasswordEmail cubre envío SMTP exitoso, error SMTP y fallback local', async () => {
+      const svc: any = emailService;
+      const origConfigured = svc.isConfigured;
+      const origTransporter = svc.transporter;
+
+      svc.isConfigured = true;
+      svc.transporter = { sendMail: vi.fn().mockResolvedValue({ messageId: 'msg-123' }) };
+      expect(await emailService.sendTemporaryPasswordEmail('u@kromalab.gt', 'User', 'Kroma!Abc123')).toBe(true);
+
+      svc.transporter = { sendMail: vi.fn().mockRejectedValue(new Error('SMTP down')) };
+      expect(await emailService.sendTemporaryPasswordEmail('u@kromalab.gt', 'User', 'Kroma!Abc123')).toBe(false);
+
+      svc.isConfigured = false;
+      svc.transporter = null;
+      expect(await emailService.sendTemporaryPasswordEmail('u@kromalab.gt', 'User', 'Kroma!Abc123')).toBe(true);
+
+      svc.isConfigured = origConfigured;
+      svc.transporter = origTransporter;
+    });
   });
 });

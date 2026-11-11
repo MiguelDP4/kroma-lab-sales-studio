@@ -312,6 +312,85 @@ Villa Nueva, Guatemala
     }
   }
 
+  /**
+   * Envía una contraseña temporal generada por el flujo "Olvidé mi contraseña".
+   */
+  async sendTemporaryPasswordEmail(email: string, name: string, temporaryPassword: string): Promise<boolean> {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const cleanFrontendUrl = frontendUrl.replace(/\/+$/, '');
+    const sender = process.env.SMTP_FROM || `"Kroma Lab Seguridad" <${process.env.SMTP_USER || 'no-reply@kromalab.gt'}>`;
+    const subject = 'Tu contraseña temporal de acceso — Kroma Lab Sales Studio';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 30px 15px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #1c7293, #0f3d50); padding: 28px 24px; text-align: center;">
+                    <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0;">🔐 Recuperación de Acceso</h1>
+                    <p style="color: rgba(255, 255, 255, 0.85); font-size: 14px; margin: 6px 0 0;">Kroma Lab Sales Studio • Guatemala</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 32px 26px;">
+                    <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 14px;">¡Hola, ${name}!</p>
+                    <p style="font-size: 15px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
+                      Recibimos una solicitud para restablecer tu contraseña. Usa la siguiente <strong>contraseña temporal</strong> para iniciar sesión:
+                    </p>
+                    <div style="background-color: #f1f5f9; border: 2px dashed #1c7293; border-radius: 10px; padding: 16px; text-align: center; margin: 20px 0;">
+                      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 6px; font-weight: 700;">Contraseña Temporal</div>
+                      <div style="font-family: monospace; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: 0.05em;">${temporaryPassword}</div>
+                    </div>
+                    <p style="font-size: 14px; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; line-height: 1.5; margin: 0 0 22px;">
+                      ⚠️ <strong>Importante:</strong> Al iniciar sesión con esta contraseña temporal, el sistema te pedirá obligatoriamente crear una nueva contraseña personal antes de continuar.
+                    </p>
+                    <div style="text-align: center;">
+                      <a href="${cleanFrontendUrl}" target="_blank" style="display: inline-block; background-color: #1c7293; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none; padding: 13px 28px; border-radius: 10px;">
+                        🔑 Ir a Iniciar Sesión
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const textContent = `Hola ${name},\n\nRecibimos una solicitud para restablecer tu contraseña en Kroma Lab.\nTu contraseña temporal es: ${temporaryPassword}\n\nInicia sesión en ${cleanFrontendUrl} y cambia tu contraseña de inmediato por seguridad.`;
+
+    if (this.isConfigured && this.transporter) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: sender,
+          to: email,
+          subject,
+          text: textContent,
+          html: htmlContent,
+        });
+        console.log(`[EmailService] Contraseña temporal enviada a ${email}. ID: ${info.messageId}`);
+        return true;
+      } catch (error) {
+        console.error('[EmailService] Error enviando contraseña temporal:', error);
+        return false;
+      }
+    } else {
+      console.log(`[EmailService MOCK/DEV] Contraseña temporal generada para ${email}: ${temporaryPassword}`);
+      return true;
+    }
+  }
+
 }
 
 export const emailService = new EmailService();

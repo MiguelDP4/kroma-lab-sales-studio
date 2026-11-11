@@ -183,9 +183,15 @@ export function initUserProfileModal() {
                 <input type="email" id="loginEmailInput" class="input-control" required style="min-height: 44px;" placeholder="ejemplo@kromalab.gt" autocomplete="email">
               </div>
 
-              <div class="form-group" style="margin-bottom: 1rem;">
+              <div class="form-group" style="margin-bottom: 0.5rem;">
                 <label class="form-label" for="loginPasswordInput" style="font-weight: 700;">Contraseña: <span style="color: #ef4444;">*</span></label>
                 <input type="password" id="loginPasswordInput" class="input-control" required style="min-height: 44px;" placeholder="••••••••" autocomplete="current-password">
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+                <button type="button" id="btnForgotPassword" style="background: none; border: none; color: var(--cerulean); font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: underline; min-height: 44px; padding: 0.25rem 0.4rem;">
+                  ¿Olvidaste tu contraseña?
+                </button>
               </div>
 
               <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -298,6 +304,61 @@ export function initUserProfileModal() {
           </form>
         </div>
 
+        <!-- ====================================================================
+             VISTA 4: OLVIDÉ MI CONTRASEÑA (SOLICITUD DE CONTRASEÑA TEMPORAL)
+             ==================================================================== -->
+        <div id="authViewForgotPassword" style="display: none;">
+          <form id="formForgotPassword">
+            <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 1.15rem;">
+              Ingresa el correo electrónico de tu cuenta. Si está registrado en nuestra base de datos, te enviaremos una <strong>contraseña temporal</strong> para que puedas iniciar sesión y definir una nueva.
+            </p>
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" for="forgotPasswordEmailInput" style="font-weight: 700;">Correo Electrónico: <span style="color: #ef4444;">*</span></label>
+              <input type="email" id="forgotPasswordEmailInput" class="input-control" required style="min-height: 44px;" placeholder="tu@correo.gt" autocomplete="email">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="btnBackToLoginFromForgot" style="min-height: 44px;">
+                ← Volver a Iniciar Sesión
+              </button>
+              <button type="submit" class="btn btn-primary" id="btnSubmitForgotPassword" style="min-height: 44px;">
+                <span>📧 Enviar Contraseña Temporal</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ====================================================================
+             VISTA 5: CAMBIO OBLIGATORIO DE CONTRASEÑA TEMPORAL
+             ==================================================================== -->
+        <div id="authViewForceChangePassword" style="display: none;">
+          <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; border-radius: var(--radius-md); padding: 0.9rem 1rem; margin-bottom: 1.15rem; font-size: 0.88rem; color: var(--text-primary); line-height: 1.5;">
+            ⚠️ <strong>Cambio de contraseña obligatorio:</strong> Iniciaste sesión con una contraseña temporal. Por tu seguridad, debes establecer una nueva contraseña personal antes de continuar usando Kroma Lab.
+          </div>
+
+          <form id="formForceChangePassword">
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label class="form-label" for="forceNewPasswordInput" style="font-weight: 700;">Nueva Contraseña: <span style="color: #ef4444;">*</span> <span class="tip">(Mínimo 6 caracteres)</span></label>
+              <input type="password" id="forceNewPasswordInput" class="input-control" required minlength="6" style="min-height: 44px;" placeholder="••••••••" autocomplete="new-password">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.35rem;">
+              <label class="form-label" for="forceConfirmPasswordInput" style="font-weight: 700;">Confirmar Nueva Contraseña: <span style="color: #ef4444;">*</span></label>
+              <input type="password" id="forceConfirmPasswordInput" class="input-control" required minlength="6" style="min-height: 44px;" placeholder="••••••••" autocomplete="new-password">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="btnLogoutForcedPassword" style="min-height: 44px; color: #ef4444;">
+                🚪 Cerrar Sesión
+              </button>
+              <button type="submit" class="btn btn-primary" id="btnSubmitForceChangePassword" style="min-height: 44px;">
+                <span>🔒 Guardar Nueva Contraseña</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
       </div>
     </div>
   `;
@@ -349,6 +410,12 @@ function attachModalEventListeners() {
   const btnSwitchLog = document.getElementById('btnSwitchToLogin');
   if (btnSwitchLog) btnSwitchLog.addEventListener('click', () => switchAuthTab('login'));
 
+  const btnForgotPassword = document.getElementById('btnForgotPassword');
+  if (btnForgotPassword) btnForgotPassword.addEventListener('click', () => switchAuthTab('forgot-password'));
+
+  const btnBackToLoginFromForgot = document.getElementById('btnBackToLoginFromForgot');
+  if (btnBackToLoginFromForgot) btnBackToLoginFromForgot.addEventListener('click', () => switchAuthTab('login'));
+
   // Modal backdrop click disabled per QA specs (Task 5: solo se cierra con la X o botones explícitos)
 
   if (typeof document !== 'undefined') {
@@ -378,10 +445,25 @@ function attachModalEventListeners() {
     formRegister.addEventListener('submit', handleRegisterSubmit);
   }
 
+  const formForgotPassword = document.getElementById('formForgotPassword');
+  if (formForgotPassword) {
+    formForgotPassword.addEventListener('submit', handleForgotPasswordSubmit);
+  }
+
+  const formForceChangePassword = document.getElementById('formForceChangePassword');
+  if (formForceChangePassword) {
+    formForceChangePassword.addEventListener('submit', handleForceChangePasswordSubmit);
+  }
+
   // Logout
   const btnLogout = document.getElementById('btnLogoutProfileBtn');
   if (btnLogout) {
     btnLogout.addEventListener('click', handleLogout);
+  }
+
+  const btnLogoutForced = document.getElementById('btnLogoutForcedPassword');
+  if (btnLogoutForced) {
+    btnLogoutForced.addEventListener('click', handleLogout);
   }
 
   // Validación reactiva con debounce de 500ms para formulario de registro (Task 2)
@@ -429,18 +511,25 @@ export function switchAuthTab(tabName) {
     });
   }
 
-  // Si ya hay sesión iniciada, las opciones de Iniciar Sesión y Crear Cuenta deben desaparecer
-  if (hasActiveSession && tabName !== 'profile') {
+  // Si ya hay sesión iniciada y tiene cambio obligatorio pendiente, forzar vista bloqueante
+  if (hasActiveSession && currentUser?.mustChangePassword) {
+    tabName = 'force-change-password';
+  } else if (hasActiveSession && tabName !== 'profile') {
+    // Si ya hay sesión iniciada, las opciones de Iniciar Sesión y Crear Cuenta deben desaparecer
     tabName = 'profile';
   }
 
   const viewProfile = document.getElementById('authViewProfile');
   const viewLogin = document.getElementById('authViewLogin');
   const viewRegister = document.getElementById('authViewRegister');
+  const viewForgot = document.getElementById('authViewForgotPassword');
+  const viewForceChange = document.getElementById('authViewForceChangePassword');
 
   const tabProfile = document.getElementById('tabBtnProfile');
   const tabLogin = document.getElementById('tabBtnLogin');
   const tabRegister = document.getElementById('tabBtnRegister');
+  const authTabs = document.getElementById('authTabsContainer');
+  const closeBtn = document.getElementById('btnCloseUserProfileModal');
 
   const titleEl = document.getElementById('userProfileModalTitle');
   const subTitleEl = document.getElementById('userProfileModalSubtitle');
@@ -455,8 +544,33 @@ export function switchAuthTab(tabName) {
   if (viewProfile) viewProfile.style.display = 'none';
   if (viewLogin) viewLogin.style.display = 'none';
   if (viewRegister) viewRegister.style.display = 'none';
+  if (viewForgot) viewForgot.style.display = 'none';
+  if (viewForceChange) viewForceChange.style.display = 'none';
 
-  if (tabName === 'login') {
+  if (closeBtn) {
+    closeBtn.style.display = (hasActiveSession && currentUser?.mustChangePassword) ? 'none' : '';
+  }
+
+  if (tabName === 'force-change-password') {
+    if (authTabs) authTabs.style.display = 'none';
+    if (viewForceChange) viewForceChange.style.display = 'block';
+    if (titleEl) titleEl.textContent = 'Cambio Obligatorio de Contraseña';
+    if (subTitleEl) subTitleEl.textContent = 'Define una nueva contraseña personal para desbloquear tu cuenta.';
+    const newPwInput = document.getElementById('forceNewPasswordInput');
+    if (newPwInput) setTimeout(() => newPwInput.focus(), 50);
+  } else if (tabName === 'forgot-password') {
+    if (authTabs) authTabs.style.display = 'none';
+    if (viewForgot) viewForgot.style.display = 'block';
+    if (titleEl) titleEl.textContent = 'Recuperar Contraseña';
+    if (subTitleEl) subTitleEl.textContent = 'Recibe una contraseña temporal en tu correo electrónico.';
+    const forgotInput = document.getElementById('forgotPasswordEmailInput');
+    const loginEmailVal = document.getElementById('loginEmailInput')?.value?.trim();
+    if (forgotInput && loginEmailVal && !forgotInput.value) {
+      forgotInput.value = loginEmailVal;
+    }
+    if (forgotInput) setTimeout(() => forgotInput.focus(), 50);
+  } else if (tabName === 'login') {
+    if (!hasActiveSession && authTabs) authTabs.style.display = 'flex';
     if (viewLogin) viewLogin.style.display = 'block';
     if (tabLogin) {
       tabLogin.classList.add('is-active', 'btn-primary');
@@ -467,6 +581,7 @@ export function switchAuthTab(tabName) {
     const emailInput = document.getElementById('loginEmailInput');
     if (emailInput) setTimeout(() => emailInput.focus(), 50);
   } else if (tabName === 'register') {
+    if (!hasActiveSession && authTabs) authTabs.style.display = 'flex';
     if (viewRegister) viewRegister.style.display = 'block';
     if (tabRegister) {
       tabRegister.classList.add('is-active', 'btn-primary');
@@ -574,7 +689,7 @@ export function openUserProfileModal(preferredTab = null) {
     if (tabLogin) tabLogin.style.display = 'none';
     if (tabRegister) tabRegister.style.display = 'none';
     if (tabProfile) tabProfile.style.display = 'none';
-    switchAuthTab('profile');
+    switchAuthTab(user?.mustChangePassword ? 'force-change-password' : 'profile');
   } else {
     // Modo Visitante (sin sesión): Mostrar Iniciar Sesión y Crear Cuenta
     if (authTabs) authTabs.style.display = 'flex';
@@ -585,13 +700,28 @@ export function openUserProfileModal(preferredTab = null) {
   }
 
   modal.style.display = 'block';
-  if (nameInput && role !== 'VISITOR') nameInput.focus();
+  if (user?.mustChangePassword) {
+    const newPwInput = document.getElementById('forceNewPasswordInput');
+    if (newPwInput) newPwInput.focus();
+  } else if (nameInput && role !== 'VISITOR') {
+    nameInput.focus();
+  }
 }
 
 export function closeUserProfileModal() {
+  if (store.state.user?.mustChangePassword) {
+    switchAuthTab('force-change-password');
+    showFeedback('⚠️ Por seguridad debes cambiar tu contraseña temporal antes de continuar.', 'error');
+    return;
+  }
+
   const modal = typeof document !== 'undefined' ? document.getElementById('userProfileModal') : null;
   if (modal) {
     modal.style.display = 'none';
+  }
+  const closeBtn = typeof document !== 'undefined' ? document.getElementById('btnCloseUserProfileModal') : null;
+  if (closeBtn) {
+    closeBtn.style.display = '';
   }
 
   // Limpiar inputs de login y credenciales inválidas (Task 6)
@@ -727,6 +857,11 @@ export async function loginWithRealCredentials(email, password, rememberMe = tru
       if (res && res.success && res.user) {
         const permissions = res.user.role === 'ADMIN' ? ['ALL'] : (res.user.role === 'EMPLOYEE' ? ['WORKSHOP', 'ORDERS', 'INVENTORY', 'DISPATCH'] : ['ORDERS']);
         store.setUser(res.user, res.token, permissions, rememberMe);
+        if (res.user.mustChangePassword) {
+          openUserProfileModal('force-change-password');
+          showFeedback('⚠️ Iniciaste sesión con una contraseña temporal. Debes crear una nueva contraseña para continuar.', 'info');
+          return res.user;
+        }
         showFeedback(`✅ Sesión real iniciada: ${res.user.name} (${res.user.role})`, 'success');
         // Cierre inmediato sin transmutar la interfaz a configuración de cuenta (Task 4)
         closeUserProfileModal();
@@ -737,6 +872,90 @@ export async function loginWithRealCredentials(email, password, rememberMe = tru
     showFeedback(err.message || 'Credenciales inválidas o servidor no disponible.', 'error');
   }
   return null;
+}
+
+export async function handleForgotPasswordSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const emailInput = document.getElementById('forgotPasswordEmailInput');
+  const submitBtn = document.getElementById('btnSubmitForgotPassword');
+  const email = emailInput?.value?.trim().toLowerCase() || '';
+
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    showFeedback('Por favor ingresa un correo electrónico válido.', 'error');
+    if (emailInput) emailInput.focus();
+    return false;
+  }
+
+  try {
+    if (submitBtn) submitBtn.disabled = true;
+    showFeedback('Verificando cuenta y enviando contraseña temporal...', 'info');
+
+    const res = await apiClient.auth.forgotPassword(email);
+    switchAuthTab('login');
+    const loginEmailInput = document.getElementById('loginEmailInput');
+    if (loginEmailInput) loginEmailInput.value = email;
+    if (emailInput) emailInput.value = '';
+    showFeedback(
+      res?.message || '📧 Si tu correo está registrado, te enviamos una contraseña temporal. Úsala para iniciar sesión.',
+      'success'
+    );
+    return true;
+  } catch (err) {
+    showFeedback(err.message || 'No se pudo procesar la solicitud de recuperación.', 'error');
+    return false;
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+export async function handleForceChangePasswordSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const newPwInput = document.getElementById('forceNewPasswordInput');
+  const confirmPwInput = document.getElementById('forceConfirmPasswordInput');
+  const submitBtn = document.getElementById('btnSubmitForceChangePassword');
+
+  const newPassword = newPwInput?.value || '';
+  const confirmPassword = confirmPwInput?.value || '';
+
+  if (!newPassword || newPassword.length < 6) {
+    showFeedback('La nueva contraseña debe tener al menos 6 caracteres.', 'error');
+    if (newPwInput) newPwInput.focus();
+    return false;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showFeedback('Las contraseñas no coinciden.', 'error');
+    if (confirmPwInput) confirmPwInput.focus();
+    return false;
+  }
+
+  try {
+    if (submitBtn) submitBtn.disabled = true;
+    showFeedback('Actualizando tu nueva contraseña...', 'info');
+
+    const res = await apiClient.auth.forceChangePassword(newPassword, confirmPassword);
+    if (res && res.success && res.user) {
+      const rememberMe = typeof localStorage !== 'undefined' && localStorage.getItem('kromalab_remember_me') === 'true';
+      const permissions = res.user.role === 'ADMIN' ? ['ALL'] : (res.user.role === 'EMPLOYEE' ? ['WORKSHOP', 'ORDERS', 'INVENTORY', 'DISPATCH'] : ['ORDERS']);
+      if (res.token) {
+        apiClient.setToken(res.token, rememberMe);
+      }
+      store.setUser({ ...res.user, mustChangePassword: false }, res.token || store.state.token, permissions, rememberMe);
+
+      if (newPwInput) newPwInput.value = '';
+      if (confirmPwInput) confirmPwInput.value = '';
+
+      closeUserProfileModal();
+      return true;
+    }
+  } catch (err) {
+    showFeedback(err.message || 'No se pudo actualizar la contraseña.', 'error');
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+  return false;
 }
 
 export async function registerWithRealAccount(userData) {

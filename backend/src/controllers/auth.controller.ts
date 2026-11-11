@@ -81,6 +81,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       email: user.email,
       role: user.role,
       name: user.name,
+      mustChangePassword: Boolean(user.mustChangePassword),
     });
 
     res.cookie('token', token, {
@@ -103,6 +104,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
         taxId: user.taxId,
         address: user.address,
         department: user.department,
+        mustChangePassword: Boolean(user.mustChangePassword),
       },
     });
   } catch (error) {
@@ -249,6 +251,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response, next: Next
         address: true,
         department: true,
         isVerified: true,
+        mustChangePassword: true,
         customerId: true,
         createdAt: true,
       },
@@ -802,6 +805,146 @@ export async function resendVerification(req: Request, res: Response, next: Next
     res.json({
       success: true,
       message: 'Correo de verificación reenviado exitosamente. Por favor revisa tu bandeja de entrada o carpeta de spam.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function generateTemporaryPassword(): string {
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.randomBytes(8);
+  let suffix = '';
+  for (let i = 0; i < bytes.length; i++) {
+    suffix += charset[bytes[i] % charset.length];
+  }
+  return `Kroma!${suffix}`;
+}
+
+/**
+ * Flujo "Olvidé mi contraseña": genera una contraseña temporal, la guarda marcada
+ * con mustChangePassword=true y la envía al correo si la cuenta existe.
+ */
+export async function forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email } = z.object({
+      email: z.string().email('Correo electrónico inválido'),
+    }).parse(req.body);
+
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (user) {
+      const temporaryPassword = generateTemporaryPassword();
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          mustChangePassword: true,
+        },
+      });
+
+      const sent = await emailService.sendTemporaryPasswordEmail(user.email, user.name, temporaryPassword);
+      if (!sent) {
+        res.status(500).json({
+          success: false,
+          message: 'No se pudo enviar el correo con la contraseña temporal. Intenta nuevamente más tarde.',
+        });
+        return;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Si tu correo está registrado en Kroma Lab, hemos enviado una contraseña temporal a tu bandeja de entrada.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Cambio obligatorio de contraseña tras iniciar sesión con contraseña temporal.
+ * Desactiva mustChangePassword y emite un nuevo JWT de sesión completa.
+ */
+export async function forceChangePassword(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'No autenticado.' });
+      return;
+    }
+
+    const { newPassword, confirmPassword } = z.object({
+      newPassword: z.string().min(6, 'La nueva contraseña debe tener al menos 6 caracteres'),
+      confirmPassword: z.string().optional(),
+    }).parse(req.body);
+
+    if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+      res.status(400).json({ success: false, message: 'Las contraseñas no coinciden.' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+      return;
+    }
+
+    const isSameAsCurrent = await bcrypt.compare(newPassword, user.password);
+    if (isSameAsCurrent) {
+      res.status(400).json({
+        success: false,
+        message: 'Por seguridad, tu nueva contraseña debe ser diferente a la contraseña temporal.',
+      });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        company: true,
+        taxId: true,
+        address: true,
+        department: true,
+        mustChangePassword: true,
+      },
+    });
+
+    const newToken = signToken({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      name: updatedUser.name,
+      mustChangePassword: false,
+    });
+
+    res.cookie('token', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      success: true,
+      message: '¡Contraseña actualizada! Tu cuenta ha quedado protegida.',
+      token: newToken,
+      user: updatedUser,
     });
   } catch (error) {
     next(error);

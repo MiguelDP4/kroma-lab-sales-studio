@@ -251,5 +251,14 @@ describe('SPA Router — Enrutamiento y Guardias RBAC', () => {
       expect(document.head.querySelector('meta[name="robots"]').getAttribute('content')).toBe('noindex, nofollow');
       expect(document.title).toContain('404');
     });
+
+    it('bloquea navegación a rutas protegidas cuando el usuario tiene mustChangePassword = true', () => {
+      store.setUser({ id: 'USR_TMP', role: 'CUSTOMER', mustChangePassword: true }, 'temp-jwt', []);
+      router.navigate('/pedidos');
+
+      const appEl = document.getElementById('app');
+      expect(appEl.innerHTML).toContain('Cambio de contraseña obligatorio');
+      expect(appEl.innerHTML).not.toContain('Pedidos');
+    });
   });
 });

@@ -149,6 +149,20 @@ export class Router {
       };
     }
 
+    // Guardia de Cambio Obligatorio de Contraseña Temporal
+    if (store.state.user?.mustChangePassword) {
+      import('./components/user-profile-modal.js').then(m => {
+        if (m && typeof m.openUserProfileModal === 'function') {
+          m.openUserProfileModal('force-change-password');
+        }
+      }).catch(() => {});
+
+      if (matchedRoute.path !== '/') {
+        this.renderForcePasswordRequired(matchedRoute);
+        return;
+      }
+    }
+
     // Guardia de Roles (RBAC): verificar si el rol tiene acceso
     if (matchedRoute.allowedRoles && !matchedRoute.allowedRoles.includes(userRole)) {
       this.renderAccessDenied(matchedRoute, userRole);
@@ -156,6 +170,37 @@ export class Router {
     }
 
     this.renderRoute(matchedRoute, { isNotFound });
+  }
+
+  renderForcePasswordRequired(route) {
+    const mountEl = document.getElementById(this.mountElementId);
+    if (!mountEl) return;
+
+    this._runActiveCleanup();
+    mountEl.innerHTML = `
+      <div style="text-align: center; padding: 4rem 1rem; max-width: 600px; margin: 0 auto;">
+        <span class="badge" style="color: #f59e0b; border-color: #f59e0b;">Seguridad de Cuenta</span>
+        <h2 style="font-size: 1.8rem; margin: 1rem 0;">Cambio de contraseña obligatorio</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.75rem;">
+          Iniciaste sesión con una contraseña temporal. Debes definir una nueva contraseña personal antes de acceder a esta sección.
+        </p>
+        <button type="button" class="btn btn-primary" id="btnOpenForcePasswordModal" style="min-height: 44px;">
+          🔒 Cambiar Contraseña Ahora
+        </button>
+      </div>
+    `;
+    const btn = mountEl.querySelector('#btnOpenForcePasswordModal');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        import('./components/user-profile-modal.js').then(m => {
+          if (m && typeof m.openUserProfileModal === 'function') {
+            m.openUserProfileModal('force-change-password');
+          }
+        }).catch(() => {});
+      });
+    }
+    this.updateActiveNavLinks(route.path);
+    updateDocumentSeo(route.path, { isAccessDenied: true });
   }
 
   normalizePath(path) {

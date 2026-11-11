@@ -14,6 +14,8 @@ import {
   resendVerification,
   changePassword,
   changeEmail,
+  forgotPassword,
+  forceChangePassword,
 } from '../controllers/auth.controller';
 import { authenticate, requireRole } from '../middlewares/auth';
 
@@ -21,6 +23,8 @@ const router = Router();
 
 router.post('/login', login);
 router.post('/register', register);
+router.post('/forgot-password', forgotPassword);
+router.post('/force-change-password', authenticate, forceChangePassword);
 router.get('/verify-email', verifyEmail);
 router.post('/verify-email', verifyEmail);
 router.post('/resend-verification', resendVerification);
