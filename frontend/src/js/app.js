@@ -139,6 +139,9 @@ export async function initBackendSync() {
           if (meRes && meRes.success && meRes.user) {
             const isRemembered = typeof localStorage !== 'undefined' && localStorage.getItem('kromalab_remember_me') === 'true';
             store.setUser(meRes.user, apiClient.token, store.state.permissions, isRemembered);
+            if (meRes.user.mustChangePassword) {
+              openUserProfileModal('force-change-password');
+            }
           }
         } catch (authErr) {
           if (authErr?.status === 401 || authErr?.message?.includes('401') || authErr?.message?.includes('No autenticado')) {
@@ -351,6 +354,9 @@ export function initApp() {
   initSaveQuoteModal();
   initPrintListeners();
   router.init();
+  if (store.state.user?.mustChangePassword) {
+    openUserProfileModal('force-change-password');
+  }
   initBackendSync();
   loadDynamicShippingSettings();
 }

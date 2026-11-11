@@ -236,6 +236,18 @@ export class ApiClient {
         body: JSON.stringify({ currentPassword, newPassword }),
       });
     },
+    forgotPassword: async (email) => {
+      return this._request('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
+    forceChangePassword: async (newPassword, confirmPassword) => {
+      return this._request('/auth/force-change-password', {
+        method: 'POST',
+        body: JSON.stringify({ newPassword, confirmPassword }),
+      });
+    },
     changeEmail: async (currentPassword, newEmail) => {
       return this._request('/auth/change-email', {
         method: 'POST',

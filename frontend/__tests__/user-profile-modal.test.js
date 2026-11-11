@@ -12,6 +12,8 @@ import {
   handleLogout,
   switchUserAccount,
   showFeedback,
+  handleForgotPasswordSubmit,
+  handleForceChangePasswordSubmit,
 } from '../src/js/components/user-profile-modal.js';
 import { store } from '../src/js/store.js';
 import { usersStore } from '../src/js/modules/users-store.js';
@@ -742,6 +744,108 @@ describe('User Profile Modal — Configuración de Cuenta de Usuario', () => {
 
       showFeedback('Mensaje informativo', 'info');
       expect(el.style.color).toBe('var(--cerulean)');
+    });
+  });
+
+  describe('Flujo "Olvidé mi contraseña" y Cambio Obligatorio (Force Password Change)', () => {
+    it('navega de Iniciar Sesión a la vista de Olvidé mi contraseña y regresa a Login', () => {
+      openUserProfileModal('login');
+      const btnForgot = document.getElementById('btnForgotPassword');
+      expect(btnForgot).not.toBeNull();
+
+      btnForgot.click();
+      expect(document.getElementById('authViewForgotPassword').style.display).toBe('block');
+      expect(document.getElementById('authViewLogin').style.display).toBe('none');
+      expect(document.getElementById('userProfileModalTitle').textContent).toBe('Recuperar Contraseña');
+
+      document.getElementById('btnBackToLoginFromForgot').click();
+      expect(document.getElementById('authViewLogin').style.display).toBe('block');
+    });
+
+    it('valida correo en Olvidé mi contraseña y llama a apiClient.auth.forgotPassword', async () => {
+      openUserProfileModal('forgot-password');
+      document.getElementById('forgotPasswordEmailInput').value = 'invalido';
+      const invalidOk = await handleForgotPasswordSubmit({ preventDefault: vi.fn() });
+      expect(invalidOk).toBe(false);
+      expect(document.getElementById('profileFeedbackMsg').textContent).toContain('correo electrónico válido');
+
+      const forgotSpy = vi.spyOn(apiClient.auth, 'forgotPassword').mockResolvedValue({
+        success: true,
+        message: 'Te enviamos una contraseña temporal.',
+      });
+
+      document.getElementById('forgotPasswordEmailInput').value = 'migueldp4@gmail.com';
+      const ok = await handleForgotPasswordSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(true);
+      expect(forgotSpy).toHaveBeenCalledWith('migueldp4@gmail.com');
+      expect(document.getElementById('authViewLogin').style.display).toBe('block');
+      expect(document.getElementById('loginEmailInput').value).toBe('migueldp4@gmail.com');
+    });
+
+    it('al iniciar sesión con contraseña temporal abre el modal bloqueante y prohíbe cerrarlo hasta cambiarla', async () => {
+      vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+        success: true,
+        token: 'temp-jwt',
+        user: {
+          id: 'usr_tmp',
+          email: 'migueldp4@gmail.com',
+          name: 'Miguel Dubois',
+          role: 'ADMIN',
+          mustChangePassword: true,
+        },
+      });
+
+      openUserProfileModal('login');
+      document.getElementById('loginEmailInput').value = 'migueldp4@gmail.com';
+      document.getElementById('loginPasswordInput').value = 'Kroma!Temp123';
+      const ok = await handleLoginSubmit({ preventDefault: vi.fn() });
+      expect(ok).toBe(true);
+
+      const modal = document.getElementById('userProfileModal');
+      expect(modal.style.display).toBe('block');
+      expect(document.getElementById('authViewForceChangePassword').style.display).toBe('block');
+      expect(document.getElementById('btnCloseUserProfileModal').style.display).toBe('none');
+
+      // Intentar cerrar con botón o Escape no cierra el modal mientras mustChangePassword sea true
+      closeUserProfileModal();
+      expect(modal.style.display).toBe('block');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(modal.style.display).toBe('block');
+
+      // Intentar cambiar a otra pestaña mantiene force-change-password
+      switchAuthTab('profile');
+      expect(document.getElementById('authViewForceChangePassword').style.display).toBe('block');
+
+      // Validaciones del formulario de cambio obligatorio
+      document.getElementById('forceNewPasswordInput').value = '123';
+      document.getElementById('forceConfirmPasswordInput').value = '123';
+      expect(await handleForceChangePasswordSubmit({ preventDefault: vi.fn() })).toBe(false);
+
+      document.getElementById('forceNewPasswordInput').value = 'NuevaClave2026!';
+      document.getElementById('forceConfirmPasswordInput').value = 'Distinta2026!';
+      expect(await handleForceChangePasswordSubmit({ preventDefault: vi.fn() })).toBe(false);
+
+      // Cambio exitoso desbloquea y cierra el modal
+      const forceSpy = vi.spyOn(apiClient.auth, 'forceChangePassword').mockResolvedValue({
+        success: true,
+        token: 'fresh-jwt',
+        user: {
+          id: 'usr_tmp',
+          email: 'migueldp4@gmail.com',
+          name: 'Miguel Dubois',
+          role: 'ADMIN',
+          mustChangePassword: false,
+        },
+      });
+
+      document.getElementById('forceNewPasswordInput').value = 'NuevaClave2026!';
+      document.getElementById('forceConfirmPasswordInput').value = 'NuevaClave2026!';
+      const changed = await handleForceChangePasswordSubmit({ preventDefault: vi.fn() });
+      expect(changed).toBe(true);
+      expect(forceSpy).toHaveBeenCalledWith('NuevaClave2026!', 'NuevaClave2026!');
+      expect(store.state.user.mustChangePassword).toBe(false);
+      expect(modal.style.display).toBe('none');
+      expect(document.getElementById('btnCloseUserProfileModal').style.display).toBe('');
     });
   });
 });

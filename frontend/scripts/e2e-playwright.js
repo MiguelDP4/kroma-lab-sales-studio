@@ -832,6 +832,100 @@ async function runFullQASuite() {
     });
     assert(privateRobots === 'noindex, nofollow', 'Rutas restringidas aplican dinámicamente noindex, nofollow', `Robots: ${privateRobots}`);
 
+    // ==========================================================================
+    // FASE 19: FLUJO "OLVIDÉ MI CONTRASEÑA" Y CAMBIO OBLIGATORIO DE CONTRASEÑA
+    // ==========================================================================
+    console.log('\n======================================================');
+    console.log('📦 FASE 19: Flujo Olvidé mi Contraseña & Cambio Obligatorio');
+    console.log('======================================================');
+
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(400);
+
+    await page.click('#userProfileChip');
+    await page.waitForTimeout(250);
+    await page.click('#dropdownBtnLogin');
+    await page.waitForTimeout(300);
+
+    const forgotBtn = await page.$('#btnForgotPassword');
+    assert(forgotBtn !== null, 'Botón "¿Olvidaste tu contraseña?" visible en modal de inicio de sesión');
+
+    await forgotBtn.click();
+    await page.waitForTimeout(250);
+    const forgotViewDisplay = await page.$eval('#authViewForgotPassword', (el) => window.getComputedStyle(el).display);
+    assert(forgotViewDisplay === 'block', 'Vista #authViewForgotPassword solicita correo electrónico');
+
+    await page.fill('#forgotPasswordEmailInput', 'qa-recovery-check@kromalab.gt');
+    await page.click('#btnSubmitForgotPassword');
+    await page.waitForTimeout(600);
+
+    const backToLoginDisplay = await page.$eval('#authViewLogin', (el) => window.getComputedStyle(el).display);
+    const prefilledLoginEmail = await page.$eval('#loginEmailInput', (el) => el.value);
+    assert(backToLoginDisplay === 'block' && prefilledLoginEmail === 'qa-recovery-check@kromalab.gt', 'Tras enviar recuperación regresa a Login con el correo prellenado');
+
+    // Simular login con contraseña temporal (mustChangePassword: true) y verificar bloqueo obligatorio
+    await page.route('**/api/auth/login', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          token: 'e2e-temp-jwt',
+          user: {
+            id: 'usr_e2e_tmp',
+            email: 'qa-recovery-check@kromalab.gt',
+            name: 'QA Recovery',
+            role: 'CUSTOMER',
+            mustChangePassword: true,
+          },
+        }),
+      });
+    });
+
+    await page.fill('#loginPasswordInput', 'Kroma!Temp99');
+    await page.click('#btnSubmitLogin');
+    await page.waitForTimeout(400);
+
+    const forceChangeDisplay = await page.$eval('#authViewForceChangePassword', (el) => window.getComputedStyle(el).display);
+    const closeBtnDisplay = await page.$eval('#btnCloseUserProfileModal', (el) => window.getComputedStyle(el).display);
+    assert(forceChangeDisplay === 'block' && closeBtnDisplay === 'none', 'Al iniciar sesión con clave temporal abre modal bloqueante sin botón de cierre');
+
+    // Intentar presionar Escape NO debe cerrar el modal
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+    const modalStillOpen = await page.$eval('#userProfileModal', (el) => window.getComputedStyle(el).display !== 'none');
+    assert(modalStillOpen, 'Tecla Escape NO cierra el modal mientras el cambio obligatorio está pendiente');
+
+    // Completar el cambio obligatorio de contraseña
+    await page.route('**/api/auth/force-change-password', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          token: 'e2e-fresh-jwt',
+          user: {
+            id: 'usr_e2e_tmp',
+            email: 'qa-recovery-check@kromalab.gt',
+            name: 'QA Recovery',
+            role: 'CUSTOMER',
+            mustChangePassword: false,
+          },
+        }),
+      });
+    });
+
+    await page.fill('#forceNewPasswordInput', 'NuevaClaveSegura2026!');
+    await page.fill('#forceConfirmPasswordInput', 'NuevaClaveSegura2026!');
+    await page.click('#btnSubmitForceChangePassword');
+    await page.waitForTimeout(400);
+
+    const modalClosedAfterChange = await page.$eval('#userProfileModal', (el) => window.getComputedStyle(el).display === 'none');
+    assert(modalClosedAfterChange, 'Tras cambiar la contraseña el modal se desbloquea y cierra correctamente');
+
+    await page.unroute('**/api/auth/login');
+    await page.unroute('**/api/auth/force-change-password');
+
   } catch (err) {
     console.error('\n💥 [QA Engineer] Excepción crítica durante la auditoría E2E:', err);
     failedTests++;
