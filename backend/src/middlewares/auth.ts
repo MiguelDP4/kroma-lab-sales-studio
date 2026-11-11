@@ -8,6 +8,7 @@ export interface AuthUserPayload {
   email: string;
   role: string;
   name: string;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -36,6 +37,25 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUserPayload;
     req.user = decoded;
+
+    if (decoded.mustChangePassword) {
+      const reqPath = (req.originalUrl || req.path || '').split('?')[0];
+      const allowedWhenForced = [
+        '/api/auth/me',
+        '/api/auth/logout',
+        '/api/auth/force-change-password',
+        '/api/auth/change-password',
+      ];
+      if (!allowedWhenForced.some((p) => reqPath.endsWith(p))) {
+        res.status(403).json({
+          success: false,
+          mustChangePassword: true,
+          message: 'Por seguridad debes cambiar tu contraseña temporal antes de continuar.',
+        });
+        return;
+      }
+    }
+
     next();
   } catch (error) {
     res.status(401).json({ success: false, message: 'Token inválido o expirado.' });

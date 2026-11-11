@@ -698,7 +698,9 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 | :--- | :--- | :--- |
 | **Salud** | `GET /api/health` | Estado del servicio y prueba de conectividad a la BD |
 | **Autenticación** | `POST /api/auth/register` | Registro público de nuevos clientes B2B (crea usuario con bcrypt y ficha comercial de cliente con JWT) |
-| **Autenticación** | `POST /api/auth/login` | Inicio de sesión real con correo y contraseña, verificación bcrypt y emisión de JWT |
+| **Autenticación** | `POST /api/auth/login` | Inicio de sesión real con correo y contraseña, verificación bcrypt y emisión de JWT (incluye flag `mustChangePassword`) |
+| **Autenticación** | `POST /api/auth/forgot-password` | Genera una contraseña temporal, marca `mustChangePassword=true` y la envía por correo SMTP si el email existe |
+| **Autenticación** | `POST /api/auth/force-change-password` | Cambio obligatorio de contraseña temporal tras iniciar sesión; desbloquea la cuenta y emite nuevo JWT |
 | **Autenticación** | `POST /api/auth/logout` | Cierre de sesión y limpieza de cookie y almacenamiento JWT |
 | **Autenticación** | `GET /api/auth/me` | Perfil del usuario activo autenticado (requiere Bearer JWT) |
 | **Autenticación** | `PUT /api/auth/profile` | Actualización de datos de perfil, empresa y contacto del usuario activo |
