@@ -1,0 +1,21 @@
+{
+  "name": "Kroma Lab | Impresión UV DTF Industrial en Guatemala",
+  "short_name": "Kroma Lab",
+  "description": "Cotizador en línea de impresión UV DTF industrial por metro lineal en Guatemala. Cama blanca fotográfica, relieve 3D y envíos a todo el país.",
+  "lang": "es-GT",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0d1224",
+  "background_color": "#0d1224",
+  "categories": ["business", "shopping", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
