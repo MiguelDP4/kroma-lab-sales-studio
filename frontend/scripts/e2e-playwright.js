@@ -662,10 +662,12 @@ async function runFullQASuite() {
     const settingsMounted = await page.evaluate(() => {
       return document.body.innerHTML.includes('Configuración del Sistema') &&
              document.body.innerHTML.includes('FREE_SHIPPING_THRESHOLD') &&
+             !!document.getElementById('setting_input_rateTier1') &&
+             !!document.getElementById('setting_input_rateTier5') &&
              !!document.getElementById('setting_desc_FREE_SHIPPING_THRESHOLD') &&
              !!document.getElementById('btnNewSetting');
     });
-    assert(settingsMounted, 'Vista de Configuración montada con tabla de parámetros (SystemSetting), descripción y botón Nuevo');
+    assert(settingsMounted, 'Vista de Configuración montada con parámetros (envío y rateTier1..5), descripción y botón Nuevo');
 
     // Probar apertura y cierre del inline form "Nuevo"
     await page.click('#btnNewSetting');

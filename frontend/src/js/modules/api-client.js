@@ -540,6 +540,9 @@ export class ApiClient {
     getShippingSettings: async () => {
       return this._request('/settings/shipping');
     },
+    getQuoterSettings: async () => {
+      return this._request('/settings/quoter');
+    },
     getAll: async () => {
       return this._request('/settings');
     },

@@ -12,14 +12,20 @@ Almacenados en la tabla `SystemSetting` (`key`, `value`, `description`, `created
 - **Creación de nuevos parámetros:** El botón **«➕ Nuevo»** abre un formulario *inline* para registrar claves nuevas (`key`, `value`, `description`) sin depender de migraciones ni despliegues.
 - **Inicialización automática (No destructiva):** Al iniciar el servidor (`backend/src/index.ts`) o ejecutar `seed.js` (`backend/src/db/seed.ts`), la función `ensureDefaultSystemSettings()` inserta únicamente las claves base que aún no existan en la base de datos (sin sobrescribir valores o descripciones modificadas en producción).
 
-| Clave (`key`) | Valor por Defecto | Descripción de Uso (`description`) | Impacto / Módulos donde se utiliza |
+| Clave (`key`) | Valor por Defecto (Fallback) | Descripción de Uso (`description`) | Impacto / Módulos donde se utiliza |
 | :--- | :--- | :--- | :--- |
-| `FREE_SHIPPING_THRESHOLD` | `575` | Monto mínimo en Quetzales (GTQ) para calificar a envío gratis dentro de la Ciudad de Guatemala / Capital (~5 metros lineales). | • `GET /api/settings/shipping` (`settings.controller.ts`)<br>• Cotizador público, barra de progreso y WhatsApp (`app.js`, `quoter-view.js`, `quoter-engine.js`)<br>• Carrito Drawer (`cart-drawer.js`, `cart-engine.js`) |
-| `FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL` | `1000` | Monto mínimo en Quetzales (GTQ) para calificar a envío gratis hacia Departamentos / Interior del país (~10 metros lineales). | • `GET /api/settings/shipping` (`settings.controller.ts`)<br>• Cotizador público, barra de progreso y WhatsApp (`app.js`, `quoter-view.js`, `quoter-engine.js`)<br>• Carrito Drawer (`cart-drawer.js`, `cart-engine.js`) |
+| `FREE_SHIPPING_THRESHOLD` | `575` | Monto mínimo en Quetzales (GTQ) para calificar a envío gratis dentro de la Ciudad de Guatemala / Capital (~5 metros lineales). | • `GET /api/settings/shipping` y `/api/settings/quoter`<br>• Cotizador público, barra de progreso y WhatsApp (`app.js`, `quoter-view.js`, `quoter-engine.js`)<br>• Carrito Drawer (`cart-drawer.js`, `cart-engine.js`) |
+| `FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL` | `1000` | Monto mínimo en Quetzales (GTQ) para calificar a envío gratis hacia Departamentos / Interior del país (~10 metros lineales). | • `GET /api/settings/shipping` y `/api/settings/quoter`<br>• Cotizador público, barra de progreso y WhatsApp (`app.js`, `quoter-view.js`, `quoter-engine.js`)<br>• Carrito Drawer (`cart-drawer.js`, `cart-engine.js`) |
+| `rateTier1` | `150` | Tarifa por metro lineal para la escala de 1 a 2 metros (y tarifa mínima base de 1 metro) en Quetzales. | • `GET /api/settings/quoter` (`settings.controller.ts`)<br>• `PRICING_TIERS[0]` / `BUSINESS_CONFIG.minimumBasePriceQ`<br>• `quoter-engine.js`, `cart-engine.js`, `profitability-engine.js`, `quoter-view.js`, `app.js` |
+| `rateTier2` | `125` | Tarifa por metro lineal para la escala de 2 a 5 metros en Quetzales. | • `GET /api/settings/quoter` (`settings.controller.ts`)<br>• `PRICING_TIERS[1]` en cotizador, carrito y tabla de tarifas |
+| `rateTier3` | `115` | Tarifa por metro lineal para la escala de 5 a 10 metros en Quetzales. | • `GET /api/settings/quoter` (`settings.controller.ts`)<br>• `PRICING_TIERS[2]` en cotizador, carrito y tabla de tarifas |
+| `rateTier4` | `105` | Tarifa por metro lineal para la escala de 10 a 20 metros en Quetzales. | • `GET /api/settings/quoter` (`settings.controller.ts`)<br>• `PRICING_TIERS[3]` en cotizador, carrito y tabla de tarifas |
+| `rateTier5` | `95` | Tarifa por metro lineal de mayoreo para pedidos de 20 metros o más en Quetzales. | • `GET /api/settings/quoter` (`settings.controller.ts`)<br>• `PRICING_TIERS[4]` en cotizador, carrito y tabla de tarifas |
 
 ### Endpoints API para `SystemSetting`
 | Método | Ruta | Acceso | Descripción |
 | :--- | :--- | :--- | :--- |
+| `GET` | `/api/settings/quoter` | Público | Retorna `{ success: true, shipping: { capital, interior }, pricingTiers: { rateTier1..rateTier5 } }` con fallback automático si faltan claves en BD. |
 | `GET` | `/api/settings/shipping` | Público | Retorna `{ success: true, shipping: { capital, interior } }` (con contingencia `575` / `1000` si no existen registros). |
 | `GET` | `/api/settings` | `ADMIN` | Lista todos los registros de `SystemSetting` ordenados alfabéticamente por `key`. |
 | `POST` | `/api/settings` | `ADMIN` | Crea un nuevo parámetro `{ key, value, description? }`. Retorna `409 Conflict` si la clave ya existe. |

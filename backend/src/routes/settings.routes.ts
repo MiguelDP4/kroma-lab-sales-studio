@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getPublicShippingSettings,
+  getPublicQuoterSettings,
   getSettings,
   createSetting,
   updateSettings,
@@ -9,8 +10,9 @@ import { authenticate, requireRole } from '../middlewares/auth';
 
 const router = Router();
 
-// Endpoint público para que el cotizador obtenga los umbrales de envío gratis actualizados
+// Endpoints públicos para que el cotizador obtenga umbrales de envío y escalas de tarifa
 router.get('/shipping', getPublicShippingSettings);
+router.get('/quoter', getPublicQuoterSettings);
 
 // Endpoints protegidos exclusivos para ADMINISTRADOR
 router.get('/', authenticate, requireRole('ADMIN'), getSettings);
