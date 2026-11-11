@@ -3,6 +3,7 @@
  */
 
 import { store } from './store.js';
+import { updateDocumentSeo } from './modules/seo-manager.js';
 
 export class Router {
   constructor(routes = [], mountElementId = 'app') {
@@ -133,7 +134,9 @@ export class Router {
     let matchedRoute = this.routes.find(r => r.path === normalizedPath);
 
     // Fallback 404 si la ruta no existe
+    let isNotFound = false;
     if (!matchedRoute) {
+      isNotFound = true;
       matchedRoute = this.routes.find(r => r.path === '*') || {
         path: '*',
         render: () => `
@@ -152,7 +155,7 @@ export class Router {
       return;
     }
 
-    this.renderRoute(matchedRoute);
+    this.renderRoute(matchedRoute, { isNotFound });
   }
 
   normalizePath(path) {
@@ -198,9 +201,10 @@ export class Router {
     }
 
     this.updateActiveNavLinks(route.path);
+    updateDocumentSeo(route.path, { isAccessDenied: true });
   }
 
-  renderRoute(route) {
+  renderRoute(route, options = {}) {
     const mountEl = document.getElementById(this.mountElementId);
     if (!mountEl) return;
 
@@ -222,6 +226,7 @@ export class Router {
     }
 
     this.updateActiveNavLinks(route.path);
+    updateDocumentSeo(route.path, { isNotFound: Boolean(options?.isNotFound) || route.path === '*' });
   }
 
   updateActiveNavLinks(activePath) {

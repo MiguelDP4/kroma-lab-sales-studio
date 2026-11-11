@@ -198,6 +198,18 @@ describe('Vistas Modulares SPA', () => {
       expect(posCutting).toBeGreaterThan(posQty);
     });
 
+    it('incluye secciones informativas SEO-friendly (beneficios, superficies, tarifas, FAQ y footer #contacto)', () => {
+      const html = quoterView.render();
+      expect(html).toContain('id="beneficios-uv-dtf"');
+      expect(html).toContain('id="superficies-compatibles"');
+      expect(html).toContain('id="tarifas-volumen"');
+      expect(html).toContain('id="preguntas-frecuentes"');
+      expect(html).toContain('id="contacto"');
+      expect(html).toContain('Q150');
+      expect(html).toContain('Q95');
+      expect(html).toContain('<details class="seo-faq-item">');
+    });
+
     it('ejecuta onMount sin errores cuando el DOM contiene los elementos', () => {
       document.body.innerHTML = quoterView.render();
       expect(typeof quoterView.onMount).toBe('function');

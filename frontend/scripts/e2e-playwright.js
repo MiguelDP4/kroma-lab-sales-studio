@@ -770,6 +770,68 @@ async function runFullQASuite() {
     });
     await page.waitForTimeout(500);
 
+    // ==========================================================================
+    // FASE 18: AUDITORÍA SEO TÉCNICO, METADATOS, SCHEMA JSON-LD Y ARCHIVOS DE RASTREO
+    // ==========================================================================
+    console.log('\n======================================================');
+    console.log('📦 FASE 18: Auditoría SEO Técnico, Metadatos & Archivos');
+    console.log('======================================================');
+
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(500);
+
+    const seoAudit = await page.evaluate(() => {
+      const desc = document.head.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+      const robots = document.head.querySelector('meta[name="robots"]')?.getAttribute('content') || '';
+      const canonical = document.head.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
+      const ogTitle = document.head.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+      const ogImage = document.head.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+      const ldScript = document.getElementById('seo-structured-data');
+      let schemaValid = false;
+      let hasFaqSchema = false;
+      if (ldScript) {
+        try {
+          const parsed = JSON.parse(ldScript.textContent);
+          schemaValid = Array.isArray(parsed['@graph']) && parsed['@graph'].length >= 4;
+          hasFaqSchema = parsed['@graph'].some((n) => n['@type'] === 'FAQPage');
+        } catch (_) {}
+      }
+      const hasFaqDom = document.querySelectorAll('#preguntas-frecuentes details.seo-faq-item').length >= 4;
+      const hasContactFooter = Boolean(document.getElementById('contacto'));
+      return { desc, robots, canonical, ogTitle, ogImage, schemaValid, hasFaqSchema, hasFaqDom, hasContactFooter };
+    });
+
+    assert(seoAudit.desc.length >= 80, 'Meta description SEO configurada con longitud óptima', `Len: ${seoAudit.desc.length}`);
+    assert(seoAudit.robots.includes('index, follow'), 'Directiva robots indexable en página principal', `Robots: ${seoAudit.robots}`);
+    assert(seoAudit.canonical === 'https://kroma-lab.pages.dev/', 'URL canónica configurada correctamente', `Canonical: ${seoAudit.canonical}`);
+    assert(seoAudit.ogTitle.includes('Kroma Lab') && seoAudit.ogImage.endsWith('/og-image.png'), 'Open Graph tags y og:image configurados');
+    assert(seoAudit.schemaValid && seoAudit.hasFaqSchema, 'JSON-LD Schema.org (@graph + FAQPage) válido');
+    assert(seoAudit.hasFaqDom && seoAudit.hasContactFooter, 'Secciones SEO visibles (FAQ acordeón y footer #contacto) renderizadas');
+
+    // Verificar viewport móvil (375px) sin desbordamiento horizontal tras secciones SEO
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForTimeout(300);
+    const seoMobileOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > document.documentElement.clientWidth + 3;
+    });
+    assert(!seoMobileOverflow, 'Cero desbordamiento horizontal en móvil (375px) con secciones SEO y FAQ');
+    await page.setViewportSize({ width: 1280, height: 850 });
+
+    // Verificar archivos estáticos SEO (robots.txt, sitemap.xml, manifest.webmanifest, og-image.png)
+    const seoAssets = ['/robots.txt', '/sitemap.xml', '/manifest.webmanifest', '/og-image.png'];
+    for (const assetPath of seoAssets) {
+      const resp = await page.request.get(`${BASE_URL}${assetPath}`);
+      assert(resp.status() === 200, `Recurso SEO ${assetPath} accesible (HTTP 200)`, `Status: ${resp.status()}`);
+    }
+
+    // Verificar noindex dinámico en ruta privada / restringida
+    await page.goto(`${BASE_URL}/pedidos`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(400);
+    const privateRobots = await page.evaluate(() => {
+      return document.head.querySelector('meta[name="robots"]')?.getAttribute('content') || '';
+    });
+    assert(privateRobots === 'noindex, nofollow', 'Rutas restringidas aplican dinámicamente noindex, nofollow', `Robots: ${privateRobots}`);
+
   } catch (err) {
     console.error('\n💥 [QA Engineer] Excepción crítica durante la auditoría E2E:', err);
     failedTests++;

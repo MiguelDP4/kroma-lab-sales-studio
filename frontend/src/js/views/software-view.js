@@ -10,7 +10,7 @@ export const softwareView = {
   name: 'software',
   allowedRoles: ['VISITOR', 'CUSTOMER', 'EMPLOYEE', 'ADMIN'],
   render: () => {
-    const waPhone = BUSINESS_CONFIG?.whatsappPhone || '50200000000';
+    const waPhone = BUSINESS_CONFIG.phoneWhatsApp;
     const cleanPhone = String(waPhone).replace(/\D/g, '');
     const waMessage = encodeURIComponent(
       '¡Hola Miguel! Me interesa el software Kroma Spot Studio para mi taller de impresión. ¿Podrías darme más información?'
@@ -77,10 +77,13 @@ export const softwareView = {
             <div style="position: relative; text-align: center; background: #000; padding: 0.5rem;">
               <img 
                 src="./src/assets/kroma_spot_studio_vs_photoshop.gif" 
-                alt="Comparativa de velocidad entre Photoshop y Kroma Spot Studio" 
+                alt="Comparativa de velocidad entre Adobe Photoshop y Kroma Spot Studio generando canales Spot Blanco y Barniz UV DTF" 
                 id="gifComparisonImg"
+                width="840"
+                height="472"
                 style="width: 100%; max-width: 840px; height: auto; border-radius: 6px; display: block; margin: 0 auto;"
                 loading="eager"
+                decoding="async"
               />
             </div>
 
