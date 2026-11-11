@@ -8,7 +8,7 @@
  */
 
 import { apiClient } from '../modules/api-client.js';
-import { BUSINESS_CONFIG } from '../../shared/business-config.js';
+import { BUSINESS_CONFIG, PRICING_TIERS, applyDynamicPricingTiers } from '../../shared/business-config.js';
 
 // Metadatos amigables para claves conocidas
 const SETTING_METADATA = {
@@ -28,6 +28,46 @@ const SETTING_METADATA = {
     unit: 'Q',
     placeholder: '1000',
   },
+  rateTier1: {
+    label: 'Tarifa Escala 1 — 1 a 2 metros (Base)',
+    description: 'Tarifa por metro lineal para la escala de 1 a 2 metros (y tarifa mínima base de 1 metro) en Quetzales.',
+    type: 'number',
+    step: '0.01',
+    unit: 'Q',
+    placeholder: '150',
+  },
+  rateTier2: {
+    label: 'Tarifa Escala 2 — 2 a 5 metros',
+    description: 'Tarifa por metro lineal para la escala de 2 a 5 metros en Quetzales.',
+    type: 'number',
+    step: '0.01',
+    unit: 'Q',
+    placeholder: '125',
+  },
+  rateTier3: {
+    label: 'Tarifa Escala 3 — 5 a 10 metros',
+    description: 'Tarifa por metro lineal para la escala de 5 a 10 metros en Quetzales.',
+    type: 'number',
+    step: '0.01',
+    unit: 'Q',
+    placeholder: '115',
+  },
+  rateTier4: {
+    label: 'Tarifa Escala 4 — 10 a 20 metros',
+    description: 'Tarifa por metro lineal para la escala de 10 a 20 metros en Quetzales.',
+    type: 'number',
+    step: '0.01',
+    unit: 'Q',
+    placeholder: '105',
+  },
+  rateTier5: {
+    label: 'Tarifa Escala 5 — 20+ metros (Mayoreo)',
+    description: 'Tarifa por metro lineal de mayoreo para pedidos de 20 metros o más en Quetzales.',
+    type: 'number',
+    step: '0.01',
+    unit: 'Q',
+    placeholder: '95',
+  },
 };
 
 function escapeHtml(str) {
@@ -40,11 +80,30 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-function syncDynamicShippingThreshold(key, value) {
-  if (key === 'FREE_SHIPPING_THRESHOLD') {
-    BUSINESS_CONFIG.freeShippingThresholds.capital = Number(value) || 575;
-  } else if (key === 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL') {
-    BUSINESS_CONFIG.freeShippingThresholds.interior = Number(value) || 1000;
+function syncDynamicSettingsInMemory(items = []) {
+  const currentRates = {
+    rateTier1: PRICING_TIERS[0]?.ratePerMeterQ,
+    rateTier2: PRICING_TIERS[1]?.ratePerMeterQ,
+    rateTier3: PRICING_TIERS[2]?.ratePerMeterQ,
+    rateTier4: PRICING_TIERS[3]?.ratePerMeterQ,
+    rateTier5: PRICING_TIERS[4]?.ratePerMeterQ,
+  };
+  let hasTierUpdates = false;
+
+  for (const item of items) {
+    if (!item || !item.key) continue;
+    if (item.key === 'FREE_SHIPPING_THRESHOLD') {
+      BUSINESS_CONFIG.freeShippingThresholds.capital = Number(item.value) || 575;
+    } else if (item.key === 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL') {
+      BUSINESS_CONFIG.freeShippingThresholds.interior = Number(item.value) || 1000;
+    } else if (/^rateTier[1-5]$/.test(item.key)) {
+      currentRates[item.key] = Number(item.value);
+      hasTierUpdates = true;
+    }
+  }
+
+  if (hasTierUpdates) {
+    applyDynamicPricingTiers(currentRates);
   }
 }
 
@@ -86,7 +145,7 @@ export const settingsView = {
       <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: flex-start;">
         <span style="font-size: 1.5rem; line-height: 1;">💡</span>
         <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
-          <strong style="color: var(--text-primary);">Impacto Inmediato en Ventas:</strong> Los valores aquí configurados son leídos automáticamente por el <strong>Cotizador Público</strong>. Al actualizar los límites de flete gratuito, la barra de progreso de incentivo y el mensaje comercial pregenerado para WhatsApp se sincronizan al instante.
+          <strong style="color: var(--text-primary);">Impacto Inmediato en Ventas:</strong> Los valores aquí configurados son leídos automáticamente por el <strong>Cotizador Público</strong> y el <strong>Carrito</strong>. Al actualizar las tarifas por metro lineal (<code>rateTier1</code>–<code>rateTier5</code>) o los límites de envío gratis, los precios, la barra de progreso y el mensaje de WhatsApp se sincronizan al instante.
         </div>
       </div>
 
@@ -454,7 +513,7 @@ function initSettingsView() {
           countBadge.textContent = `${currentSettings.length} Parámetros Activos`;
         }
 
-        syncDynamicShippingThreshold(res.setting.key, res.setting.value);
+        syncDynamicSettingsInMemory([res.setting]);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('kroma-settings-updated', { detail: [res.setting] }));
         }
@@ -518,9 +577,7 @@ function initSettingsView() {
         }
 
         // Actualizar constantes de contingencia en memoria
-        for (const item of payload) {
-          syncDynamicShippingThreshold(item.key, item.value);
-        }
+        syncDynamicSettingsInMemory(payload);
 
         // Disparar evento personalizado en window para sincronizar el cotizador si está activo
         if (typeof window !== 'undefined') {

@@ -299,19 +299,97 @@ describe('System Settings API (/api/settings)', () => {
 
     it('ensureDefaultSystemSettings crea las claves base con descripción si faltan', async () => {
       await prisma.systemSetting.deleteMany({
-        where: { key: { in: ['FREE_SHIPPING_THRESHOLD', 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL'] } },
+        where: {
+          key: {
+            in: [
+              'FREE_SHIPPING_THRESHOLD',
+              'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL',
+              'rateTier1',
+              'rateTier2',
+              'rateTier3',
+              'rateTier4',
+              'rateTier5',
+            ],
+          },
+        },
       });
 
       await ensureDefaultSystemSettings();
 
       const settings = await prisma.systemSetting.findMany({
-        where: { key: { in: ['FREE_SHIPPING_THRESHOLD', 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL'] } },
+        where: {
+          key: {
+            in: [
+              'FREE_SHIPPING_THRESHOLD',
+              'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL',
+              'rateTier1',
+              'rateTier2',
+              'rateTier3',
+              'rateTier4',
+              'rateTier5',
+            ],
+          },
+        },
       });
 
-      expect(settings.length).toBe(2);
+      expect(settings.length).toBe(7);
       const cap = settings.find((s) => s.key === 'FREE_SHIPPING_THRESHOLD');
       expect(cap?.value).toBe('575');
       expect(cap?.description).toBeTruthy();
+
+      const t1 = settings.find((s) => s.key === 'rateTier1');
+      const t5 = settings.find((s) => s.key === 'rateTier5');
+      expect(t1?.value).toBe('150');
+      expect(t5?.value).toBe('95');
+      expect(t1?.description).toBeTruthy();
+    });
+
+    it('GET /api/settings/quoter retorna envío y rateTier1..5 con fallback si faltan o son inválidos', async () => {
+      await prisma.systemSetting.deleteMany();
+
+      // Con BD vacía retorna valores fallback exactos
+      const fallbackRes = await request(app).get('/api/settings/quoter');
+      expect(fallbackRes.status).toBe(200);
+      expect(fallbackRes.body.success).toBe(true);
+      expect(fallbackRes.body.shipping).toEqual({ capital: 575, interior: 1000 });
+      expect(fallbackRes.body.pricingTiers).toEqual({
+        rateTier1: 150,
+        rateTier2: 125,
+        rateTier3: 115,
+        rateTier4: 105,
+        rateTier5: 95,
+      });
+
+      // Actualizar algunos tiers y dejar uno inválido para probar fallback parcial
+      await request(app)
+        .put('/api/settings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send([
+          { key: 'rateTier1', value: '140' },
+          { key: 'rateTier2', value: '120' },
+          { key: 'rateTier3', value: 'invalido' },
+        ]);
+
+      const customRes = await request(app).get('/api/settings/quoter');
+      expect(customRes.status).toBe(200);
+      expect(customRes.body.pricingTiers).toEqual({
+        rateTier1: 140,
+        rateTier2: 120,
+        rateTier3: 115, // fallback
+        rateTier4: 105, // fallback
+        rateTier5: 95,  // fallback
+      });
+
+      // Restaurar valores sembrados y cubrir catch 500
+      await prisma.systemSetting.deleteMany();
+      await ensureDefaultSystemSettings();
+
+      const origFindMany = prisma.systemSetting.findMany.bind(prisma.systemSetting);
+      vi.spyOn(prisma.systemSetting, 'findMany')
+        .mockRejectedValueOnce(new Error('DB failure'))
+        .mockImplementation(origFindMany as any);
+      const resErr = await request(app).get('/api/settings/quoter');
+      expect(resErr.status).toBe(500);
     });
 
     it('maneja errores de base de datos en POST /api/settings (500)', async () => {

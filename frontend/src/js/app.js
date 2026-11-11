@@ -13,7 +13,7 @@ import { usersStore } from './modules/users-store.js';
 import { store } from './store.js';
 import { calculateQuote, calculateMaxStickersInMeters, getTierRate } from './modules/quoter-engine.js';
 import { drawRollCanvas, generateCanvasSnapshot } from './modules/roll-simulator.js';
-import { BUSINESS_CONFIG } from '../shared/business-config.js';
+import { BUSINESS_CONFIG, PRICING_TIERS, applyDynamicPricingTiers } from '../shared/business-config.js';
 import { Router } from './router.js';
 import { initCartDrawer, openCartDrawer } from './components/cart-drawer.js';
 import { cartStore } from './modules/cart-store.js';
@@ -24,7 +24,7 @@ import { initPrintListeners, printDocument } from './modules/print-helper.js';
 import { quotesStore } from './modules/quotes-store.js';
 import { clearAllApplicationCache } from './modules/cache-cleaner.js';
 
-import { quoterView } from './views/quoter-view.js';
+import { quoterView, renderSeoPricingTiers } from './views/quoter-view.js';
 import { ordersView } from './views/orders-view.js';
 import { productionView } from './views/production-view.js';
 import { clientsView } from './views/clients-view.js';
@@ -358,7 +358,7 @@ export function initApp() {
     openUserProfileModal('force-change-password');
   }
   initBackendSync();
-  loadDynamicShippingSettings();
+  loadDynamicQuoterSettings();
 }
 
 /**
@@ -1342,10 +1342,18 @@ export function initQuoter() {
     });
   }
 
-  // Redimensionado responsivo del canvas
+  // Redimensionado responsivo del canvas y recálculo reactivo ante actualización de parámetros
   window.addEventListener('resize', () => {
     redrawRollCanvas();
   });
+
+  if (typeof window !== 'undefined') {
+    if (window.__kromaQuoterRecalcHandler) {
+      window.removeEventListener('kroma-quoter-recalculate', window.__kromaQuoterRecalcHandler);
+    }
+    window.__kromaQuoterRecalcHandler = handleCalculate;
+    window.addEventListener('kroma-quoter-recalculate', handleCalculate);
+  }
 
   // Cálculo inicial
   handleCalculate();
@@ -1468,8 +1476,9 @@ export function renderQuoteResults(quote) {
   const noticeBox = document.getElementById('minimumNotice');
   if (noticeBox) {
     if (quote.isUnderMin) {
+      const minBasePriceStr = Number(BUSINESS_CONFIG.minimumBasePriceQ || 150).toFixed(2);
       noticeBox.style.display = 'block';
-      noticeBox.innerHTML = `💡 <strong>Aprovecha tu metro:</strong> El pedido mínimo es 1 metro lineal (Q150.00). Tus ${quote.qty} stickers ocupan aprox. ${(quote.actualLinearMeters).toFixed(2)} m. ¡Puedes pedir hasta <strong>${quote.maxInOneMeter} piezas</strong> por el mismo precio exacto de Q150.00!`;
+      noticeBox.innerHTML = `💡 <strong>Aprovecha tu metro:</strong> El pedido mínimo es 1 metro lineal (Q${minBasePriceStr}). Tus ${quote.qty} stickers ocupan aprox. ${(quote.actualLinearMeters).toFixed(2)} m. ¡Puedes pedir hasta <strong>${quote.maxInOneMeter} piezas</strong> por el mismo precio exacto de Q${minBasePriceStr}!`;
     } else {
       noticeBox.style.display = 'none';
     }
@@ -1526,9 +1535,48 @@ export async function loadDynamicShippingSettings() {
   return currentShippingThresholds;
 }
 
+export async function loadDynamicQuoterSettings() {
+  try {
+    const res = await apiClient.settings.getQuoterSettings();
+    if (res && res.success) {
+      if (res.shipping) {
+        currentShippingThresholds.capital = Number(res.shipping.capital) || 575;
+        currentShippingThresholds.interior = Number(res.shipping.interior) || 1000;
+        BUSINESS_CONFIG.freeShippingThresholds.capital = currentShippingThresholds.capital;
+        BUSINESS_CONFIG.freeShippingThresholds.interior = currentShippingThresholds.interior;
+      }
+
+      if (res.pricingTiers) {
+        applyDynamicPricingTiers(res.pricingTiers);
+      }
+
+      if (typeof document !== 'undefined') {
+        const tiersGrid = document.getElementById('seoPricingTiersGrid');
+        if (tiersGrid) {
+          tiersGrid.innerHTML = renderSeoPricingTiers();
+        }
+      }
+
+      if (cartStore && typeof cartStore.notify === 'function') {
+        cartStore.notify();
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kroma-quoter-recalculate'));
+      }
+    }
+  } catch (err) {
+    console.warn('[App] No se pudieron obtener parámetros dinámicos del cotizador:', err);
+  }
+  return {
+    shipping: currentShippingThresholds,
+    pricingTiers: PRICING_TIERS,
+  };
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('kroma-settings-updated', () => {
-    loadDynamicShippingSettings();
+    loadDynamicQuoterSettings();
   });
 }
 

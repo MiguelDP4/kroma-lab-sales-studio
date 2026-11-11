@@ -6,11 +6,11 @@
 import { BUSINESS_CONFIG, PRICING_TIERS } from '../../shared/business-config.js';
 import { FAQ_ITEMS } from '../modules/seo-manager.js';
 
-function renderSeoPricingTiers() {
+export function renderSeoPricingTiers() {
   return PRICING_TIERS.map((tier) => `
     <div class="seo-tier-card">
       <div class="seo-tier-range">${tier.label}</div>
-      <div class="seo-tier-price">Q${tier.ratePerMeterQ.toFixed(0)}<span>/m</span></div>
+      <div class="seo-tier-price">Q${Number(tier.ratePerMeterQ).toFixed(0)}<span>/m</span></div>
       <div class="seo-tier-note">Bobina 28 cm útiles</div>
     </div>
   `).join('');
@@ -224,7 +224,7 @@ export const quoterView = {
               </div>
               <div class="breakdown-row">
                 <span>Tarifa por metro lineal:</span>
-                <strong id="resTierRate">Q150.00 / m</strong>
+                <strong id="resTierRate">Q${Number(BUSINESS_CONFIG.minimumBasePriceQ || 150).toFixed(2)} / m</strong>
               </div>
               <div class="breakdown-row">
                 <span>Corte individual:</span>
@@ -241,7 +241,7 @@ export const quoterView = {
             <!-- Caja de Total en Quetzales -->
             <div class="total-box">
               <div class="total-label">Total Estimado en Quetzales</div>
-              <div class="total-price" id="resTotalPrice">Q150.00</div>
+              <div class="total-price" id="resTotalPrice">Q${Number(BUSINESS_CONFIG.minimumBasePriceQ || 150).toFixed(2)}</div>
               <div class="unit-price-hint" id="resUnitHint">Costo aprox: Q3.00 por sticker</div>
               <div class="total-freight-notice" id="totalFreightNotice">
                 <span class="freight-notice-badge">📦 No incluye flete</span>
@@ -370,7 +370,7 @@ export const quoterView = {
         </p>
       </div>
 
-      <div class="seo-tiers-grid">
+      <div class="seo-tiers-grid" id="seoPricingTiersGrid">
         ${renderSeoPricingTiers()}
       </div>
     </section>

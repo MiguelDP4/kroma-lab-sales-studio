@@ -14,6 +14,36 @@ export const DEFAULT_SYSTEM_SETTINGS = [
     description:
       'Monto mínimo en Quetzales para calificar a envío gratis hacia Departamentos / Interior del país (~10 metros lineales).',
   },
+  {
+    key: 'rateTier1',
+    value: '150',
+    description:
+      'Tarifa por metro lineal para la escala de 1 a 2 metros (y tarifa mínima base de 1 metro) en Quetzales.',
+  },
+  {
+    key: 'rateTier2',
+    value: '125',
+    description:
+      'Tarifa por metro lineal para la escala de 2 a 5 metros en Quetzales.',
+  },
+  {
+    key: 'rateTier3',
+    value: '115',
+    description:
+      'Tarifa por metro lineal para la escala de 5 a 10 metros en Quetzales.',
+  },
+  {
+    key: 'rateTier4',
+    value: '105',
+    description:
+      'Tarifa por metro lineal para la escala de 10 a 20 metros en Quetzales.',
+  },
+  {
+    key: 'rateTier5',
+    value: '95',
+    description:
+      'Tarifa por metro lineal de mayoreo para pedidos de 20 metros o más en Quetzales.',
+  },
 ];
 
 /**

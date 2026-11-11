@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { settingsView } from '../src/js/views/settings-view.js';
 import { apiClient } from '../src/js/modules/api-client.js';
-import { BUSINESS_CONFIG } from '../src/shared/business-config.js';
+import { BUSINESS_CONFIG, PRICING_TIERS, DEFAULT_PRICING_TIER_RATES, applyDynamicPricingTiers } from '../src/shared/business-config.js';
+import { getTierRate, calculateQuote } from '../src/js/modules/quoter-engine.js';
 import {
   currentShippingThresholds,
   loadDynamicShippingSettings,
+  loadDynamicQuoterSettings,
   sendWhatsAppQuote,
 } from '../src/js/app.js';
 
@@ -488,6 +490,9 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       await apiClient.settings.getShippingSettings();
       expect(reqSpy).toHaveBeenCalledWith('/settings/shipping');
 
+      await apiClient.settings.getQuoterSettings();
+      expect(reqSpy).toHaveBeenCalledWith('/settings/quoter');
+
       await apiClient.settings.getAll();
       expect(reqSpy).toHaveBeenCalledWith('/settings');
 
@@ -528,6 +533,109 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       const decodedText = decodeURIComponent(calledUrl);
 
       expect(decodedText).toContain('Envío gratis desde Q575 en Capital y Q1000 en Departamentos');
+    });
+
+    it('applyDynamicPricingTiers actualiza PRICING_TIERS y aplica fallback ante valores faltantes', () => {
+      try {
+        applyDynamicPricingTiers({
+          rateTier1: 140,
+          rateTier2: 118,
+          rateTier3: 'invalido',
+          rateTier4: 0,
+          rateTier5: 88,
+        });
+
+        expect(PRICING_TIERS[0].ratePerMeterQ).toBe(140);
+        expect(PRICING_TIERS[1].ratePerMeterQ).toBe(118);
+        expect(PRICING_TIERS[2].ratePerMeterQ).toBe(115); // fallback
+        expect(PRICING_TIERS[3].ratePerMeterQ).toBe(105); // fallback
+        expect(PRICING_TIERS[4].ratePerMeterQ).toBe(88);
+        expect(BUSINESS_CONFIG.minimumBasePriceQ).toBe(140);
+
+        expect(getTierRate(1.0)).toBe(140);
+        expect(getTierRate(3.0)).toBe(118);
+        expect(getTierRate(25.0)).toBe(88);
+
+        const quote = calculateQuote({ widthCm: 5, heightCm: 5, qty: 10, includeCutting: false });
+        expect(quote.tierRate).toBe(140);
+        expect(quote.totalPriceQ).toBe(140);
+      } finally {
+        applyDynamicPricingTiers(DEFAULT_PRICING_TIER_RATES);
+      }
+    });
+
+    it('loadDynamicQuoterSettings sincroniza envío, rateTiers y #seoPricingTiersGrid en el DOM', async () => {
+      const grid = document.createElement('div');
+      grid.id = 'seoPricingTiersGrid';
+      document.body.appendChild(grid);
+
+      vi.spyOn(apiClient.settings, 'getQuoterSettings').mockResolvedValue({
+        success: true,
+        shipping: { capital: 580, interior: 1050 },
+        pricingTiers: {
+          rateTier1: 145,
+          rateTier2: 122,
+          rateTier3: 112,
+          rateTier4: 102,
+          rateTier5: 92,
+        },
+      });
+
+      try {
+        const res = await loadDynamicQuoterSettings();
+        expect(res.shipping.capital).toBe(580);
+        expect(PRICING_TIERS[0].ratePerMeterQ).toBe(145);
+        expect(PRICING_TIERS[4].ratePerMeterQ).toBe(92);
+        expect(grid.innerHTML).toContain('Q145');
+        expect(grid.innerHTML).toContain('Q92');
+      } finally {
+        applyDynamicPricingTiers(DEFAULT_PRICING_TIER_RATES);
+        grid.remove();
+      }
+    });
+
+    it('loadDynamicQuoterSettings tolera fallo de red conservando valores de contingencia', async () => {
+      vi.spyOn(apiClient.settings, 'getQuoterSettings').mockRejectedValue(new Error('Offline'));
+      const res = await loadDynamicQuoterSettings();
+      expect(res.pricingTiers.length).toBe(5);
+      expect(PRICING_TIERS[0].ratePerMeterQ).toBe(150);
+    });
+
+    it('settingsView guarda rateTier1..5 y sincroniza PRICING_TIERS en memoria', async () => {
+      vi.spyOn(apiClient.settings, 'getAll').mockResolvedValue({
+        success: true,
+        settings: [
+          { key: 'rateTier1', value: '150', description: 'Escala 1' },
+          { key: 'rateTier5', value: '95', description: 'Escala 5' },
+        ],
+      });
+
+      vi.spyOn(apiClient.settings, 'update').mockResolvedValue({
+        success: true,
+        settings: [
+          { key: 'rateTier1', value: '142', description: 'Escala 1' },
+          { key: 'rateTier5', value: '89', description: 'Escala 5' },
+        ],
+      });
+
+      container.innerHTML = settingsView.render();
+      const cleanup = settingsView.onMount();
+      await new Promise((r) => setTimeout(r, 10));
+
+      try {
+        document.getElementById('setting_input_rateTier1').value = '142';
+        document.getElementById('setting_input_rateTier5').value = '89';
+
+        document.getElementById('btnSaveSettings').click();
+        await new Promise((r) => setTimeout(r, 10));
+
+        expect(PRICING_TIERS[0].ratePerMeterQ).toBe(142);
+        expect(PRICING_TIERS[4].ratePerMeterQ).toBe(89);
+        expect(BUSINESS_CONFIG.minimumBasePriceQ).toBe(142);
+      } finally {
+        applyDynamicPricingTiers(DEFAULT_PRICING_TIER_RATES);
+        if (typeof cleanup === 'function') cleanup();
+      }
     });
   });
 });

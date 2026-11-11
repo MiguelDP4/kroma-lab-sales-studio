@@ -692,7 +692,7 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 5. **`InventoryItem` & `InventoryMovement`:** Catálogo de 7 insumos industriales para la Audley (Film A, Film B, CMYK, Blanco, Barniz 3D, Navajas, Solvente), semáforo de existencias (Óptimo, Bajo, Crítico) y Kardex inmutable.
 6. **`Payment`:** Transacciones de abono y liquidación (`PAY-YYYY-XXX`), métodos de pago parametrizados, conciliación de cuentas bancarias (BI, BAC, Banrural) y recálculo automático de deuda.
 7. **`WorkshopConfig`:** Parámetros maestros de la máquina Audley (ancho imprimible 28.00 cm, ancho bobina 30.00 cm), escalas de tarifas por metro lineal (Q130, Q120, Q115, Q105, Q95), cuentas bancarias y meta mensual.
-8. **`SystemSetting`:** Tabla clave-valor extensible (`key: String @id`, `value: String`, `description: String?`, `updatedAt: DateTime`, `createdAt: DateTime`) para almacenar configuraciones operativas dinámicas del sistema y documentar el propósito de cada parámetro. Inicializada automáticamente en arranque y seeding (sin sobrescribir cambios previos, incluso en producción) mediante `ensureDefaultSystemSettings()` con `FREE_SHIPPING_THRESHOLD` (Q575 para Ciudad de Guatemala, ~5 metros lineales) y `FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL` (Q1,000 para Departamentos / Interior, ~10 metros lineales). Ver detalle completo en [CONFIGURATION.md](./CONFIGURATION.md).
+8. **`SystemSetting`:** Tabla clave-valor extensible (`key: String @id`, `value: String`, `description: String?`, `updatedAt: DateTime`, `createdAt: DateTime`) para almacenar configuraciones operativas dinámicas del sistema y documentar el propósito de cada parámetro. Inicializada automáticamente en arranque y seeding (sin sobrescribir cambios previos, incluso en producción) mediante `ensureDefaultSystemSettings()` con `FREE_SHIPPING_THRESHOLD` (Q575), `FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL` (Q1,000) y las tarifas por metro lineal `rateTier1` (Q150), `rateTier2` (Q125), `rateTier3` (Q115), `rateTier4` (Q105) y `rateTier5` (Q95). Ver detalle completo en [CONFIGURATION.md](./CONFIGURATION.md).
 
 ### Catálogo de Endpoints REST (`/api/*`)
 
@@ -740,6 +740,7 @@ Para optimizar el rendimiento y evitar tráfico innecesario en la API, la aplica
 | **Cotizaciones** | `DELETE /api/quotes/:id` | Eliminación de cotización y sus `OrderItem` asociados. **Requiere autenticación**: Propietario o Staff. Retorna 403 Forbidden ante cotizaciones ajenas. |
 | **Taller Audley** | `GET /api/workshop` | Parámetros de bobina (28 cm útiles), tarifas y cuentas monetarias |
 | **Taller Audley** | `PUT /api/workshop` | Actualización de tarifas y cuentas bancarias (`ADMIN`) |
+| **Configuración** | `GET /api/settings/quoter` | Lectura pública consolidada de umbrales de envío y tarifas por metro (`rateTier1`–`rateTier5`) con fallback automático |
 | **Configuración** | `GET /api/settings/shipping` | Lectura pública de umbrales dinámicos de envío gratis para el cotizador (`capital`, `interior`) |
 | **Configuración** | `GET /api/settings` | Listado completo de parámetros clave-valor y descripción del sistema (`ADMIN`) |
 | **Configuración** | `POST /api/settings` | Creación de un nuevo parámetro `{ key, value, description? }` con validación de unicidad 409 (`ADMIN`) |

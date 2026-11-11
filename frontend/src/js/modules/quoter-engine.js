@@ -11,13 +11,16 @@ import { BUSINESS_CONFIG, PRICING_TIERS, CUTTING_TIERS } from '../../shared/busi
  * @returns {number} Tarifa en Quetzales por metro
  */
 export function getTierRate(meters) {
-  if (meters < 2.0) return 150.0;
+  const firstTierRate = PRICING_TIERS[0]?.ratePerMeterQ ?? 150.0;
+  const lastTierRate = PRICING_TIERS[PRICING_TIERS.length - 1]?.ratePerMeterQ ?? 95.0;
+  if (typeof meters !== 'number' || isNaN(meters)) return lastTierRate;
+  if (meters < 2.0) return firstTierRate;
   for (const tier of PRICING_TIERS) {
     if (meters >= tier.minMeters && meters < tier.maxMeters) {
       return tier.ratePerMeterQ;
     }
   }
-  return 95.0; // Fallback mayoreo 20+ m
+  return lastTierRate; // Fallback mayoreo 20+ m
 }
 
 /**
