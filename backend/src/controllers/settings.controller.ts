@@ -2,9 +2,23 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 
+export const createSettingSchema = z.object({
+  key: z
+    .string()
+    .trim()
+    .min(1, 'La clave es requerida')
+    .regex(
+      /^[A-Za-z0-9_.-]+$/,
+      'La clave solo puede contener letras, números, puntos y guiones (sin espacios).'
+    ),
+  value: z.string().trim().min(1, 'El valor es requerido'),
+  description: z.string().trim().optional().nullable(),
+});
+
 export const updateItemSchema = z.object({
   key: z.string().trim().min(1, 'La clave es requerida'),
   value: z.string().trim().min(1, 'El valor es requerido'),
+  description: z.string().trim().optional().nullable(),
 });
 
 export const updateSettingsSchema = z.union([
@@ -70,13 +84,50 @@ export async function getSettings(_req: Request, res: Response, next: NextFuncti
 }
 
 /**
+ * Crear un nuevo parámetro del sistema (Solo ADMIN)
+ */
+export async function createSetting(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const parsed = createSettingSchema.parse(req.body);
+
+    const existing = await prisma.systemSetting.findUnique({
+      where: { key: parsed.key },
+    });
+
+    if (existing) {
+      res.status(409).json({
+        success: false,
+        message: `Ya existe un parámetro configurado con la clave "${parsed.key}".`,
+      });
+      return;
+    }
+
+    const setting = await prisma.systemSetting.create({
+      data: {
+        key: parsed.key,
+        value: parsed.value,
+        description: parsed.description ? parsed.description : null,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Parámetro creado exitosamente.',
+      setting,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Actualizar configuraciones del sistema (Solo ADMIN)
  */
 export async function updateSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const parsed = updateSettingsSchema.parse(req.body);
 
-    let itemsToUpdate: Array<{ key: string; value: string }> = [];
+    let itemsToUpdate: Array<{ key: string; value: string; description?: string | null }> = [];
 
     if (Array.isArray(parsed)) {
       itemsToUpdate = parsed;
@@ -90,10 +141,20 @@ export async function updateSettings(req: Request, res: Response, next: NextFunc
     }
 
     for (const item of itemsToUpdate) {
+      const normalizedDescription =
+        item.description !== undefined ? (item.description ? item.description : null) : undefined;
+
       await prisma.systemSetting.upsert({
         where: { key: item.key },
-        update: { value: item.value },
-        create: { key: item.key, value: item.value },
+        update: {
+          value: item.value,
+          ...(normalizedDescription !== undefined ? { description: normalizedDescription } : {}),
+        },
+        create: {
+          key: item.key,
+          value: item.value,
+          description: normalizedDescription ?? null,
+        },
       });
     }
 

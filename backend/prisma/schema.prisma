@@ -316,8 +316,9 @@ model OrderItem {
 
 
 model SystemSetting {
-  key       String   @id
-  value     String
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 }

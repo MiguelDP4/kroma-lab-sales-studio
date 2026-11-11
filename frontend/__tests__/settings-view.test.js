@@ -37,6 +37,11 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       expect(html).toContain('Tabla de Parámetros (SystemSetting)');
       expect(html).toContain('btnSaveSettings');
       expect(html).toContain('btnRefreshSettings');
+      expect(html).toContain('btnNewSetting');
+      expect(html).toContain('inlineNewSettingContainer');
+      expect(html).toContain('newSettingKey');
+      expect(html).toContain('newSettingValue');
+      expect(html).toContain('newSettingDescription');
       expect(html).toContain('settingsListContainer');
       expect(html).toContain('settingsCountBadge');
     });
@@ -81,7 +86,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       });
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const listContainer = document.getElementById('settingsListContainer');
@@ -94,7 +99,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       vi.spyOn(apiClient.settings, 'getAll').mockRejectedValue(new Error('Fallo de red simulado'));
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const listContainer = document.getElementById('settingsListContainer');
@@ -110,7 +115,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       });
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const listContainer = document.getElementById('settingsListContainer');
@@ -139,11 +144,13 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       });
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const inputCapital = document.getElementById('setting_input_FREE_SHIPPING_THRESHOLD');
       inputCapital.value = '625';
+      const descCapital = document.getElementById('setting_desc_FREE_SHIPPING_THRESHOLD');
+      descCapital.value = 'Envío gratis en Ciudad Capital';
       const inputInterior = document.getElementById('setting_input_FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL');
       inputInterior.value = '1150';
 
@@ -153,8 +160,8 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       await new Promise((r) => setTimeout(r, 10));
 
       expect(updateSpy).toHaveBeenCalledWith([
-        { key: 'FREE_SHIPPING_THRESHOLD', value: '625' },
-        { key: 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL', value: '1150' },
+        { key: 'FREE_SHIPPING_THRESHOLD', value: '625', description: 'Envío gratis en Ciudad Capital' },
+        { key: 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL', value: '1150', description: null },
       ]);
 
       const alertBox = document.getElementById('settingsAlert');
@@ -180,7 +187,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       const updateSpy = vi.spyOn(apiClient.settings, 'update');
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const inputCapital = document.getElementById('setting_input_FREE_SHIPPING_THRESHOLD');
@@ -207,7 +214,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       vi.spyOn(apiClient.settings, 'update').mockRejectedValue(new Error('Error de validación 400'));
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const btnSave = document.getElementById('btnSaveSettings');
@@ -233,7 +240,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       });
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const btnSave = document.getElementById('btnSaveSettings');
@@ -280,7 +287,7 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       });
 
       container.innerHTML = settingsView.render();
-      const cleanup = settingsView.mount();
+      const cleanup = settingsView.onMount();
       await new Promise((r) => setTimeout(r, 10));
 
       const inputCustom = document.getElementById('setting_input_CUSTOM_TAX_RATE');
@@ -300,7 +307,152 @@ describe('Settings View & Dynamic Shipping Settings', () => {
       form.dispatchEvent(new Event('submit'));
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(updateSpy).toHaveBeenCalledWith([{ key: 'CUSTOM_TAX_RATE', value: '0.12' }]);
+      expect(updateSpy).toHaveBeenCalledWith([{ key: 'CUSTOM_TAX_RATE', value: '0.12', description: null }]);
+
+      if (typeof cleanup === 'function') cleanup();
+    });
+
+    it('abre y cierra el formulario inline al pulsar "Nuevo" y "Cancelar" o Escape', async () => {
+      vi.spyOn(apiClient.settings, 'getAll').mockResolvedValue({
+        success: true,
+        settings: [],
+      });
+
+      container.innerHTML = settingsView.render();
+      const cleanup = settingsView.onMount();
+      await new Promise((r) => setTimeout(r, 10));
+
+      const btnNew = document.getElementById('btnNewSetting');
+      const inlineBox = document.getElementById('inlineNewSettingContainer');
+      const btnCancel = document.getElementById('btnCancelNewSetting');
+
+      expect(inlineBox.style.display).toBe('none');
+      btnNew.click();
+      expect(inlineBox.style.display).toBe('block');
+      expect(btnNew.disabled).toBe(true);
+
+      btnCancel.click();
+      expect(inlineBox.style.display).toBe('none');
+      expect(btnNew.disabled).toBe(false);
+
+      // También cierra con tecla Escape
+      btnNew.click();
+      expect(inlineBox.style.display).toBe('block');
+      inlineBox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(inlineBox.style.display).toBe('none');
+
+      if (typeof cleanup === 'function') cleanup();
+    });
+
+    it('valida campos obligatorios y formato de clave en el formulario inline', async () => {
+      vi.spyOn(apiClient.settings, 'getAll').mockResolvedValue({
+        success: true,
+        settings: [],
+      });
+      const createSpy = vi.spyOn(apiClient.settings, 'create');
+
+      container.innerHTML = settingsView.render();
+      const cleanup = settingsView.onMount();
+      await new Promise((r) => setTimeout(r, 10));
+
+      document.getElementById('btnNewSetting').click();
+      const btnCreate = document.getElementById('btnCreateNewSetting');
+      const errorBox = document.getElementById('inlineNewSettingError');
+      const keyInput = document.getElementById('newSettingKey');
+      const valInput = document.getElementById('newSettingValue');
+
+      // Clave vacía
+      btnCreate.click();
+      expect(errorBox.style.display).toBe('block');
+      expect(errorBox.textContent).toContain('La clave (Key) es obligatoria');
+
+      // Clave con espacios
+      keyInput.value = 'CON ESPACIOS';
+      valInput.value = '100';
+      btnCreate.click();
+      expect(errorBox.textContent).toContain('sin espacios');
+
+      // Valor vacío
+      keyInput.value = 'VALID_KEY';
+      valInput.value = '';
+      btnCreate.click();
+      expect(errorBox.textContent).toContain('El valor (Value) es obligatorio');
+
+      expect(createSpy).not.toHaveBeenCalled();
+      if (typeof cleanup === 'function') cleanup();
+    });
+
+    it('crea un nuevo parámetro con key, value y description desde el inline form', async () => {
+      vi.spyOn(apiClient.settings, 'getAll').mockResolvedValue({
+        success: true,
+        settings: [],
+      });
+      const createSpy = vi.spyOn(apiClient.settings, 'create').mockResolvedValue({
+        success: true,
+        setting: {
+          key: 'FREE_SHIPPING_THRESHOLD',
+          value: '575',
+          description: 'Umbral de envío gratis para Capital.',
+          updatedAt: '2026-11-11T12:00:00Z',
+        },
+      });
+
+      container.innerHTML = settingsView.render();
+      const cleanup = settingsView.onMount();
+      await new Promise((r) => setTimeout(r, 10));
+
+      document.getElementById('btnNewSetting').click();
+      document.getElementById('newSettingKey').value = 'FREE_SHIPPING_THRESHOLD';
+      document.getElementById('newSettingValue').value = '575';
+      document.getElementById('newSettingDescription').value = 'Umbral de envío gratis para Capital.';
+
+      document.getElementById('btnCreateNewSetting').click();
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(createSpy).toHaveBeenCalledWith({
+        key: 'FREE_SHIPPING_THRESHOLD',
+        value: '575',
+        description: 'Umbral de envío gratis para Capital.',
+      });
+
+      expect(document.getElementById('inlineNewSettingContainer').style.display).toBe('none');
+      expect(document.getElementById('settingsCountBadge').textContent).toContain('1 Parámetros Activos');
+      expect(document.getElementById('setting_input_FREE_SHIPPING_THRESHOLD').value).toBe('575');
+      expect(document.getElementById('setting_desc_FREE_SHIPPING_THRESHOLD').value).toBe('Umbral de envío gratis para Capital.');
+      expect(document.getElementById('settingsAlert').textContent).toContain('creado exitosamente');
+
+      if (typeof cleanup === 'function') cleanup();
+    });
+
+    it('muestra error en el formulario inline si POST /api/settings falla (ej. clave duplicada)', async () => {
+      vi.spyOn(apiClient.settings, 'getAll').mockResolvedValue({
+        success: true,
+        settings: [{ key: 'EXISTENTE', value: '1', description: 'Ya existe' }],
+      });
+      vi.spyOn(apiClient.settings, 'create').mockRejectedValue(new Error('Ya existe un parámetro configurado con la clave "EXISTENTE".'));
+
+      container.innerHTML = settingsView.render();
+      const cleanup = settingsView.onMount();
+      await new Promise((r) => setTimeout(r, 10));
+
+      document.getElementById('btnNewSetting').click();
+      document.getElementById('newSettingKey').value = 'EXISTENTE';
+      document.getElementById('newSettingValue').value = '2';
+
+      // Probar también disparo vía Enter en input de valor
+      document.getElementById('newSettingValue').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      const errorBox = document.getElementById('inlineNewSettingError');
+      expect(errorBox.style.display).toBe('block');
+      expect(errorBox.textContent).toContain('Ya existe un parámetro configurado');
+      expect(document.getElementById('inlineNewSettingContainer').style.display).toBe('block');
+
+      // También cubre el caso donde create retorna success: false
+      vi.spyOn(apiClient.settings, 'create').mockResolvedValue({ success: false, message: 'Clave rechazada por política' });
+      document.getElementById('btnCreateNewSetting').click();
+      await new Promise((r) => setTimeout(r, 10));
+      expect(errorBox.textContent).toContain('Clave rechazada por política');
 
       if (typeof cleanup === 'function') cleanup();
     });
@@ -338,6 +490,12 @@ describe('Settings View & Dynamic Shipping Settings', () => {
 
       await apiClient.settings.getAll();
       expect(reqSpy).toHaveBeenCalledWith('/settings');
+
+      await apiClient.settings.create({ key: 'NEW_KEY', value: '10', description: 'Desc' });
+      expect(reqSpy).toHaveBeenCalledWith('/settings', {
+        method: 'POST',
+        body: JSON.stringify({ key: 'NEW_KEY', value: '10', description: 'Desc' }),
+      });
 
       await apiClient.settings.update([{ key: 'A', value: 'B' }]);
       expect(reqSpy).toHaveBeenCalledWith('/settings', {

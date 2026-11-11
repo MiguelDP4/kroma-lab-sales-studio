@@ -543,6 +543,12 @@ export class ApiClient {
     getAll: async () => {
       return this._request('/settings');
     },
+    create: async (settingData) => {
+      return this._request('/settings', {
+        method: 'POST',
+        body: JSON.stringify(settingData),
+      });
+    },
     update: async (settingsData) => {
       return this._request('/settings', {
         method: 'PUT',

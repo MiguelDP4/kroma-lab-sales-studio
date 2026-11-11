@@ -1,9 +1,45 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 
+export const DEFAULT_SYSTEM_SETTINGS = [
+  {
+    key: 'FREE_SHIPPING_THRESHOLD',
+    value: '575',
+    description:
+      'Monto mínimo en Quetzales para calificar a envío gratis dentro de la Ciudad de Guatemala / Capital (~5 metros lineales).',
+  },
+  {
+    key: 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL',
+    value: '1000',
+    description:
+      'Monto mínimo en Quetzales para calificar a envío gratis hacia Departamentos / Interior del país (~10 metros lineales).',
+  },
+];
+
+/**
+ * Garantiza que los parámetros esenciales del sistema existan sin sobrescribir
+ * personalizaciones previas (seeding no destructivo e idempotente por clave).
+ */
+export async function ensureDefaultSystemSettings() {
+  for (const setting of DEFAULT_SYSTEM_SETTINGS) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: {
+        key: setting.key,
+        value: setting.value,
+        description: setting.description,
+      },
+    });
+  }
+}
+
 export async function seedDatabase() {
+  // Asegurar parámetros base en cualquier entorno (incluyendo producción) de forma no destructiva
+  await ensureDefaultSystemSettings();
+
   if (process.env.NODE_ENV === 'production') {
-    console.warn('⛔ Seeding está estrictamente deshabilitado en entorno de producción.');
+    console.warn('⛔ Seeding de datos de prueba está estrictamente deshabilitado en entorno de producción.');
     return;
   }
 
@@ -34,23 +70,6 @@ export async function seedDatabase() {
       monthlyNetTargetQ: 20000.0,
     },
   });
-
-  // 1.1 Configuración de Parámetros del Sistema (SystemSetting - Idempotente por clave)
-  const defaultSettings = [
-    { key: 'FREE_SHIPPING_THRESHOLD', value: '575' },
-    { key: 'FREE_SHIPPING_THRESHOLD_OUTSIDE_CAPITAL', value: '1000' },
-  ];
-
-  for (const setting of defaultSettings) {
-    await prisma.systemSetting.upsert({
-      where: { key: setting.key },
-      update: {},
-      create: {
-        key: setting.key,
-        value: setting.value,
-      },
-    });
-  }
 
   // 2. Insumos de Inventario de Taller UV DTF (7 insumos clave)
   const items = [

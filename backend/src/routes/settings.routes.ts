@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getPublicShippingSettings,
   getSettings,
+  createSetting,
   updateSettings,
 } from '../controllers/settings.controller';
 import { authenticate, requireRole } from '../middlewares/auth';
@@ -13,6 +14,7 @@ router.get('/shipping', getPublicShippingSettings);
 
 // Endpoints protegidos exclusivos para ADMINISTRADOR
 router.get('/', authenticate, requireRole('ADMIN'), getSettings);
+router.post('/', authenticate, requireRole('ADMIN'), createSetting);
 router.put('/', authenticate, requireRole('ADMIN'), updateSettings);
 
 export default router;
