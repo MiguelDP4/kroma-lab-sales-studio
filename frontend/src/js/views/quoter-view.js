@@ -1,6 +1,34 @@
 /**
  * Vista Principal: Hero + Cotizador Interactivo UV DTF + Simulador de Bobina
+ * Incluye secciones informativas SEO-friendly (beneficios, superficies, tarifas, FAQ y contacto).
  */
+
+import { BUSINESS_CONFIG, PRICING_TIERS } from '../../shared/business-config.js';
+import { FAQ_ITEMS } from '../modules/seo-manager.js';
+
+function renderSeoPricingTiers() {
+  return PRICING_TIERS.map((tier) => `
+    <div class="seo-tier-card">
+      <div class="seo-tier-range">${tier.label}</div>
+      <div class="seo-tier-price">Q${tier.ratePerMeterQ.toFixed(0)}<span>/m</span></div>
+      <div class="seo-tier-note">Bobina 28 cm útiles</div>
+    </div>
+  `).join('');
+}
+
+function renderSeoFaqItems() {
+  return FAQ_ITEMS.map((item) => `
+    <details class="seo-faq-item">
+      <summary class="seo-faq-summary">
+        <span>${item.question}</span>
+        <span class="seo-faq-chevron" aria-hidden="true">+</span>
+      </summary>
+      <div class="seo-faq-answer">
+        <p>${item.answer}</p>
+      </div>
+    </details>
+  `).join('');
+}
 
 export const quoterView = {
   path: '/',
@@ -258,6 +286,131 @@ export const quoterView = {
 
       </div>
     </section>
+
+    <!-- ========================================================================
+         SECCIONES INFORMATIVAS Y SEO LOCAL (UV DTF GUATEMALA)
+         ======================================================================== -->
+    <section class="seo-section" id="beneficios-uv-dtf" aria-labelledby="seo-benefits-heading">
+      <div class="seo-section-header">
+        <span class="badge">¿Por qué Kroma Lab?</span>
+        <h2 id="seo-benefits-heading" class="seo-section-title">
+          Impresión UV DTF Industrial de Alta Definición en Guatemala
+        </h2>
+        <p class="seo-section-subtitle">
+          Stickers transferibles en frío con tecnología LED UV: colores vibrantes, cama blanca cubriente y barniz con relieve táctil para marcas, emprendedores e industria promocional.
+        </p>
+      </div>
+
+      <div class="seo-grid">
+        <article class="seo-card">
+          <div class="seo-card-icon" aria-hidden="true">🎯</div>
+          <h3>Resolución 600 DPI y Cama Blanca</h3>
+          <p>
+            Impresión fotográfica industrial con tinta blanca de alta opacidad que conserva los colores reales sobre vidrio transparente, acero oscuro o madera.
+          </p>
+        </article>
+
+        <article class="seo-card">
+          <div class="seo-card-icon" aria-hidden="true">✨</div>
+          <h3>Barniz Brillante con Relieve 3D</h3>
+          <p>
+            Cada calcomanía recibe curado LED UV instantáneo y barniz protector resistente al agua, humedad, rayos solares y rayones cotidianos.
+          </p>
+        </article>
+
+        <article class="seo-card">
+          <div class="seo-card-icon" aria-hidden="true">🧲</div>
+          <h3>Adherencia Permanente Sin Calor</h3>
+          <p>
+            Sistema Peel &amp; Stick con film A/B de alto agarre: despega, presiona sobre la superficie limpia y retira el transportador sin usar plancha ni hornos.
+          </p>
+        </article>
+
+        <article class="seo-card">
+          <div class="seo-card-icon" aria-hidden="true">📐</div>
+          <h3>Bobina de 28 cm Útiles Reales</h3>
+          <p>
+            Aprovecha al máximo cada metro lineal con acomodo inteligente y 3 mm de margen técnico entre piezas para un despiece limpio y sin desperdicios.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="seo-section" id="superficies-compatibles" aria-labelledby="seo-surfaces-heading">
+      <div class="seo-section-header">
+        <span class="badge">Aplicaciones B2B y Emprendedores</span>
+        <h2 id="seo-surfaces-heading" class="seo-section-title">
+          Superficies Compatibles para Stickers UV DTF
+        </h2>
+        <p class="seo-section-subtitle">
+          Personaliza artículos promocionales, empaques de lujo y productos corporativos sin mínimos de colores ni gastos de clisé.
+        </p>
+      </div>
+
+      <div class="seo-surfaces-grid">
+        <div class="seo-surface-pill">🧴 Termos y Pachones de Acero</div>
+        <div class="seo-surface-pill">🥂 Vidrio, Vasos y Cristalería</div>
+        <div class="seo-surface-pill">🪧 Acrílico, PVC y Señalética</div>
+        <div class="seo-surface-pill">🪵 Madera Barnizada y MDF</div>
+        <div class="seo-surface-pill">☕ Cerámica, Tazas y Porcelana</div>
+        <div class="seo-surface-pill">📦 Cajas Rígidas y Empaques</div>
+        <div class="seo-surface-pill">💻 Laptops, Cascos y Plásticos</div>
+        <div class="seo-surface-pill">🎁 Regalos Corporativos B2B</div>
+      </div>
+    </section>
+
+    <section class="seo-section" id="tarifas-volumen" aria-labelledby="seo-pricing-heading">
+      <div class="seo-section-header">
+        <span class="badge">Precios Transparentes en Quetzales</span>
+        <h2 id="seo-pricing-heading" class="seo-section-title">
+          Tarifas por Metro Lineal y Cobertura en Guatemala
+        </h2>
+        <p class="seo-section-subtitle">
+          Escala automática de descuentos por volumen en impresión UV DTF. Entregas en Villa Nueva, Ciudad de Guatemala y envíos a los 22 departamentos por Guatex, Forza o Cargo Expreso.
+        </p>
+      </div>
+
+      <div class="seo-tiers-grid">
+        ${renderSeoPricingTiers()}
+      </div>
+    </section>
+
+    <section class="seo-section" id="preguntas-frecuentes" aria-labelledby="seo-faq-heading">
+      <div class="seo-section-header">
+        <span class="badge">Preguntas Frecuentes</span>
+        <h2 id="seo-faq-heading" class="seo-section-title">
+          Dudas Comunes sobre Impresión UV DTF en Guatemala
+        </h2>
+      </div>
+
+      <div class="seo-faq-list">
+        ${renderSeoFaqItems()}
+      </div>
+    </section>
+
+    <footer class="seo-footer" id="contacto" aria-labelledby="seo-contact-heading">
+      <div class="seo-footer-content">
+        <div class="seo-footer-brand">
+          <h2 id="seo-contact-heading" class="seo-footer-title">Kroma Lab Guatemala</h2>
+          <p class="seo-footer-desc">
+            Taller especializado en maquila e impresión UV DTF industrial en Villa Nueva y Área Metropolitana de Guatemala. Calidad fotográfica a 600 DPI y envíos seguros a todo el país.
+          </p>
+          <p class="seo-footer-meta">
+            📍 Villa Nueva, Guatemala • 🚚 Envíos vía Guatex, Forza y Cargo Expreso
+          </p>
+        </div>
+
+        <div class="seo-footer-actions">
+          <a href="https://api.whatsapp.com/send?phone=${BUSINESS_CONFIG.phoneWhatsApp}&text=${encodeURIComponent('Hola Kroma Lab, me interesa cotizar impresión UV DTF en Guatemala.')}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp seo-footer-wa-btn">
+            <span>💬 Cotizar por WhatsApp</span>
+          </a>
+          <div class="seo-footer-links">
+            <a href="/" data-link>Cotizador UV DTF</a>
+            <a href="/cotizaciones" data-link>Mis Cotizaciones</a>
+          </div>
+        </div>
+      </div>
+    </footer>
   `,
   onMount: () => {
     if (typeof window !== 'undefined' && typeof window.__initQuoter === 'function') {

@@ -214,8 +214,12 @@ kroma-lab-sales-studio/
 ├── GEMINI.md                       # Reglas operativas y mandatos para el Agente IA
 ├── DOCUMENTATION.md                # Fuente Única de Verdad viva del proyecto
 ├── frontend/                       # Aplicación Web Vanilla (HTML5, CSS3, ES Modules)
-│   ├── index.html                  # Shell único con contenedor SPA #app, navbar reactivo y drawer
+│   ├── index.html                  # Shell único con metadatos SEO, Schema JSON-LD, contenedor SPA #app, navbar reactivo y drawer
 │   ├── favicon.svg                 # Emblema vectorial oficial Kroma Lab (arcoíris facetado 3D)
+│   ├── og-image.png                # Imagen Open Graph 1200x630 para previsualizaciones en WhatsApp/Facebook/Google
+│   ├── robots.txt                  # Directivas de rastreo para buscadores (permite rutas públicas y bloquea privadas)
+│   ├── sitemap.xml                 # Mapa del sitio XML con URLs canónicas públicas
+│   ├── manifest.webmanifest        # Manifiesto Web PWA / Mobile-First en español Guatemala (es-GT)
 │   ├── _redirects                  # Configuración de routing SPA para Cloudflare Pages
 │   ├── package.json                # Dependencias de testing (Vitest, JSDOM) y scripts
 │   ├── vitest.config.js            # Configuración de pruebas unitarias (>85% coverage)
@@ -246,6 +250,7 @@ kroma-lab-sales-studio/
 │   │       │   ├── clients-store.js    # Almacén reactivo de cartera de clientes B2B y métricas 360°
 │   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
 │   │       │   ├── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
+│   │       │   ├── seo-manager.js      # Gestor dinámico de metadatos SEO por ruta, canonical, OG y JSON-LD
 │   │       │   └── production-store.js # Almacén reactivo de Kanban y monitor de consumo de film PET
 │   │       └── views/
 │   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF + Dropzone
@@ -957,3 +962,25 @@ pm run test:e2e (ejecutado desde rontend/).
   6. Cierre de sesión (Logout) con purga total de localStorage y de caches de tablas (cero fuga de datos entre perfiles).
   7. Detección reactiva de desconexión del backend API y despliegue del banner global de advertencia (#backendOfflineBanner).
 * **Capturas de Pantalla:** Se almacenan automáticamente en la carpeta raíz qa-results/ (ignorada en git).
+
+---
+
+## 13. Estrategia y Arquitectura SEO (Posicionamiento Orgánico en Guatemala)
+
+Con el objetivo de maximizar el descubrimiento orgánico en Google, Bing y previsualizaciones sociales (WhatsApp, Facebook, LinkedIn), el frontend implementa SEO técnico y de contenido adaptado a SPA:
+
+* **Metadatos Estáticos y Locales (`frontend/index.html`):**
+  * Idioma regional `<html lang="es-GT">` y geoetiquetas de Guatemala (`GT-GU`, Villa Nueva / Ciudad de Guatemala).
+  * Etiquetas `title`, `description`, `keywords`, `robots`, `canonical`, `theme-color`, **Open Graph** (`og:image` apuntando a `/og-image.png` de 1200×630 px) y **Twitter Cards**.
+  * Datos estructurados **JSON-LD (Schema.org)** con grafo `@graph` (`ProfessionalService`, `WebSite`, `WebApplication` y `FAQPage`).
+  * Bloque `<noscript>` de respaldo para indexadores sin ejecución JS.
+* **Gestor Dinámico por Ruta (`frontend/src/js/modules/seo-manager.js` + `router.js`):**
+  * Actualiza automáticamente `document.title`, `meta[name="description"]`, `meta[name="robots"]`, `link[rel="canonical"]`, etiquetas OG/Twitter y JSON-LD en cada navegación SPA.
+  * Consolida alias (`/cotizador` → `/`, `/spot-studio` y `/preprensa` → `/software`) mediante URLs canónicas para evitar contenido duplicado.
+  * Marca automáticamente con `noindex, nofollow` todas las rutas privadas, operativas RBAC, acceso denegado y páginas 404.
+* **Archivos de Rastreo y PWA (`frontend/`):**
+  * `robots.txt` permitiendo rutas públicas y bloqueando rutas operativas privadas.
+  * `sitemap.xml` con URLs canónicas públicas y prioridades.
+  * `manifest.webmanifest` con configuración regional `es-GT`.
+* **Contenido Semántico Mobile-First (`quoter-view.js` + `views.css`):**
+  * Secciones informativas debajo de `#cotizador`: beneficios UV DTF industrial (600 DPI, cama blanca, relieve 3D, Peel & Stick), superficies compatibles B2B, tabla de tarifas por volumen sincronizada con `PRICING_TIERS`, acordeón accesible `<details>` de Preguntas Frecuentes sincronizado con `FAQ_ITEMS` del JSON-LD y footer semántico `#contacto`.

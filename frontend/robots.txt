@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+Allow: /cotizador
+Allow: /software
+Allow: /spot-studio
+Allow: /preprensa
+
+Disallow: /produccion
+Disallow: /pedidos
+Disallow: /despacho
+Disallow: /remisiones
+Disallow: /inventario
+Disallow: /clientes
+Disallow: /cobranza
+Disallow: /cuentas-por-cobrar
+Disallow: /reportes
+Disallow: /rentabilidad
+Disallow: /usuarios
+Disallow: /settings
+Disallow: /configuracion
+Disallow: /mi-cuenta
+Disallow: /cuenta
+Disallow: /perfil
+Disallow: /verify-email
+Disallow: /confirmar-correo
+Disallow: /cotizaciones
+Disallow: /cotizaciones-guardadas
+Disallow: /quotes
+Disallow: /api/
+
+Sitemap: https://kroma-lab.pages.dev/sitemap.xml

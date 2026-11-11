@@ -237,5 +237,19 @@ describe('SPA Router — Enrutamiento y Guardias RBAC', () => {
       // Pequeño timeout para la promesa de import dinamico
       await new Promise(r => setTimeout(r, 50));
     });
+
+    it('actualiza dinámicamente los metadatos SEO (title, robots, canonical) al resolver rutas públicas, restringidas y 404', () => {
+      router.navigate('/');
+      expect(document.head.querySelector('meta[name="robots"]').getAttribute('content')).toContain('index, follow');
+      expect(document.head.querySelector('link[rel="canonical"]').getAttribute('href')).toBe('https://kroma-lab.pages.dev/');
+
+      router.navigate('/usuarios');
+      expect(document.head.querySelector('meta[name="robots"]').getAttribute('content')).toBe('noindex, nofollow');
+      expect(document.title).toContain('Acceso Restringido');
+
+      router.navigate('/ruta-inexistente-seo');
+      expect(document.head.querySelector('meta[name="robots"]').getAttribute('content')).toBe('noindex, nofollow');
+      expect(document.title).toContain('404');
+    });
   });
 });
