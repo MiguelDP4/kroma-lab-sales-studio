@@ -661,9 +661,26 @@ async function runFullQASuite() {
 
     const settingsMounted = await page.evaluate(() => {
       return document.body.innerHTML.includes('Configuración del Sistema') &&
-             document.body.innerHTML.includes('FREE_SHIPPING_THRESHOLD');
+             document.body.innerHTML.includes('FREE_SHIPPING_THRESHOLD') &&
+             !!document.getElementById('setting_desc_FREE_SHIPPING_THRESHOLD') &&
+             !!document.getElementById('btnNewSetting');
     });
-    assert(settingsMounted, 'Vista de Configuración montada con tabla de parámetros (SystemSetting)');
+    assert(settingsMounted, 'Vista de Configuración montada con tabla de parámetros (SystemSetting), descripción y botón Nuevo');
+
+    // Probar apertura y cierre del inline form "Nuevo"
+    await page.click('#btnNewSetting');
+    await page.waitForTimeout(200);
+    const inlineFormVisible = await page.evaluate(() => {
+      const box = document.getElementById('inlineNewSettingContainer');
+      const k = document.getElementById('newSettingKey');
+      const v = document.getElementById('newSettingValue');
+      const d = document.getElementById('newSettingDescription');
+      return box && box.style.display === 'block' && !!k && !!v && !!d;
+    });
+    assert(inlineFormVisible, 'Botón Nuevo despliega el inline form con campos Key, Value y Descripción');
+
+    await page.click('#btnCancelNewSetting');
+    await page.waitForTimeout(150);
 
     await page.screenshot({ path: path.join(QA_RESULTS_DIR, 'qa-10b-settings-view.png'), fullPage: true });
 
