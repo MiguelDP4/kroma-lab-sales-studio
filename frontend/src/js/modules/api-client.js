@@ -333,6 +333,15 @@ export class ApiClient {
     getById: async (id) => {
       return this._request(`/customers/${id}`);
     },
+    getStatement: async (id) => {
+      return this._request(`/customers/${id}/statement`);
+    },
+    settleStatement: async (id, data = {}) => {
+      return this._request(`/customers/${id}/settle-statement`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
     create: async (data) => {
       return this._request('/customers', {
         method: 'POST',

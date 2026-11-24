@@ -42,9 +42,12 @@ model Customer {
   email       String   @unique
   address     String?
   taxId       String?  // NIT en Guatemala (ej. 7845129-4 o CF)
-  tier        String   @default("NUEVO") // VIP, RECURRENTE, NUEVO, INACTIVO
-  sector      String   @default("COMERCIO_RETAIL") // CAFETERIAS, BARBERIAS, PROMO, BEBIDAS, COMERCIO
-  notes       String?
+  tier                String   @default("NUEVO") // VIP, RECURRENTE, NUEVO, INACTIVO
+  sector              String   @default("COMERCIO_RETAIL") // CAFETERIAS, BARBERIAS, PROMO, BEBIDAS, COMERCIO
+  notes               String?
+  customRatePerMeterQ Float?   // Tarifa especial por metro lineal (ej. Q75.00 maquila)
+  exemptFromMinimum   Boolean  @default(false) // Exento del mínimo de 1.0 m (cobra metraje exacto)
+  allowCredit         Boolean  @default(false) // Habilita cuenta corriente / pago consolidado post-entrega
 
   orders      Order[]
   users       User[]

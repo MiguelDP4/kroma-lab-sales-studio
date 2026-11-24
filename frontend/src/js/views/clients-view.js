@@ -11,6 +11,12 @@ import { BUSINESS_CONFIG } from '../../shared/business-config.js';
 import { renderTableSkeleton, renderMetricsSkeleton, renderCardsSkeleton } from '../components/skeleton-loader.js';
 import { apiClient } from '../modules/api-client.js';
 import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
+import { printDocument } from '../modules/print-helper.js';
+import {
+  buildClientStatementData,
+  formatStatementWhatsAppMessage,
+  renderClientStatementSheetHtml,
+} from '../modules/statement-helper.js';
 
 export const clientsView = {
   path: '/clientes',
@@ -184,6 +190,27 @@ export const clientsView = {
               <textarea id="clientFormNotes" class="input-control" rows="2" placeholder="Ej. Prefiere acabado 3D, entrega por las tardes, corte individual..."></textarea>
             </div>
 
+            <!-- CONDICIONES ESPECIALES B2B / MAQUILA -->
+            <div style="margin: 0.75rem 0 1rem; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px;">
+              <div style="font-size: 0.82rem; font-weight: 800; color: var(--cerulean); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.65rem;">
+                💎 Condiciones Especiales / Maquila (Opcional)
+              </div>
+              <div class="form-group" style="margin-bottom: 0.65rem;">
+                <label class="form-label" for="clientFormCustomRate">Tarifa Preferencial por Metro Lineal (Q):</label>
+                <input type="number" id="clientFormCustomRate" class="input-control" placeholder="Vacío = Escala estándar (ej. 75.00 para maquila)" min="1" max="500" step="0.5">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.55rem; font-size: 0.86rem; cursor: pointer; min-height: 36px;">
+                  <input type="checkbox" id="clientFormExemptMin" style="width: 18px; height: 18px;">
+                  <span>📏 Exento de mínimo de 1.0 m (cobrar metraje exacto al combinar en bobina)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.55rem; font-size: 0.86rem; cursor: pointer; min-height: 36px;">
+                  <input type="checkbox" id="clientFormAllowCredit" style="width: 18px; height: 18px;">
+                  <span>📒 Cuenta Corriente (permitir entregar pedidos y liquidar en corte consolidado)</span>
+                </label>
+              </div>
+            </div>
+
             <div class="modal-actions-footer">
               <button type="button" class="btn btn-secondary" id="btnCancelClientFormModal">Cancelar</button>
               <button type="submit" class="btn btn-primary" id="btnSaveClient">Guardar Cliente</button>
@@ -240,6 +267,70 @@ export const clientsView = {
           </div>
         </div>
       </div>
+
+      <!-- MODAL 4: RECIBO CONSOLIDADO / ESTADO DE CUENTA DEL CLIENTE -->
+      <div id="clientStatementModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
+        <div class="modal-card" style="width: min(820px, 96vw); max-height: 92vh;">
+          <div class="modal-header btn-print-hide">
+            <div>
+              <span class="badge" style="color: var(--cerulean); border-color: var(--cerulean);">Corte de Cuenta B2B</span>
+              <h2 id="statementModalTitle" style="font-size: 1.3rem; font-weight: 800; margin-top: 0.35rem;">Recibo Consolidado / Estado de Cuenta</h2>
+            </div>
+            <button type="button" class="btn-close-modal" id="btnCloseStatementModal" aria-label="Cerrar recibo">✕</button>
+          </div>
+
+          <div id="clientStatementSheetContainer" style="overflow-y: auto; max-height: calc(92vh - 250px); padding-right: 0.25rem;">
+            <!-- Recibo imprimible inyectado dinámicamente -->
+          </div>
+
+          <!-- Panel de Liquidación de Corte (oculto hasta hacer clic en Liquidar) -->
+          <div id="statementSettlePanel" class="btn-print-hide" style="display: none; margin-top: 1rem; padding: 0.9rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 6px;">
+            <div style="font-weight: 800; font-size: 0.9rem; color: #10b981; margin-bottom: 0.6rem;">
+              ✅ Confirmar Liquidación de Corte (<span id="statementSettleAmountLabel">Q0.00</span>)
+            </div>
+            <div class="input-row">
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label class="form-label" for="statementSettleMethod">Método de Pago:</label>
+                <select id="statementSettleMethod" class="input-control" style="min-height: 44px;">
+                  <option value="CASH">💵 Efectivo</option>
+                  <option value="TRANSFER">🏦 Transferencia Bancaria</option>
+                  <option value="DEPOSIT">🧾 Depósito Bancario</option>
+                  <option value="CARD">💳 Tarjeta</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label class="form-label" for="statementSettleRef">Referencia / Nota (Opcional):</label>
+                <input type="text" id="statementSettleRef" class="input-control" placeholder="Ej. Liquidación semana 47" style="min-height: 44px;">
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+              <button type="button" class="btn btn-secondary" id="btnCancelSettleStatement" style="min-height: 44px;">Cancelar</button>
+              <button type="button" class="btn btn-primary" id="btnConfirmSettleStatement" style="background: #10b981; border-color: #10b981; min-height: 44px;">
+                <span>✓ Marcar Todo como Pagado</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="btn-print-hide" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="btnCopyStatementWhatsApp" style="min-height: 44px; font-size: 0.85rem;">
+                <span>📋 Copiar WhatsApp</span>
+              </button>
+              <a href="#" id="btnSendStatementWhatsApp" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="min-height: 44px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <span>💬 Enviar WhatsApp</span>
+              </a>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="btnPrintClientStatement" style="min-height: 44px; font-size: 0.85rem;">
+                <span>🖨️ Imprimir / PDF</span>
+              </button>
+              <button type="button" class="btn btn-primary" id="btnOpenSettleStatement" style="background: #10b981; border-color: #10b981; min-height: 44px; font-size: 0.85rem;">
+                <span>✅ Liquidar Corte</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     `;
   },
 
@@ -263,6 +354,20 @@ export const clientsView = {
     const dossierModal = document.getElementById('clientDossierModal');
     const btnCloseDossier = document.getElementById('btnCloseDossierModal');
     const btnOkDossier = document.getElementById('btnOkDossierModal');
+
+    const statementModal = document.getElementById('clientStatementModal');
+    const btnCloseStatementModal = document.getElementById('btnCloseStatementModal');
+    const statementSheetContainer = document.getElementById('clientStatementSheetContainer');
+    const statementSettlePanel = document.getElementById('statementSettlePanel');
+    const statementSettleAmountLabel = document.getElementById('statementSettleAmountLabel');
+    const btnCopyStatementWhatsApp = document.getElementById('btnCopyStatementWhatsApp');
+    const btnSendStatementWhatsApp = document.getElementById('btnSendStatementWhatsApp');
+    const btnPrintClientStatement = document.getElementById('btnPrintClientStatement');
+    const btnOpenSettleStatement = document.getElementById('btnOpenSettleStatement');
+    const btnCancelSettleStatement = document.getElementById('btnCancelSettleStatement');
+    const btnConfirmSettleStatement = document.getElementById('btnConfirmSettleStatement');
+    let activeStatementClientId = null;
+    let activeStatementData = null;
 
     const deleteClientModal = document.getElementById('deleteClientModal');
     const deleteClientId = document.getElementById('deleteClientId');
@@ -306,6 +411,88 @@ export const clientsView = {
     if (btnCloseDossier) btnCloseDossier.addEventListener('click', () => toggleModal(dossierModal, false));
     if (btnOkDossier) btnOkDossier.addEventListener('click', () => toggleModal(dossierModal, false));
 
+    if (btnCloseStatementModal) {
+      btnCloseStatementModal.addEventListener('click', () => {
+        if (statementSettlePanel) statementSettlePanel.style.display = 'none';
+        toggleModal(statementModal, false);
+      });
+    }
+
+    if (btnCopyStatementWhatsApp) {
+      btnCopyStatementWhatsApp.addEventListener('click', async () => {
+        if (!activeStatementData) return;
+        const text = formatStatementWhatsAppMessage(activeStatementData);
+        try {
+          if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+          }
+          const origHtml = btnCopyStatementWhatsApp.innerHTML;
+          btnCopyStatementWhatsApp.innerHTML = '<span>✓ Copiado para WhatsApp</span>';
+          setTimeout(() => {
+            btnCopyStatementWhatsApp.innerHTML = origHtml;
+          }, 2000);
+        } catch (_) {}
+      });
+    }
+
+    if (btnPrintClientStatement) {
+      btnPrintClientStatement.addEventListener('click', () => {
+        if (statementSheetContainer && statementSheetContainer.innerHTML.trim()) {
+          const title = activeStatementData?.customer?.companyName
+            ? `Recibo Estado de Cuenta — ${activeStatementData.customer.companyName}`
+            : 'Recibo Consolidado — Kroma Lab UV DTF';
+          printDocument(statementSheetContainer.innerHTML, title);
+        } else if (typeof window !== 'undefined' && window.print) {
+          window.print();
+        }
+      });
+    }
+
+    if (btnOpenSettleStatement) {
+      btnOpenSettleStatement.addEventListener('click', () => {
+        if (!activeStatementData) return;
+        if (statementSettleAmountLabel) {
+          statementSettleAmountLabel.textContent = `Q${Number(activeStatementData.balanceDueQ || 0).toFixed(2)}`;
+        }
+        if (statementSettlePanel) {
+          statementSettlePanel.style.display = statementSettlePanel.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    }
+
+    if (btnCancelSettleStatement) {
+      btnCancelSettleStatement.addEventListener('click', () => {
+        if (statementSettlePanel) statementSettlePanel.style.display = 'none';
+      });
+    }
+
+    if (btnConfirmSettleStatement) {
+      btnConfirmSettleStatement.addEventListener('click', async () => {
+        if (!activeStatementClientId) return;
+        const method = document.getElementById('statementSettleMethod')?.value || 'CASH';
+        const ref = document.getElementById('statementSettleRef')?.value.trim() || '';
+        btnConfirmSettleStatement.disabled = true;
+        try {
+          await clientsStore.settleClientStatement(activeStatementClientId, {
+            method,
+            bankReference: ref || undefined,
+            notes: ref ? `Corte liquidado: ${ref}` : 'Corte consolidado liquidado',
+          });
+          if (statementSettlePanel) statementSettlePanel.style.display = 'none';
+          const refEl = document.getElementById('statementSettleRef');
+          if (refEl) refEl.value = '';
+          toggleModal(statementModal, false);
+          if (dossierModal && dossierModal.style.display !== 'none') {
+            showClientDossier(activeStatementClientId);
+          }
+          renderClientsMetrics();
+          renderClientsTable();
+        } finally {
+          btnConfirmSettleStatement.disabled = false;
+        }
+      });
+    }
+
     // Guardar / Editar Cliente
     if (formClient) {
       formClient.addEventListener('submit', (e) => {
@@ -320,6 +507,10 @@ export const clientsView = {
         const category = document.getElementById('clientFormCategory')?.value || 'COMERCIO_GENERAL';
         const tier = document.getElementById('clientFormTier')?.value || 'NUEVO';
         const notes = document.getElementById('clientFormNotes')?.value || '';
+        const rawRate = document.getElementById('clientFormCustomRate')?.value;
+        const customRatePerMeterQ = rawRate && !isNaN(parseFloat(rawRate)) && parseFloat(rawRate) > 0 ? parseFloat(rawRate) : null;
+        const exemptFromMinimum = Boolean(document.getElementById('clientFormExemptMin')?.checked);
+        const allowCredit = Boolean(document.getElementById('clientFormAllowCredit')?.checked);
 
         if (id) {
           clientsStore.updateClient(id, {
@@ -332,6 +523,9 @@ export const clientsView = {
             category,
             tier,
             notes,
+            customRatePerMeterQ,
+            exemptFromMinimum,
+            allowCredit,
           });
         } else {
           clientsStore.createClient({
@@ -344,6 +538,9 @@ export const clientsView = {
             category,
             tier,
             notes,
+            customRatePerMeterQ,
+            exemptFromMinimum,
+            allowCredit,
           });
         }
 
@@ -447,6 +644,16 @@ export const clientsView = {
                 <span class="badge" style="background: ${tierInfo.bg}; color: ${tierInfo.color}; border-color: ${tierInfo.color}; font-size: 0.72rem; padding: 0.15rem 0.45rem;">
                   ${tierInfo.badge}
                 </span>
+                ${client.customRatePerMeterQ ? `
+                  <span class="badge" style="background: rgba(16, 185, 129, 0.14); color: #10b981; border-color: #10b981; font-size: 0.72rem; padding: 0.15rem 0.45rem;">
+                    💎 Q${Number(client.customRatePerMeterQ).toFixed(0)}/m
+                  </span>
+                ` : ''}
+                ${client.allowCredit ? `
+                  <span class="badge" style="background: rgba(245, 158, 11, 0.14); color: #f59e0b; border-color: #f59e0b; font-size: 0.72rem; padding: 0.15rem 0.45rem;">
+                    📒 Crédito
+                  </span>
+                ` : ''}
                 <span style="font-size: 0.78rem; color: var(--text-secondary);">
                   ${catInfo.icon} ${catInfo.label}
                 </span>
@@ -530,10 +737,20 @@ export const clientsView = {
                   </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
                   <span class="badge" style="background: ${tierInfo.bg}; color: ${tierInfo.color}; border-color: ${tierInfo.color}; font-size: 0.75rem; font-weight: 700; padding: 0.35rem 0.65rem;">
                     ${tierInfo.badge}
                   </span>
+                  ${client.customRatePerMeterQ ? `
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.14); color: #10b981; border-color: #10b981; font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.55rem;">
+                      💎 Q${Number(client.customRatePerMeterQ).toFixed(0)}/m
+                    </span>
+                  ` : ''}
+                  ${client.allowCredit ? `
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.14); color: #f59e0b; border-color: #f59e0b; font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.55rem;">
+                      📒 Crédito
+                    </span>
+                  ` : ''}
                 </div>
               </div>
 
@@ -666,7 +883,61 @@ export const clientsView = {
       const notesInput = document.getElementById('clientFormNotes');
       if (notesInput) notesInput.value = client.notes || '';
 
+      const rateInput = document.getElementById('clientFormCustomRate');
+      if (rateInput) rateInput.value = client.customRatePerMeterQ ? Number(client.customRatePerMeterQ) : '';
+
+      const exemptInput = document.getElementById('clientFormExemptMin');
+      if (exemptInput) exemptInput.checked = Boolean(client.exemptFromMinimum);
+
+      const creditInput = document.getElementById('clientFormAllowCredit');
+      if (creditInput) creditInput.checked = Boolean(client.allowCredit);
+
       toggleModal(formModal, true);
+    }
+
+    function openClientStatementModal(clientId) {
+      const client = clientsStore.getClientById(clientId);
+      if (!client) return;
+
+      const orders = clientsStore.getClientOrders(client);
+      const statement = buildClientStatementData(client, orders);
+      activeStatementClientId = client.id;
+      activeStatementData = statement;
+
+      const titleEl = document.getElementById('statementModalTitle');
+      if (titleEl) titleEl.textContent = `Recibo Consolidado — ${client.company}`;
+
+      if (statementSheetContainer) {
+        if (statement.ordersCount === 0) {
+          statementSheetContainer.innerHTML = `
+            <div class="kanban-empty-col" style="padding: 2rem 1rem;">
+              ✓ ${client.company} no tiene pedidos con saldo pendiente en este momento.
+            </div>
+          `;
+        } else {
+          statementSheetContainer.innerHTML = renderClientStatementSheetHtml(statement);
+        }
+      }
+
+      if (statementSettlePanel) statementSettlePanel.style.display = 'none';
+
+      if (btnSendStatementWhatsApp) {
+        const cleanPhone = (client.phone || '').replace(/\D/g, '');
+        const waText = formatStatementWhatsAppMessage(statement);
+        btnSendStatementWhatsApp.href = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waText)}`;
+        btnSendStatementWhatsApp.style.display = statement.ordersCount > 0 ? 'inline-flex' : 'none';
+      }
+      if (btnCopyStatementWhatsApp) {
+        btnCopyStatementWhatsApp.style.display = statement.ordersCount > 0 ? 'inline-flex' : 'none';
+      }
+      if (btnPrintClientStatement) {
+        btnPrintClientStatement.style.display = statement.ordersCount > 0 ? 'inline-flex' : 'none';
+      }
+      if (btnOpenSettleStatement) {
+        btnOpenSettleStatement.style.display = statement.ordersCount > 0 ? 'inline-flex' : 'none';
+      }
+
+      toggleModal(statementModal, true);
     }
 
     function showClientDossier(clientId) {
@@ -738,6 +1009,40 @@ export const clientsView = {
             </div>
           </div>
 
+          ${(client.customRatePerMeterQ || client.exemptFromMinimum || client.allowCredit) ? `
+            <div style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem;">
+              ${client.customRatePerMeterQ ? `
+                <span class="badge" style="background: rgba(16, 185, 129, 0.14); color: #10b981; border-color: #10b981; font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                  💎 Tarifa Preferencial: Q${Number(client.customRatePerMeterQ).toFixed(2)}/m
+                </span>
+              ` : ''}
+              ${client.exemptFromMinimum ? `
+                <span class="badge" style="background: rgba(28, 114, 147, 0.14); color: var(--cerulean); border-color: var(--cerulean); font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                  📏 Sin mínimo de 1.0 m
+                </span>
+              ` : ''}
+              ${client.allowCredit ? `
+                <span class="badge" style="background: rgba(245, 158, 11, 0.14); color: #f59e0b; border-color: #f59e0b; font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                  📒 Cuenta Corriente (Pago en Corte)
+                </span>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Acciones Rápidas de Expediente -->
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem;">
+            ${metrics.pendingDebtQ > 0 ? `
+              <button type="button" class="btn btn-primary btn-open-client-statement" data-client-id="${client.id}" style="min-height: 44px; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span>🧾</span>
+                <span>Generar Recibo / Estado de Cuenta (Q${metrics.pendingDebtQ.toFixed(2)})</span>
+              </button>
+            ` : ''}
+            <a href="/pedidos?quickClient=${encodeURIComponent(client.id)}" data-link class="btn btn-secondary btn-dossier-quick-order" style="min-height: 44px; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+              <span>➕</span>
+              <span>Nuevo Pedido Rápido</span>
+            </a>
+          </div>
+
           ${client.notes ? `
             <div style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(28, 114, 147, 0.1); border-left: 3px solid var(--cerulean); border-radius: 4px; font-size: 0.88rem;">
               <strong>Instrucciones y Preferencias:</strong> ${client.notes}
@@ -803,6 +1108,20 @@ export const clientsView = {
             <span>Escribir por WhatsApp</span>
           </a>
         `;
+      }
+
+      const btnOpenStmt = contentEl?.querySelector('.btn-open-client-statement');
+      if (btnOpenStmt) {
+        btnOpenStmt.addEventListener('click', () => {
+          openClientStatementModal(client.id);
+        });
+      }
+
+      const btnQuickOrder = contentEl?.querySelector('.btn-dossier-quick-order');
+      if (btnQuickOrder) {
+        btnQuickOrder.addEventListener('click', () => {
+          toggleModal(dossierModal, false);
+        });
       }
 
       toggleModal(dossierModal, true);
