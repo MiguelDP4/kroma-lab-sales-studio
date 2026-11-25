@@ -237,7 +237,7 @@ export class Router {
       btnLogin.addEventListener('click', () => {
         import('./components/user-profile-modal.js').then(m => {
           if (m && typeof m.openUserProfileModal === 'function') {
-            m.openUserProfileModal({ defaultTab: 'login' });
+            m.openUserProfileModal('login');
           }
         }).catch(err => {
           console.error('Error al abrir modal de autenticación:', err);
