@@ -951,6 +951,10 @@ export const ordersView = {
           workshopNotes,
         });
 
+        if (productionStore && typeof productionStore.syncWithOrdersStore === 'function') {
+          productionStore.syncWithOrdersStore();
+        }
+
         toggleModal(editModal, false);
         renderOrdersMetrics();
         renderOrdersTable();
@@ -2206,6 +2210,9 @@ export const ordersView = {
             });
           } else if (existingProd && productionStore?.setOrderStatus) {
             productionStore.setOrderStatus(existingProd.id, ORDER_STATUS.IN_AUDLEY_QUEUE);
+            if (typeof productionStore.syncWithOrdersStore === 'function') {
+              productionStore.syncWithOrdersStore();
+            }
           }
 
           renderOrdersTable();
