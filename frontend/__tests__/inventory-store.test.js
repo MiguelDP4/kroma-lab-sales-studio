@@ -328,5 +328,55 @@ describe('Inventory Store — Almacén Reactivo de Insumos UV DTF', () => {
       // Eliminar ID inexistente retorna false
       expect(inventoryStore.deleteItem('non_existent')).toBe(false);
     });
+
+    it('calcula correctamente litros de tinta en unidad L (sin dividir entre 1000) y aplica umbral crítico estricto < 1 L', () => {
+      inventoryStore.items = [
+        {
+          id: 'ink_barniz_l',
+          name: 'Barniz (1L)',
+          category: 'INK',
+          unit: 'L',
+          currentStock: 1.0,
+          minStockThreshold: 1.0,
+          optimalThreshold: 1.5,
+          costPerUnitQ: 389.0,
+          supplier: 'Novocolor',
+        },
+        {
+          id: 'ink_blanca_l',
+          name: 'Tinta Blanca (1L)',
+          category: 'INK',
+          unit: 'L',
+          currentStock: 2.9,
+          minStockThreshold: 1.0,
+          optimalThreshold: 1.5,
+          costPerUnitQ: 599.0,
+          supplier: 'Novocolor',
+        },
+        {
+          id: 'ink_cyan_low',
+          name: 'Tinta Cyan (1L)',
+          category: 'INK',
+          unit: 'L',
+          currentStock: 0.85,
+          minStockThreshold: 1.0,
+          optimalThreshold: 1.5,
+          costPerUnitQ: 599.0,
+          supplier: 'Novocolor',
+        },
+      ];
+
+      const barniz = inventoryStore.getItemById('ink_barniz_l');
+      const blanca = inventoryStore.getItemById('ink_blanca_l');
+      const cyan = inventoryStore.getItemById('ink_cyan_low');
+
+      // 1.0 L exacto NO es crítico (< 1 L es crítico)
+      expect(barniz.status).toBe(STOCK_STATUS.LOW);
+      expect(blanca.status).toBe(STOCK_STATUS.OPTIMAL);
+      expect(cyan.status).toBe(STOCK_STATUS.CRITICAL);
+
+      const summary = inventoryStore.getInventorySummary();
+      expect(Number(summary.totalInkLiters.toFixed(2))).toBe(4.75);
+    });
   });
 });

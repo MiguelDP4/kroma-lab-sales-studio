@@ -696,7 +696,10 @@ export function openUserProfileModal(preferredTab = null) {
     if (tabProfile) tabProfile.style.display = 'none';
     if (tabLogin) tabLogin.style.display = 'block';
     if (tabRegister) tabRegister.style.display = 'block';
-    switchAuthTab(preferredTab || 'login');
+    const normalizedTab = typeof preferredTab === 'object' && preferredTab !== null
+      ? (preferredTab.defaultTab || preferredTab.tab || 'login')
+      : (preferredTab || 'login');
+    switchAuthTab(normalizedTab);
   }
 
   modal.style.display = 'block';

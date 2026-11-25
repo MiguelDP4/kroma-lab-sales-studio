@@ -183,6 +183,7 @@ model InventoryItem {
   minStockThreshold Float
   unitCostQ         Float
   optimalRatio      Float               @default(1.5)
+  supplier          String?
 
   movements         InventoryMovement[]
 
