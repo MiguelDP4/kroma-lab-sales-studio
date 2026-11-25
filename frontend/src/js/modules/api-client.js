@@ -302,6 +302,12 @@ export class ApiClient {
         body: JSON.stringify(data),
       });
     },
+    update: async (id, data) => {
+      return this._request(`/orders/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
     updateStatus: async (id, status) => {
       return this._request(`/orders/${id}/status`, {
         method: 'PUT',

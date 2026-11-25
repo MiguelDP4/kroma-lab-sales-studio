@@ -1017,3 +1017,6 @@ Pensado para clientes B2B recurrentes y maquila de volumen (ej. **Arte Modelo Du
    * Regla estricta de umbral crítico en tintas (`INK`): se marca `CRITICAL` únicamente cuando `currentStock < minStockThreshold` (menos de 1.0 L), mostrando `<` en las tarjetas.
    * KPI de Tintas UV (`getInventorySummary`): suma litros directos cuando `unit === 'L'` y divide entre `1000` únicamente cuando `unit === 'ml'`.
    * Botón **Iniciar Sesión** en pantallas de Acceso Restringido (`router.js` + `user-profile-modal.js`): abre directamente la pestaña `login`.
+6. **Edición de Ficha de Pedido Post-Creación (`feature/edit-order-details`):**
+   * Endpoint `PUT /api/orders/:id` (roles `ADMIN`, `EMPLOYEE`): actualiza dimensiones (`widthCm`, `heightCm`), cantidad, metraje, tarifa, corte, notas, datos de cliente y reemplaza atómicamente los `OrderItem` preservando artes/snapshots adjuntos.
+   * Botón **✏️ Editar** disponible en la tabla de pedidos, tarjetas móviles y dentro del modal de **Detalle del Pedido** (`orders-view.js`), con recálculo en vivo del metraje en bobina Audley de 28 cm al cambiar dimensiones o cantidad.

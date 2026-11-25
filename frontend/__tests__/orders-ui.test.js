@@ -1162,4 +1162,65 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       expect(created.paymentStatus).toBe(PAYMENT_STATUS.PENDING);
     });
   });
+
+  describe('Edición de Ficha de Pedido (Dimensiones, Estampas y Totales)', () => {
+    it('abre el modal de edición, recalcula metraje al cambiar dimensiones de una estampa y guarda cambios', () => {
+      const btnEdit = document.querySelector('.btn-edit-order[data-order-id="KL-00042"]');
+      expect(btnEdit).not.toBeNull();
+      btnEdit.click();
+
+      const editModal = document.getElementById('editOrderModal');
+      expect(editModal.style.display).toBe('block');
+      expect(document.getElementById('editOrderCodeBadge').textContent).toBe('#KL-00042');
+
+      const firstRow = document.querySelector('#editOrderItemsList .edit-order-item-row');
+      expect(firstRow).not.toBeNull();
+
+      // Cambiar dimensiones de 5x5 cm a 10x8 cm para 100 pzs -> 2 por fila, 50 filas -> (50 * 8.3 - 0.3)/100 = 4.15 m
+      firstRow.querySelector('.edit-item-title').value = 'Logo Tazas Actualizado';
+      const widthInput = firstRow.querySelector('.edit-item-width');
+      const heightInput = firstRow.querySelector('.edit-item-height');
+      const qtyInput = firstRow.querySelector('.edit-item-qty');
+      widthInput.value = '10';
+      heightInput.value = '8';
+      qtyInput.value = '100';
+      widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(Number(firstRow.querySelector('.edit-item-meters').value)).toBeCloseTo(4.15, 1);
+
+      // Cambiar tarifa a Q75/m y quitar corte
+      const rateInput = document.getElementById('editOrderUnitRateQ');
+      rateInput.value = '75';
+      rateInput.dispatchEvent(new Event('input', { bubbles: true }));
+      const cutCb = document.getElementById('editOrderCutting');
+      cutCb.checked = false;
+      cutCb.dispatchEvent(new Event('change', { bubbles: true }));
+
+      document.getElementById('editOrderNotes').value = 'Medidas actualizadas por solicitud del cliente';
+      document.getElementById('formEditOrder').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      expect(editModal.style.display).toBe('none');
+      const updated = ordersStore.getOrderById('KL-00042');
+      expect(updated.items[0].title).toBe('Logo Tazas Actualizado');
+      expect(updated.items[0].widthCm).toBe(10);
+      expect(updated.items[0].heightCm).toBe(8);
+      expect(updated.items[0].qty).toBe(100);
+      expect(updated.metrics.tierRate).toBe(75);
+      expect(updated.workshopNotes).toBe('Medidas actualizadas por solicitud del cliente');
+    });
+
+    it('permite abrir la edición directamente desde la Ficha de Detalle del Pedido', () => {
+      const btnView = document.querySelector('.btn-view-order[data-order-id="KL-00041"]');
+      btnView.click();
+      const btnEditFromDetail = document.querySelector('.btn-edit-order-from-detail');
+      expect(btnEditFromDetail).not.toBeNull();
+      btnEditFromDetail.click();
+
+      expect(document.getElementById('orderDetailModal').style.display).toBe('none');
+      expect(document.getElementById('editOrderModal').style.display).toBe('block');
+      expect(document.getElementById('editOrderCodeBadge').textContent).toBe('#KL-00041');
+      document.getElementById('btnCloseEditOrderModal').click();
+      expect(document.getElementById('editOrderModal').style.display).toBe('none');
+    });
+  });
 });

@@ -3,6 +3,7 @@ import {
   listOrders,
   getOrderById,
   createOrder,
+  updateOrder,
   updateOrderStatus,
   updateOrderPayment,
   attachPaymentReceipt,
@@ -16,6 +17,7 @@ router.get('/stats', authenticate, requireRole('ADMIN', 'EMPLOYEE'), getOrderSta
 router.get('/', authenticate, listOrders);
 router.get('/:id', authenticate, getOrderById);
 router.post('/', optionalAuthenticate, createOrder); // Público desde el checkout o autenticado
+router.put('/:id', authenticate, requireRole('ADMIN', 'EMPLOYEE'), updateOrder);
 router.put('/:id/status', authenticate, requireRole('ADMIN', 'EMPLOYEE'), updateOrderStatus);
 router.put('/:id/payment', authenticate, requireRole('ADMIN', 'EMPLOYEE'), updateOrderPayment);
 router.post('/:id/receipt', authenticate, attachPaymentReceipt);
