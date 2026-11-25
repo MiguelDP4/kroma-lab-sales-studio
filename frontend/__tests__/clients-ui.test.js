@@ -328,4 +328,69 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       document.getElementById('btnCloseClientFormModal').click();
     });
   });
+
+  describe('Tarifa Especial, Cuenta Corriente y Recibo Consolidado (Estado de Cuenta)', () => {
+    it('registra un cliente con tarifa preferencial Q75/m, exento de mínimo y cuenta corriente, y liquida su corte', async () => {
+      const btnOpen = document.getElementById('btnOpenNewClientModal');
+      btnOpen.click();
+
+      document.getElementById('clientFormCompany').value = 'Arte Modelo Dubois';
+      document.getElementById('clientFormName').value = 'Papá Dubois';
+      document.getElementById('clientFormPhone').value = '+502 5555-7777';
+      document.getElementById('clientFormNit').value = '123456-7';
+      document.getElementById('clientFormTier').value = 'VIP';
+      document.getElementById('clientFormCustomRate').value = '75';
+      document.getElementById('clientFormExemptMin').checked = true;
+      document.getElementById('clientFormAllowCredit').checked = true;
+
+      document.getElementById('formClient').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const client = clientsStore.getClients().find(c => c.company === 'Arte Modelo Dubois');
+      expect(client).toBeDefined();
+      expect(client.customRatePerMeterQ).toBe(75);
+      expect(client.exemptFromMinimum).toBe(true);
+      expect(client.allowCredit).toBe(true);
+
+      // Crear un pedido pendiente a Q75/m vinculado al cliente
+      ordersStore.createOrder({
+        customer: { clientId: client.id, name: client.name, company: client.company, phone: client.phone, nit: client.nit },
+        cartTotals: { totalBillableMeters: 0.6, tierRate: 75.0, materialTotalQ: 45.0, cuttingTotalQ: 0, grandTotalQ: 45.0, hasCutting: false },
+        items: [{ title: 'Logo_Taza_Papa.png', qty: 20, actualLinearMeters: 0.6 }],
+        productionStatus: 'COMPLETED',
+        paymentStatus: 'PENDING',
+      });
+
+      // Abrir expediente 360° y verificar botón de Recibo / Estado de Cuenta
+      const dossierBtn = document.querySelector(`.btn-view-dossier[data-client-id="${client.id}"]`);
+      expect(dossierBtn).not.toBeNull();
+      dossierBtn.click();
+
+      const dossierContent = document.getElementById('dossierContent');
+      expect(dossierContent.textContent).toContain('Q75.00/m');
+      expect(dossierContent.textContent).toContain('Sin mínimo de 1.0 m');
+      expect(dossierContent.textContent).toContain('Cuenta Corriente');
+
+      const btnStmt = dossierContent.querySelector('.btn-open-client-statement');
+      expect(btnStmt).not.toBeNull();
+      btnStmt.click();
+
+      const stmtModal = document.getElementById('clientStatementModal');
+      expect(stmtModal.style.display).toBe('block');
+      expect(document.getElementById('clientStatementSheetContainer').textContent).toContain('Logo_Taza_Papa.png');
+      expect(document.getElementById('clientStatementSheetContainer').textContent).toContain('Q 45.00');
+
+      // Abrir panel de liquidación y confirmar pago masivo
+      document.getElementById('btnOpenSettleStatement').click();
+      expect(document.getElementById('statementSettlePanel').style.display).toBe('block');
+
+      document.getElementById('statementSettleMethod').value = 'CASH';
+      document.getElementById('statementSettleRef').value = 'Pago semanal';
+      document.getElementById('btnConfirmSettleStatement').click();
+
+      // Esperar promesa async de settleClientStatement
+      await new Promise((r) => setTimeout(r, 20));
+      expect(stmtModal.style.display).toBe('none');
+      expect(clientsStore.getClientMetrics(client.id).pendingDebtQ).toBe(0);
+    });
+  });
 });

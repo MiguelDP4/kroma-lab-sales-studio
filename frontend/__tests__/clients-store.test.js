@@ -183,4 +183,35 @@ describe('Clients Store — Almacén de Cartera de Clientes B2B', () => {
     clientsStore._loadClients();
     expect(clientsStore.getClients().length).toBeGreaterThanOrEqual(5);
   });
+
+  it('aísla estrictamente los pedidos por clientId y evita fugas entre clientes con nombres similares', () => {
+    const clientA = clientsStore.createClient({
+      company: 'Arte Modelo Dubois',
+      name: 'Miguel Dubois',
+      phone: '+502 4707-8909',
+      nit: '4675274',
+    });
+    const clientB = clientsStore.createClient({
+      company: 'Arte Modelo Dubois Sucursal 2',
+      name: 'Otro Contacto',
+      phone: '+502 5555-7777',
+      nit: '123456-7',
+    });
+
+    ordersStore.createOrder({
+      customer: {
+        clientId: clientA.id,
+        company: clientA.company,
+        name: clientA.name,
+        phone: clientA.phone,
+        nit: clientA.nit,
+      },
+      cartTotals: { totalBillableMeters: 5.0, tierRate: 75.0, materialTotalQ: 375.0, cuttingTotalQ: 0, grandTotalQ: 375.0 },
+      paymentStatus: 'PENDING',
+    });
+
+    expect(clientsStore.getClientMetrics(clientA.id).pendingDebtQ).toBe(375.0);
+    expect(clientsStore.getClientMetrics(clientB.id).pendingDebtQ).toBe(0);
+    expect(clientsStore.getClientOrders(clientB.id).length).toBe(0);
+  });
 });
