@@ -439,43 +439,81 @@ export const ordersView = {
               </label>
             </div>
 
+            <!-- LISTA DE IMÁGENES / TRABAJOS DEL PEDIDO -->
+            <div style="margin: 0.75rem 0; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; flex-wrap: wrap;">
+                <span style="font-size: 0.82rem; font-weight: 800; color: var(--cerulean); text-transform: uppercase;">
+                  🖼️ Imágenes / Trabajos a Imprimir
+                </span>
+                <button type="button" id="btnAddManualOrderItem" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.7rem; min-height: 36px;">
+                  + Agregar otra imagen
+                </button>
+              </div>
+
+              <div id="manualOrderItemsList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                <div class="manual-order-item-row" data-item-index="0" style="padding: 0.6rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px;">
+                  <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label class="form-label" for="manualItemTitle" style="font-size: 0.8rem;">Nombre de la Imagen / Diseño:</label>
+                    <input type="text" id="manualItemTitle" class="input-control manual-item-title" placeholder="Ej. Logo_Tazas_Navidad.png" required>
+                  </div>
+                  <div class="input-row">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="manualItemQty" style="font-size: 0.8rem;">Cantidad (pzs):</label>
+                      <input type="number" id="manualItemQty" class="input-control manual-item-qty" value="100" min="1" max="10000" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="manualItemMeters" style="font-size: 0.8rem;">Metros ocupados:</label>
+                      <input type="number" id="manualItemMeters" class="input-control manual-item-meters" value="1.50" min="0.01" max="100" step="0.01" required>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <details style="margin-top: 0.55rem; font-size: 0.8rem; color: var(--text-secondary);">
+                <summary style="cursor: pointer; font-weight: 600;">📐 Medidas de referencia (opcional)</summary>
+                <div class="input-row" style="margin-top: 0.45rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="manualItemWidth">Ancho (cm):</label>
+                    <input type="number" id="manualItemWidth" class="input-control" value="5" min="0.5" max="28" step="0.1">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="manualItemHeight">Alto (cm):</label>
+                    <input type="number" id="manualItemHeight" class="input-control" value="5" min="0.5" max="150" step="0.1">
+                  </div>
+                </div>
+              </details>
+            </div>
+
             <div class="input-row">
               <div class="form-group">
-                <label class="form-label" for="manualItemTitle">Nombre del Diseño:</label>
-                <input type="text" id="manualItemTitle" class="input-control" placeholder="Ej. Stickers Logo 5x5" required>
+                <label class="form-label" for="manualUnitRateQ">Tarifa por Metro (Q/m):</label>
+                <input type="number" id="manualUnitRateQ" class="input-control" value="115.00" min="1" max="500" step="0.5" required>
               </div>
               <div class="form-group">
-                <label class="form-label" for="manualItemQty">Cantidad (piezas):</label>
-                <input type="number" id="manualItemQty" class="input-control" value="100" min="1" max="10000" required>
+                <label class="form-label" for="manualMeters">Metros Totales:</label>
+                <input type="number" id="manualMeters" class="input-control" value="1.50" min="0.01" max="100" step="0.01" required>
               </div>
             </div>
 
             <div class="input-row">
               <div class="form-group">
-                <label class="form-label" for="manualItemWidth">Ancho (cm):</label>
-                <input type="number" id="manualItemWidth" class="input-control" value="5" min="0.5" max="28" step="0.1" required>
+                <label class="form-label" for="manualTotalQ">Total a Cobrar (Q):</label>
+                <input type="number" id="manualTotalQ" class="input-control" value="172.50" min="0.5" max="100000" step="0.01" required>
               </div>
               <div class="form-group">
-                <label class="form-label" for="manualItemHeight">Alto (cm):</label>
-                <input type="number" id="manualItemHeight" class="input-control" value="5" min="0.5" max="150" step="0.1" required>
-              </div>
-            </div>
-
-            <div class="input-row">
-              <div class="form-group">
-                <label class="form-label" for="manualMeters">Metros Facturables:</label>
-                <input type="number" id="manualMeters" class="input-control" value="1.5" min="0.1" max="100" step="0.05" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="manualTotalQ">Total (Q):</label>
-                <input type="number" id="manualTotalQ" class="input-control" value="172.50" min="1" max="100000" step="0.05" required>
+                <label class="form-label" for="manualProductionStatus">Estado de Producción:</label>
+                <select id="manualProductionStatus" class="input-control">
+                  <option value="${ORDER_STATUS.IN_AUDLEY_QUEUE}">En Cola Audley</option>
+                  <option value="${ORDER_STATUS.COMPLETED}">Entregado (Registro directo)</option>
+                  <option value="${ORDER_STATUS.PENDING_REVIEW}">Por Confirmar</option>
+                </select>
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="manualPaymentStatus">Estado de Pago Inicial:</label>
               <select id="manualPaymentStatus" class="input-control">
-                <option value="${PAYMENT_STATUS.PENDING}">Pendiente de Pago</option>
+                <option value="${PAYMENT_STATUS.PENDING}">Pendiente de Pago (Cuenta Corriente)</option>
                 <option value="${PAYMENT_STATUS.PARTIAL}">Anticipo 50%</option>
                 <option value="${PAYMENT_STATUS.PAID}">Pagado 100%</option>
               </select>
@@ -802,6 +840,104 @@ export const ordersView = {
     const manualSelect = document.getElementById('manualClientAutofillSelect');
     const btnManualClear = document.getElementById('btnManualClearAutofill');
     const manualBadgeContainer = document.getElementById('manualAutofillBadgeContainer');
+    const manualItemsList = document.getElementById('manualOrderItemsList');
+    const btnAddManualItem = document.getElementById('btnAddManualOrderItem');
+    const manualUnitRateInput = document.getElementById('manualUnitRateQ');
+    const manualMetersInput = document.getElementById('manualMeters');
+    const manualTotalQInput = document.getElementById('manualTotalQ');
+    const manualCuttingCheckbox = document.getElementById('manualCheckCutting');
+
+    function recalculateManualOrderTotals(syncMetersFromItems = true) {
+      const rate = parseFloat(manualUnitRateInput?.value) || 115.0;
+      const includeCutting = Boolean(manualCuttingCheckbox?.checked);
+
+      let totalMeters = parseFloat(manualMetersInput?.value) || 0;
+      if (syncMetersFromItems && manualItemsList) {
+        const meterInputs = manualItemsList.querySelectorAll('.manual-item-meters');
+        if (meterInputs.length > 0) {
+          totalMeters = Array.from(meterInputs).reduce((sum, inp) => sum + (parseFloat(inp.value) || 0), 0);
+          totalMeters = Number(totalMeters.toFixed(2));
+          if (manualMetersInput) manualMetersInput.value = totalMeters.toFixed(2);
+        }
+      }
+
+      const materialQ = Number((totalMeters * rate).toFixed(2));
+      const cuttingQ = includeCutting ? 25.0 : 0.0;
+      const grandQ = Number((materialQ + cuttingQ).toFixed(2));
+      if (manualTotalQInput) manualTotalQInput.value = grandQ.toFixed(2);
+    }
+
+    function resetManualItemsToSingle() {
+      if (!manualItemsList) return;
+      const rows = manualItemsList.querySelectorAll('.manual-order-item-row');
+      rows.forEach((row, idx) => {
+        if (idx > 0) row.remove();
+      });
+      const firstMeters = document.getElementById('manualItemMeters');
+      if (firstMeters) firstMeters.value = '1.50';
+      if (manualUnitRateInput) manualUnitRateInput.value = '115.00';
+      recalculateManualOrderTotals(true);
+    }
+
+    if (manualItemsList) {
+      manualItemsList.addEventListener('input', (e) => {
+        if (e.target && e.target.classList.contains('manual-item-meters')) {
+          recalculateManualOrderTotals(true);
+        }
+      });
+      manualItemsList.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.btn-remove-manual-item');
+        if (removeBtn) {
+          const row = removeBtn.closest('.manual-order-item-row');
+          if (row && manualItemsList.querySelectorAll('.manual-order-item-row').length > 1) {
+            row.remove();
+            recalculateManualOrderTotals(true);
+          }
+        }
+      });
+    }
+
+    if (btnAddManualItem && manualItemsList) {
+      btnAddManualItem.addEventListener('click', () => {
+        const idx = manualItemsList.querySelectorAll('.manual-order-item-row').length;
+        const row = document.createElement('div');
+        row.className = 'manual-order-item-row';
+        row.dataset.itemIndex = String(idx);
+        row.style.cssText = 'padding: 0.6rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; position: relative;';
+        row.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted);">Imagen #${idx + 1}</span>
+            <button type="button" class="btn-remove-manual-item" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: 800; font-size: 0.9rem; min-width: 32px; min-height: 32px;" title="Quitar imagen">✕</button>
+          </div>
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label class="form-label" style="font-size: 0.8rem;">Nombre de la Imagen / Diseño:</label>
+            <input type="text" class="input-control manual-item-title" placeholder="Ej. Etiqueta_Termo.png" required>
+          </div>
+          <div class="input-row">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.8rem;">Cantidad (pzs):</label>
+              <input type="number" class="input-control manual-item-qty" value="50" min="1" max="10000" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.8rem;">Metros ocupados:</label>
+              <input type="number" class="input-control manual-item-meters" value="0.50" min="0.01" max="100" step="0.01" required>
+            </div>
+          </div>
+        `;
+        manualItemsList.appendChild(row);
+        recalculateManualOrderTotals(true);
+      });
+    }
+
+    if (manualUnitRateInput) {
+      manualUnitRateInput.addEventListener('input', () => recalculateManualOrderTotals(false));
+    }
+    if (manualMetersInput) {
+      manualMetersInput.addEventListener('input', () => recalculateManualOrderTotals(false));
+    }
+    if (manualCuttingCheckbox) {
+      manualCuttingCheckbox.addEventListener('change', () => recalculateManualOrderTotals(false));
+    }
 
     function updateManualBadge(client) {
       if (!manualBadgeContainer) return;
@@ -812,42 +948,67 @@ export const ordersView = {
         return;
       }
       const tier = CLIENT_TIERS[client.tier] || { badge: client.tier, bg: 'rgba(28, 114, 147, 0.15)', color: 'var(--cerulean)' };
+      const specialTags = [];
+      if (client.customRatePerMeterQ) specialTags.push(`💎 Q${Number(client.customRatePerMeterQ).toFixed(2)}/m`);
+      if (client.exemptFromMinimum) specialTags.push('📏 Sin mínimo 1m');
+      if (client.allowCredit) specialTags.push('📒 Cuenta Corriente');
+
       manualBadgeContainer.style.display = 'block';
       manualBadgeContainer.innerHTML = `
-        <div class="autofill-linked-badge" style="background: ${tier.bg}; color: ${tier.color}; border: 1px solid ${tier.color};">
+        <div class="autofill-linked-badge" style="background: ${tier.bg}; color: ${tier.color}; border: 1px solid ${tier.color}; flex-wrap: wrap;">
           <span>🏢 Cliente Vinculado: <strong>${client.company}</strong></span>
           <span class="badge" style="background: ${tier.color}; color: #fff;">${tier.badge}</span>
+          ${specialTags.length > 0 ? `
+            <span style="font-size: 0.76rem; font-weight: 700; color: #10b981; width: 100%; margin-top: 0.25rem;">
+              ${specialTags.join(' • ')}
+            </span>
+          ` : ''}
         </div>
       `;
       if (btnManualClear) btnManualClear.style.display = 'inline-flex';
     }
 
+    function applyManualClientSelection(clientId) {
+      if (clientId) {
+        const c = clientsStore.getClientById(clientId);
+        if (c) {
+          manualSelectedClientId = c.id;
+          const nameEl = document.getElementById('manualCustName');
+          const compEl = document.getElementById('manualCustCompany');
+          const phoneEl = document.getElementById('manualCustPhone');
+          const nitEl = document.getElementById('manualCustNit');
+          const addrEl = document.getElementById('manualCustAddress');
+          const notesEl = document.getElementById('manualNotes');
+          const paySel = document.getElementById('manualPaymentStatus');
+
+          if (nameEl) nameEl.value = c.name;
+          if (compEl) compEl.value = c.company;
+          if (phoneEl) phoneEl.value = c.phone;
+          if (nitEl) nitEl.value = c.nit;
+          if (addrEl) addrEl.value = c.address;
+          if (notesEl && c.notes) notesEl.value = c.notes;
+          if (manualUnitRateInput) {
+            manualUnitRateInput.value = c.customRatePerMeterQ
+              ? Number(c.customRatePerMeterQ).toFixed(2)
+              : '115.00';
+          }
+          if (paySel && c.allowCredit) {
+            paySel.value = PAYMENT_STATUS.PENDING;
+          }
+          recalculateManualOrderTotals(true);
+          updateManualBadge(c);
+          return;
+        }
+      }
+      manualSelectedClientId = null;
+      if (manualUnitRateInput) manualUnitRateInput.value = '115.00';
+      recalculateManualOrderTotals(true);
+      updateManualBadge(null);
+    }
+
     if (manualSelect) {
       manualSelect.addEventListener('change', (e) => {
-        const id = e.target.value;
-        if (id) {
-          const c = clientsStore.getClientById(id);
-          if (c) {
-            manualSelectedClientId = c.id;
-            const nameEl = document.getElementById('manualCustName');
-            const compEl = document.getElementById('manualCustCompany');
-            const phoneEl = document.getElementById('manualCustPhone');
-            const nitEl = document.getElementById('manualCustNit');
-            const addrEl = document.getElementById('manualCustAddress');
-            const notesEl = document.getElementById('manualNotes');
-
-            if (nameEl) nameEl.value = c.name;
-            if (compEl) compEl.value = c.company;
-            if (phoneEl) phoneEl.value = c.phone;
-            if (nitEl) nitEl.value = c.nit;
-            if (addrEl) addrEl.value = c.address;
-            if (notesEl && c.notes) notesEl.value = c.notes;
-            updateManualBadge(c);
-          }
-        } else {
-          manualSelectedClientId = null;
-          updateManualBadge(null);
-        }
+        applyManualClientSelection(e.target.value);
       });
     }
 
@@ -856,6 +1017,8 @@ export const ordersView = {
         manualSelectedClientId = null;
         if (manualSelect) manualSelect.value = '';
         updateManualBadge(null);
+        if (manualUnitRateInput) manualUnitRateInput.value = '115.00';
+        recalculateManualOrderTotals(true);
         const nameEl = document.getElementById('manualCustName');
         const compEl = document.getElementById('manualCustCompany');
         const phoneEl = document.getElementById('manualCustPhone');
@@ -869,20 +1032,43 @@ export const ordersView = {
       });
     }
 
-    if (btnOpenNewOrder) {
-      btnOpenNewOrder.addEventListener('click', () => {
-        if (manualSelect) {
-          manualSelect.innerHTML = `
-            <option value="">-- Seleccionar cliente existente o ingresar nuevo --</option>
-            ${clientsStore.getClients().map(c => `
-              <option value="${c.id}">${c.company} (${c.name}) • ${CLIENT_TIERS[c.tier]?.badge || c.tier}</option>
-            `).join('')}
-          `;
-        }
+    function openManualOrderModal(preselectClientId = null) {
+      if (manualSelect) {
+        manualSelect.innerHTML = `
+          <option value="">-- Seleccionar cliente existente o ingresar nuevo --</option>
+          ${clientsStore.getClients().map(c => `
+            <option value="${c.id}">${c.company} (${c.name})${c.customRatePerMeterQ ? ` • Q${Number(c.customRatePerMeterQ).toFixed(0)}/m` : ''} • ${CLIENT_TIERS[c.tier]?.badge || c.tier}</option>
+          `).join('')}
+        `;
+      }
+      resetManualItemsToSingle();
+      if (preselectClientId) {
+        if (manualSelect) manualSelect.value = preselectClientId;
+        applyManualClientSelection(preselectClientId);
+      } else {
         manualSelectedClientId = null;
         updateManualBadge(null);
-        toggleModal(createModal, true);
+      }
+      toggleModal(createModal, true);
+    }
+
+    if (btnOpenNewOrder) {
+      btnOpenNewOrder.addEventListener('click', () => {
+        openManualOrderModal(null);
       });
+    }
+
+    // Auto-abrir Modal de Pedido Rápido si venimos desde el expediente de un cliente (?quickClient=...)
+    if (isStaff && typeof window !== 'undefined' && window.location?.search) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const quickClientId = params.get('quickClient');
+        if (quickClientId) {
+          setTimeout(() => {
+            openManualOrderModal(quickClientId);
+          }, 50);
+        }
+      } catch (_) {}
     }
     if (btnCloseCreateModal) btnCloseCreateModal.addEventListener('click', () => toggleModal(createModal, false));
     if (btnCancelCreateModal) btnCancelCreateModal.addEventListener('click', () => toggleModal(createModal, false));
@@ -898,15 +1084,56 @@ export const ordersView = {
         const address = document.getElementById('manualCustAddress')?.value.trim() || '';
         const shouldSync = Boolean(document.getElementById('manualCheckSaveClient')?.checked);
 
-        const itemTitle = document.getElementById('manualItemTitle')?.value || 'Stickers';
-        const itemQty = parseInt(document.getElementById('manualItemQty')?.value, 10) || 50;
         const itemWidth = parseFloat(document.getElementById('manualItemWidth')?.value) || 5;
         const itemHeight = parseFloat(document.getElementById('manualItemHeight')?.value) || 5;
-        const meters = parseFloat(document.getElementById('manualMeters')?.value) || 1.5;
-        const totalQ = parseFloat(document.getElementById('manualTotalQ')?.value) || 172.5;
-        const paymentStatus = document.getElementById('manualPaymentStatus')?.value || PAYMENT_STATUS.PENDING;
+        const unitRateQ = parseFloat(document.getElementById('manualUnitRateQ')?.value) || 115.0;
+        const meters = parseFloat(document.getElementById('manualMeters')?.value) || 1.0;
         const includeCutting = Boolean(document.getElementById('manualCheckCutting')?.checked);
+        const cuttingTotalQ = includeCutting ? 25.0 : 0.0;
+        const totalQ = parseFloat(document.getElementById('manualTotalQ')?.value) || Number((meters * unitRateQ + cuttingTotalQ).toFixed(2));
+        const materialTotalQ = Number(Math.max(0, totalQ - cuttingTotalQ).toFixed(2));
+        const paymentStatus = document.getElementById('manualPaymentStatus')?.value || PAYMENT_STATUS.PENDING;
+        const productionStatus = document.getElementById('manualProductionStatus')?.value || ORDER_STATUS.IN_AUDLEY_QUEUE;
         const notes = document.getElementById('manualNotes')?.value.trim() || '';
+
+        const itemRows = manualItemsList
+          ? Array.from(manualItemsList.querySelectorAll('.manual-order-item-row'))
+          : [];
+
+        const collectedItems = itemRows.length > 0
+          ? itemRows.map((row) => {
+              const title = row.querySelector('.manual-item-title')?.value.trim() || 'Impresión UV DTF';
+              const qty = parseInt(row.querySelector('.manual-item-qty')?.value, 10) || 1;
+              const rowMeters = parseFloat(row.querySelector('.manual-item-meters')?.value) || meters;
+              return {
+                title,
+                fileName: title,
+                widthCm: itemWidth,
+                heightCm: itemHeight,
+                qty,
+                actualLinearMeters: Number(rowMeters.toFixed(2)),
+                stickersPerRow: 5,
+                rows: Math.max(1, Math.ceil(qty / 5)),
+                includeCutting,
+                cuttingRateUnit: 0.30,
+                finishType: 'Barniz con Relieve 3D',
+              };
+            })
+          : [
+              {
+                title: document.getElementById('manualItemTitle')?.value || 'Stickers',
+                fileName: document.getElementById('manualItemTitle')?.value || 'Stickers',
+                widthCm: itemWidth,
+                heightCm: itemHeight,
+                qty: parseInt(document.getElementById('manualItemQty')?.value, 10) || 50,
+                actualLinearMeters: meters,
+                stickersPerRow: 5,
+                rows: 10,
+                includeCutting,
+                cuttingRateUnit: 0.30,
+                finishType: 'Barniz con Relieve 3D',
+              },
+            ];
 
         let linkedClientId = manualSelectedClientId;
 
@@ -943,39 +1170,27 @@ export const ordersView = {
           }
         }
 
+        const linkedClient = linkedClientId ? clientsStore.getClientById(linkedClientId) : null;
+        const resolvedClientId = linkedClient?.backendId || linkedClientId || null;
+
         const newOrder = ordersStore.createOrder({
-          customer: { name, company, phone, nit, address, clientId: linkedClientId || null },
+          customer: { name, company, phone, nit, address, clientId: resolvedClientId },
           cartTotals: {
             totalBillableMeters: meters,
-            tierRate: 115.0,
-            materialTotalQ: totalQ,
-            cuttingTotalQ: includeCutting ? 25.0 : 0.0,
+            tierRate: unitRateQ,
+            materialTotalQ,
+            cuttingTotalQ,
             grandTotalQ: totalQ,
             hasCutting: includeCutting,
           },
-          items: [
-            {
-              title: itemTitle,
-              widthCm: itemWidth,
-              heightCm: itemHeight,
-              qty: itemQty,
-              actualLinearMeters: meters,
-              stickersPerRow: 5,
-              rows: 10,
-              includeCutting,
-              cuttingRateUnit: 0.30,
-              finishType: 'Barniz con Relieve 3D',
-            }
-          ],
+          items: collectedItems,
           workshopNotes: notes,
+          productionStatus,
+          paymentStatus,
         });
 
-        // Actualizar estado de pago si fue seleccionado
-        if (paymentStatus !== PAYMENT_STATUS.PENDING) {
-          ordersStore.updatePaymentStatus(newOrder.id, paymentStatus);
-        }
-
         formCreateOrder.reset();
+        resetManualItemsToSingle();
         manualSelectedClientId = null;
         updateManualBadge(null);
         toggleModal(createModal, false);

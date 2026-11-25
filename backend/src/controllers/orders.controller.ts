@@ -55,6 +55,16 @@ const createOrderSchema = z.object({
   rotationDeg: z.number().int().nullable().optional(),
   paymentReceiptUrl: z.string().nullable().optional(),
   paymentReceiptFileName: z.string().nullable().optional(),
+  status: z.enum([
+    'PENDING_REVIEW',
+    'IN_AUDLEY_QUEUE',
+    'PRINTING',
+    'LAMINATING_CUTTING',
+    'READY_FOR_DELIVERY',
+    'COMPLETED',
+    'CANCELLED',
+  ]).optional(),
+  paymentStatus: z.enum(['PENDING', 'PARTIAL', 'PAID', 'CANCELLED']).optional(),
 });
 
 const updateStatusSchema = z.object({
@@ -206,12 +216,39 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
 
     const code = await generateNextOrderCode();
 
-    const { canvasSnapshot, rotationDeg, items, ...orderData } = data;
+    const { canvasSnapshot, rotationDeg, items, status, paymentStatus, ...orderData } = data;
+    const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'EMPLOYEE';
 
+    // Validar que customerId exista en BD para evitar errores de FK con IDs locales temporales
+    if (orderData.customerId) {
+      const existingCustomer = await prisma.customer.findUnique({
+        where: { id: orderData.customerId },
+        select: { id: true },
+      });
+      if (!existingCustomer) {
+        orderData.customerId = null;
+      }
+    }
+
+    const staffOverrides: Record<string, any> = {};
+    if (isStaff) {
+      if (status) staffOverrides.status = status;
+      if (paymentStatus) {
+        staffOverrides.paymentStatus = paymentStatus;
+        if (paymentStatus === 'PAID') {
+          staffOverrides.amountPaidQ = orderData.totalAmountQ;
+        } else if (paymentStatus === 'PARTIAL') {
+          staffOverrides.amountPaidQ = Number((orderData.totalAmountQ * 0.5).toFixed(2));
+        }
+      }
+    }
+
+    const isSqlite = (process.env.DATABASE_URL || '').startsWith('file:');
     const order = await prisma.order.create({
       data: {
         code,
         ...orderData,
+        ...staffOverrides,
         items: items && items.length > 0 ? {
           create: items.map(it => ({
             title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
@@ -224,7 +261,9 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
             includeCutting: it.includeCutting || false,
             fileUrl: it.fileUrl || null,
             fileName: it.fileName || null,
-            fileInfo: it.fileInfo || null,
+            fileInfo: it.fileInfo
+              ? (isSqlite && typeof it.fileInfo !== 'string' ? JSON.stringify(it.fileInfo) : it.fileInfo)
+              : null,
             previewUrl: it.previewUrl || it.fileUrl || null,
             canvasSnapshot: it.canvasSnapshot || null,
             canvasSnapshotUrl: it.canvasSnapshotUrl || null,

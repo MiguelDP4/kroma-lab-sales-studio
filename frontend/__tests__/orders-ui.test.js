@@ -1101,4 +1101,65 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       confirmSpy.mockRestore();
     });
   });
+
+  describe('Pedido Rápido Multi-Imagen con Tarifa Preferencial por Cliente', () => {
+    it('autocompleta tarifa especial Q75/m, permite múltiples imágenes y calcula total exacto sin mínimo 1m', () => {
+      const papa = clientsStore.createClient({
+        company: 'Arte Modelo Dubois',
+        name: 'Papá Dubois',
+        phone: '+502 5555-7777',
+        nit: '123456-7',
+        tier: 'VIP',
+        customRatePerMeterQ: 75.0,
+        exemptFromMinimum: true,
+        allowCredit: true,
+      });
+
+      document.getElementById('btnOpenNewOrderModal').click();
+
+      const sel = document.getElementById('manualClientAutofillSelect');
+      sel.value = papa.id;
+      sel.dispatchEvent(new Event('change'));
+
+      expect(document.getElementById('manualUnitRateQ').value).toBe('75.00');
+      expect(document.getElementById('manualAutofillBadgeContainer').textContent).toContain('Q75.00/m');
+
+      // Configurar primera imagen (0.40 m)
+      document.getElementById('manualItemTitle').value = 'Logo_Taza_Navidad.png';
+      document.getElementById('manualItemQty').value = '30';
+      const firstMeters = document.getElementById('manualItemMeters');
+      firstMeters.value = '0.40';
+      firstMeters.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // Agregar segunda imagen (0.60 m) -> total 1.00 m * Q75 = Q75.00
+      document.getElementById('btnAddManualOrderItem').click();
+      const rows = document.querySelectorAll('.manual-order-item-row');
+      expect(rows.length).toBe(2);
+
+      rows[1].querySelector('.manual-item-title').value = 'Etiqueta_Cafe.png';
+      rows[1].querySelector('.manual-item-qty').value = '40';
+      const secondMeters = rows[1].querySelector('.manual-item-meters');
+      secondMeters.value = '0.60';
+      secondMeters.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(document.getElementById('manualMeters').value).toBe('1.00');
+      expect(document.getElementById('manualTotalQ').value).toBe('75.00');
+
+      document.getElementById('manualProductionStatus').value = ORDER_STATUS.COMPLETED;
+      document.getElementById('manualPaymentStatus').value = PAYMENT_STATUS.PENDING;
+
+      document.getElementById('formStaffCreateOrder').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+      const created = ordersStore.getOrders()[0];
+      expect(created.customer.company).toBe('Arte Modelo Dubois');
+      expect(created.items.length).toBe(2);
+      expect(created.items[0].title).toBe('Logo_Taza_Navidad.png');
+      expect(created.items[1].title).toBe('Etiqueta_Cafe.png');
+      expect(created.metrics.tierRate).toBe(75);
+      expect(created.metrics.totalBillableMeters).toBe(1.0);
+      expect(created.metrics.grandTotalQ).toBe(75.0);
+      expect(created.productionStatus).toBe(ORDER_STATUS.COMPLETED);
+      expect(created.paymentStatus).toBe(PAYMENT_STATUS.PENDING);
+    });
+  });
 });

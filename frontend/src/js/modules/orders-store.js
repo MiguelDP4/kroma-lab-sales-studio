@@ -417,7 +417,16 @@ class OrdersStore {
     return this.orders.find(o => o.id === id) || null;
   }
 
-  createOrder({ customer = {}, cartTotals = {}, items = [], workshopNotes = '', paymentReceiptUrl = null, paymentReceiptFileName = null }) {
+  createOrder({
+    customer = {},
+    cartTotals = {},
+    items = [],
+    workshopNotes = '',
+    paymentReceiptUrl = null,
+    paymentReceiptFileName = null,
+    productionStatus = ORDER_STATUS.PENDING_REVIEW,
+    paymentStatus = PAYMENT_STATUS.PENDING,
+  }) {
     let maxNum = 0;
     this.orders.forEach(o => {
       const cleanId = (o.id || '').replace(/^KL-/, '');
@@ -479,8 +488,11 @@ class OrdersStore {
         grandTotalQ: parseFloat(cartTotals.grandTotalQ) || 140.0,
         hasCutting: Boolean(cartTotals.hasCutting),
       },
-      productionStatus: ORDER_STATUS.PENDING_REVIEW,
-      paymentStatus: PAYMENT_STATUS.PENDING,
+      productionStatus: productionStatus || ORDER_STATUS.PENDING_REVIEW,
+      paymentStatus: paymentStatus || PAYMENT_STATUS.PENDING,
+      amountPaidQ: paymentStatus === PAYMENT_STATUS.PAID
+        ? (parseFloat(cartTotals.grandTotalQ) || 140.0)
+        : (paymentStatus === PAYMENT_STATUS.PARTIAL ? Number(((parseFloat(cartTotals.grandTotalQ) || 140.0) * 0.5).toFixed(2)) : 0),
       paymentMethod: 'TRANSFER',
       workshopNotes: workshopNotes || customer.notes || '',
     };
@@ -514,6 +526,8 @@ class OrdersStore {
         rotationDeg: firstItem.rotationDeg || newOrder.rotationDeg,
         paymentReceiptUrl: newOrder.paymentReceiptUrl,
         paymentReceiptFileName: newOrder.paymentReceiptFileName,
+        status: newOrder.productionStatus,
+        paymentStatus: newOrder.paymentStatus,
         notes: newOrder.workshopNotes || null,
         items: newOrder.items.map(it => cleanOrderItemForApi(it)),
       }).then(res => {

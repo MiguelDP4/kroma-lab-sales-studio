@@ -153,6 +153,9 @@ class ClientsStore {
       category: cat,
       tier: (c.tier && CLIENT_TIERS[c.tier]) ? c.tier : 'NUEVO',
       notes: c.notes || '',
+      customRatePerMeterQ: c.customRatePerMeterQ !== null && c.customRatePerMeterQ !== undefined ? Number(c.customRatePerMeterQ) : null,
+      exemptFromMinimum: Boolean(c.exemptFromMinimum),
+      allowCredit: Boolean(c.allowCredit),
       createdAt: c.createdAt,
     };
   }
@@ -274,9 +277,15 @@ class ClientsStore {
     category = 'COMERCIO_GENERAL',
     tier = 'NUEVO',
     notes = '',
+    customRatePerMeterQ = null,
+    exemptFromMinimum = false,
+    allowCredit = false,
   }) {
     const randomNum = Math.floor(100 + Math.random() * 900);
     const newId = `CLI-${randomNum}`;
+    const parsedRate = customRatePerMeterQ !== null && customRatePerMeterQ !== '' && !isNaN(Number(customRatePerMeterQ)) && Number(customRatePerMeterQ) > 0
+      ? Number(customRatePerMeterQ)
+      : null;
 
     const newClient = {
       id: newId,
@@ -289,6 +298,9 @@ class ClientsStore {
       category: CLIENT_CATEGORIES[category] ? category : 'COMERCIO_GENERAL',
       tier: CLIENT_TIERS[tier] ? tier : 'NUEVO',
       notes: notes.trim(),
+      customRatePerMeterQ: parsedRate,
+      exemptFromMinimum: Boolean(exemptFromMinimum),
+      allowCredit: Boolean(allowCredit),
       createdAt: new Date().toISOString(),
     };
 
@@ -306,10 +318,14 @@ class ClientsStore {
         tier: newClient.tier,
         sector: newClient.category,
         notes: newClient.notes,
+        customRatePerMeterQ: newClient.customRatePerMeterQ,
+        exemptFromMinimum: newClient.exemptFromMinimum,
+        allowCredit: newClient.allowCredit,
       }).then(res => {
         if (res && res.customer) {
+          newClient.id = res.customer.id;
           newClient.backendId = res.customer.id;
-          this._saveClients();
+          this._notify();
         }
       }).catch(() => {});
     }
@@ -330,12 +346,20 @@ class ClientsStore {
     if (data.category && CLIENT_CATEGORIES[data.category]) client.category = data.category;
     if (data.tier && CLIENT_TIERS[data.tier]) client.tier = data.tier;
     if (data.notes !== undefined) client.notes = data.notes.trim();
+    if (data.customRatePerMeterQ !== undefined) {
+      client.customRatePerMeterQ = data.customRatePerMeterQ !== null && data.customRatePerMeterQ !== '' && !isNaN(Number(data.customRatePerMeterQ)) && Number(data.customRatePerMeterQ) > 0
+        ? Number(data.customRatePerMeterQ)
+        : null;
+    }
+    if (data.exemptFromMinimum !== undefined) client.exemptFromMinimum = Boolean(data.exemptFromMinimum);
+    if (data.allowCredit !== undefined) client.allowCredit = Boolean(data.allowCredit);
 
     client.updatedAt = new Date().toISOString();
     this._notify();
 
-    if (typeof apiClient !== 'undefined' && apiClient.customers) {
-      const targetId = client.backendId || client.id;
+    const targetId = client.backendId || client.id;
+    const isLocalTempId = !client.backendId && String(client.id).startsWith('CLI-');
+    if (!isLocalTempId && typeof apiClient !== 'undefined' && apiClient.customers) {
       apiClient.customers.update(targetId, {
         companyName: client.company,
         managerName: client.name,
@@ -346,6 +370,9 @@ class ClientsStore {
         tier: client.tier,
         sector: client.category,
         notes: client.notes,
+        customRatePerMeterQ: client.customRatePerMeterQ,
+        exemptFromMinimum: client.exemptFromMinimum,
+        allowCredit: client.allowCredit,
       }).catch(() => {});
     }
 
@@ -369,24 +396,87 @@ class ClientsStore {
     const cleanName = (client.name || '').trim().toLowerCase();
     const cleanPhone = (client.phone || '').replace(/\D/g, '');
     const cleanNit = (client.nit || '').trim().toLowerCase();
+    const isPlaceholderPhone = !cleanPhone || cleanPhone === '55550000' || cleanPhone === '50255550000';
 
     const allOrders = ordersStore.getOrders();
     return allOrders.filter(o => {
-      if (o.customer && o.customer.clientId && o.customer.clientId === client.id) {
-        return true;
+      if (o.customer && o.customer.clientId) {
+        return o.customer.clientId === client.id || Boolean(client.backendId && o.customer.clientId === client.backendId);
       }
+
       const oCompany = (o.customer.company || '').trim().toLowerCase();
       const oName = (o.customer.name || '').trim().toLowerCase();
       const oPhone = (o.customer.phone || '').replace(/\D/g, '');
       const oNit = (o.customer.nit || '').trim().toLowerCase();
+      const isOrderPlaceholderPhone = !oPhone || oPhone === '55550000' || oPhone === '50255550000';
 
-      const matchCompany = cleanCompany && oCompany && (oCompany === cleanCompany || oCompany.includes(cleanCompany) || cleanCompany.includes(oCompany));
-      const matchName = cleanName && oName && (oName === cleanName || oName.includes(cleanName) || cleanName.includes(oName));
-      const matchPhone = cleanPhone && oPhone && (oPhone === cleanPhone || oPhone.endsWith(cleanPhone) || cleanPhone.endsWith(oPhone));
-      const matchNit = cleanNit && cleanNit !== 'cf' && oNit === cleanNit;
+      const matchCompany = Boolean(cleanCompany && oCompany && oCompany === cleanCompany);
+      const matchName = Boolean(cleanName && oName && oName === cleanName);
+      const matchPhone = Boolean(!isPlaceholderPhone && !isOrderPlaceholderPhone && (oPhone === cleanPhone || oPhone.endsWith(cleanPhone) || cleanPhone.endsWith(oPhone)));
+      const matchNit = Boolean(cleanNit && cleanNit !== 'cf' && oNit === cleanNit);
 
       return matchCompany || matchPhone || matchNit || matchName;
     });
+  }
+
+  getClientPendingOrders(clientOrId) {
+    return this.getClientOrders(clientOrId).filter(
+      o => o.productionStatus !== 'CANCELLED' && (o.paymentStatus === PAYMENT_STATUS.PENDING || o.paymentStatus === PAYMENT_STATUS.PARTIAL)
+    );
+  }
+
+  async settleClientStatement(clientId, options = {}) {
+    const client = this.getClientById(clientId);
+    if (!client) return { success: false, settledCount: 0, totalSettledQ: 0 };
+
+    const pendingOrders = this.getClientPendingOrders(client);
+    if (pendingOrders.length === 0) {
+      return { success: false, settledCount: 0, totalSettledQ: 0 };
+    }
+
+    const totalSettledQ = pendingOrders.reduce((sum, o) => {
+      const paid = Number(o.amountPaidQ || (o.paymentStatus === PAYMENT_STATUS.PARTIAL ? o.metrics.grandTotalQ * 0.5 : 0));
+      return sum + Math.max(0, o.metrics.grandTotalQ - paid);
+    }, 0);
+
+    // Sincronizar liquidación en el backend en una sola transacción
+    let settledOnBackend = false;
+    if (!IS_TEST_ENV && typeof apiClient !== 'undefined' && apiClient.customers && apiClient.customers.settleStatement) {
+      const targetId = client.backendId || client.id;
+      try {
+        await apiClient.customers.settleStatement(targetId, {
+          method: options.method || 'CASH',
+          bankName: options.bankName || undefined,
+          bankReference: options.bankReference || undefined,
+          notes: options.notes || undefined,
+        });
+        settledOnBackend = true;
+      } catch (err) {
+        console.warn('[ClientsStore] Fallback local al liquidar corte:', err.message);
+      }
+    }
+
+    // Actualizar estado local en ordersStore de forma inmediata y reactiva
+    pendingOrders.forEach(o => {
+      if (settledOnBackend) {
+        o.paymentStatus = PAYMENT_STATUS.PAID;
+        o.amountPaidQ = o.metrics?.grandTotalQ ?? o.amountPaidQ;
+        o.updatedAt = new Date().toISOString();
+      } else {
+        ordersStore.updatePaymentStatus(o.id, PAYMENT_STATUS.PAID);
+      }
+    });
+    if (settledOnBackend && typeof ordersStore._notify === 'function') {
+      ordersStore._notify();
+    }
+
+    this._notify();
+
+    return {
+      success: true,
+      settledCount: pendingOrders.length,
+      totalSettledQ: Number(totalSettledQ.toFixed(2)),
+    };
   }
 
   getClientMetrics(clientOrId) {
@@ -396,7 +486,7 @@ class ClientsStore {
     const totalMetersPurchased = orders.reduce((sum, o) => sum + o.metrics.totalBillableMeters, 0);
     const totalSpentQ = orders.reduce((sum, o) => sum + o.metrics.grandTotalQ, 0);
     const pendingDebtQ = orders
-      .filter(o => o.paymentStatus === PAYMENT_STATUS.PENDING)
+      .filter(o => o.productionStatus !== 'CANCELLED' && o.paymentStatus === PAYMENT_STATUS.PENDING)
       .reduce((sum, o) => sum + o.metrics.grandTotalQ, 0);
 
     const lastOrderDate = orders.length > 0 ? orders[0].createdAt : null;

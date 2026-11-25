@@ -253,6 +253,7 @@ kroma-lab-sales-studio/
 │   │       │   ├── file-uploader.js    # Validador de archivos gráficos y extracción de preview
 │   │       │   ├── roll-simulator.js   # Renderizador en Canvas 2D con centrado simétrico en bobina (28 cm)
 │   │       │   ├── seo-manager.js      # Gestor dinámico de metadatos SEO por ruta, canonical, OG y JSON-LD
+│   │       │   ├── statement-helper.js # Generador de Recibo Consolidado / Estado de Cuenta B2B (PDF y WhatsApp)
 │   │       │   └── production-store.js # Almacén reactivo de Kanban y monitor de consumo de film PET
 │   │       └── views/
 │   │           ├── quoter-view.js      # Vista principal del cotizador UV DTF + Dropzone
@@ -990,3 +991,24 @@ Con el objetivo de maximizar el descubrimiento orgánico en Google, Bing y previ
   * `manifest.webmanifest` con configuración regional `es-GT`.
 * **Contenido Semántico Mobile-First (`quoter-view.js` + `views.css`):**
   * Secciones informativas debajo de `#cotizador`: beneficios UV DTF industrial (600 DPI, cama blanca, relieve 3D, Peel & Stick), superficies compatibles B2B, tabla de tarifas por volumen sincronizada con `PRICING_TIERS`, acordeón accesible `<details>` de Preguntas Frecuentes sincronizado con `FAQ_ITEMS` del JSON-LD y footer semántico `#contacto`.
+
+---
+
+## 14. Tarifa Preferencial por Cliente, Pedido Rápido Multi-Imagen y Recibo Consolidado (Cuenta Corriente)
+
+Pensado para clientes B2B recurrentes y maquila de volumen (ej. **Arte Modelo Dubois** a `Q75.00/m`) que envían pedidos por WhatsApp y liquidan en cortes consolidados post-entrega:
+
+1. **Condiciones Especiales en `Customer` (`schema.prisma` / `schema.sqlite.prisma`):**
+   * `customRatePerMeterQ`: Tarifa preferencial fija por metro lineal (ej. `75.00`).
+   * `exemptFromMinimum`: Bandera booleana que exime al cliente del piso de `1.0 m`, permitiendo cobrar metraje exacto al combinar trabajos en la bobina.
+   * `allowCredit`: Bandera de **Cuenta Corriente**, habilitando entregas acumuladas con saldo pendiente para liquidar en bloque.
+2. **Endpoints REST de Estado de Cuenta (`/api/customers`):**
+   * `GET /api/customers/:id/statement`: Consolida todas las órdenes no canceladas con estado de pago `PENDING` o `PARTIAL`, desglosando cada imagen (`OrderItem`), cantidad, metros ocupados, tarifa/m y saldo total.
+   * `POST /api/customers/:id/settle-statement`: Liquida en una sola transacción Prisma todos los pedidos pendientes del corte, generando los registros en `Payment` y marcando cada orden como `PAID`.
+   * `POST /api/orders`: Con `optionalAuthenticate`, permite a usuarios `ADMIN` / `EMPLOYEE` definir el estado inicial de producción (`IN_AUDLEY_QUEUE`, `COMPLETED`, etc.) y de pago (`PENDING`, `PARTIAL`, `PAID`).
+3. **Pedido Rápido Multi-Imagen (`orders-view.js`):**
+   * Al seleccionar un cliente con tarifa preferencial (o al llegar desde `/pedidos?quickClient=<id>`), precarga automáticamente `customRatePerMeterQ` (editable manualmente si hay excepción).
+   * Soporta múltiples imágenes por pedido (`+ Agregar otra imagen`) con nombre de archivo, cantidad y metros exactos, recalculando en vivo los metros totales y el monto a cobrar.
+4. **Recibo Consolidado / Estado de Cuenta (`clients-view.js` + `statement-helper.js`):**
+   * Accesible desde el **Expediente 360°** del cliente cuando tiene saldo pendiente.
+   * Permite **Imprimir / Guardar PDF** con diseño oficial Kroma Lab, **Copiar / Enviar por WhatsApp** el listado detallado por imagen, y **Liquidar Corte (Pago Masivo)** en 1 clic.
