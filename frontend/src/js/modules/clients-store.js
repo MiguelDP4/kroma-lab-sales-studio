@@ -396,21 +396,24 @@ class ClientsStore {
     const cleanName = (client.name || '').trim().toLowerCase();
     const cleanPhone = (client.phone || '').replace(/\D/g, '');
     const cleanNit = (client.nit || '').trim().toLowerCase();
+    const isPlaceholderPhone = !cleanPhone || cleanPhone === '55550000' || cleanPhone === '50255550000';
 
     const allOrders = ordersStore.getOrders();
     return allOrders.filter(o => {
-      if (o.customer && o.customer.clientId && (o.customer.clientId === client.id || (client.backendId && o.customer.clientId === client.backendId))) {
-        return true;
+      if (o.customer && o.customer.clientId) {
+        return o.customer.clientId === client.id || Boolean(client.backendId && o.customer.clientId === client.backendId);
       }
+
       const oCompany = (o.customer.company || '').trim().toLowerCase();
       const oName = (o.customer.name || '').trim().toLowerCase();
       const oPhone = (o.customer.phone || '').replace(/\D/g, '');
       const oNit = (o.customer.nit || '').trim().toLowerCase();
+      const isOrderPlaceholderPhone = !oPhone || oPhone === '55550000' || oPhone === '50255550000';
 
-      const matchCompany = cleanCompany && oCompany && (oCompany === cleanCompany || oCompany.includes(cleanCompany) || cleanCompany.includes(oCompany));
-      const matchName = cleanName && oName && (oName === cleanName || oName.includes(cleanName) || cleanName.includes(oName));
-      const matchPhone = cleanPhone && oPhone && (oPhone === cleanPhone || oPhone.endsWith(cleanPhone) || cleanPhone.endsWith(oPhone));
-      const matchNit = cleanNit && cleanNit !== 'cf' && oNit === cleanNit;
+      const matchCompany = Boolean(cleanCompany && oCompany && oCompany === cleanCompany);
+      const matchName = Boolean(cleanName && oName && oName === cleanName);
+      const matchPhone = Boolean(!isPlaceholderPhone && !isOrderPlaceholderPhone && (oPhone === cleanPhone || oPhone.endsWith(cleanPhone) || cleanPhone.endsWith(oPhone)));
+      const matchNit = Boolean(cleanNit && cleanNit !== 'cf' && oNit === cleanNit);
 
       return matchCompany || matchPhone || matchNit || matchName;
     });
