@@ -67,6 +67,38 @@ const createOrderSchema = z.object({
   paymentStatus: z.enum(['PENDING', 'PARTIAL', 'PAID', 'CANCELLED']).optional(),
 });
 
+const updateOrderSchema = z.object({
+  customerName: z.string().min(2).optional(),
+  customerPhone: z.string().min(6).optional(),
+  customerEmail: z.string().email().optional().or(z.literal('')).or(z.null()),
+  customerTaxId: z.string().nullable().optional().or(z.literal('')),
+  customerAddress: z.string().nullable().optional().or(z.literal('')),
+  widthCm: z.number().positive().optional(),
+  heightCm: z.number().positive().optional(),
+  qty: z.number().int().positive().optional(),
+  linearMeters: z.number().positive().optional(),
+  unitRateQ: z.number().positive().optional(),
+  materialPriceQ: z.number().nonnegative().optional(),
+  withCutting: z.boolean().optional(),
+  cuttingPriceQ: z.number().nonnegative().optional(),
+  totalAmountQ: z.number().positive().optional(),
+  finishType: z.string().optional(),
+  stickersPerRow: z.number().int().positive().optional(),
+  rows: z.number().int().positive().optional(),
+  notes: z.string().nullable().optional(),
+  status: z.enum([
+    'PENDING_REVIEW',
+    'IN_AUDLEY_QUEUE',
+    'PRINTING',
+    'LAMINATING_CUTTING',
+    'READY_FOR_DELIVERY',
+    'COMPLETED',
+    'CANCELLED',
+  ]).optional(),
+  paymentStatus: z.enum(['PENDING', 'PARTIAL', 'PAID', 'CANCELLED']).optional(),
+  items: z.array(orderItemSchema).min(1).optional(),
+});
+
 const updateStatusSchema = z.object({
   status: z.enum([
     'PENDING_REVIEW',
@@ -300,6 +332,90 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
       success: true,
       message: 'Orden creada exitosamente.',
       order,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateOrder(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const data = updateOrderSchema.parse(req.body);
+
+    const existing = await prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { code: id }],
+      },
+      include: { items: true },
+    });
+
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Orden no encontrada.' });
+      return;
+    }
+
+    const { items, ...orderFields } = data;
+    const isSqlite = (process.env.DATABASE_URL || '').startsWith('file:');
+
+    // Si se envían items actualizados, sincronizar dimensiones/totales de cabecera desde items si no vienen explícitos
+    const updatePayload: Record<string, any> = { ...orderFields };
+    if (items && items.length > 0) {
+      const first = items[0];
+      if (updatePayload.widthCm === undefined) updatePayload.widthCm = first.widthCm;
+      if (updatePayload.heightCm === undefined) updatePayload.heightCm = first.heightCm;
+      if (updatePayload.qty === undefined) {
+        updatePayload.qty = items.reduce((sum, it) => sum + Number(it.qty || 0), 0);
+      }
+      if (updatePayload.stickersPerRow === undefined) updatePayload.stickersPerRow = first.stickersPerRow || 1;
+      if (updatePayload.rows === undefined) updatePayload.rows = first.rows || 1;
+      if (first.fileName) updatePayload.fileName = first.fileName;
+      if (first.fileUrl) updatePayload.fileUrl = first.fileUrl;
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (items && items.length > 0) {
+        await tx.orderItem.deleteMany({ where: { orderId: existing.id } });
+        await tx.orderItem.createMany({
+          data: items.map((it) => ({
+            orderId: existing.id,
+            title: it.title || `Stickers ${it.widthCm} × ${it.heightCm} cm`,
+            widthCm: it.widthCm,
+            heightCm: it.heightCm,
+            qty: it.qty,
+            rotationDeg: it.rotationDeg || 0,
+            rows: it.rows || 1,
+            stickersPerRow: it.stickersPerRow || 1,
+            includeCutting: it.includeCutting || false,
+            fileUrl: it.fileUrl || null,
+            fileName: it.fileName || null,
+            fileInfo: it.fileInfo
+              ? (isSqlite && typeof it.fileInfo !== 'string' ? JSON.stringify(it.fileInfo) : it.fileInfo)
+              : null,
+            previewUrl: it.previewUrl || it.fileUrl || null,
+            canvasSnapshot: it.canvasSnapshot || null,
+            canvasSnapshotUrl: it.canvasSnapshotUrl || null,
+            actualLinearMeters: it.actualLinearMeters || 0.0,
+          })),
+        });
+      }
+
+      return tx.order.update({
+        where: { id: existing.id },
+        data: updatePayload,
+        include: {
+          items: { orderBy: { createdAt: 'asc' } },
+          customer: true,
+          dispatchNotes: true,
+          payments: true,
+        },
+      });
+    });
+
+    res.json({
+      success: true,
+      message: 'Pedido actualizado exitosamente.',
+      order: updated,
     });
   } catch (error) {
     next(error);

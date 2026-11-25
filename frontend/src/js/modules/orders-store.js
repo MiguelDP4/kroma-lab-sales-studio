@@ -586,6 +586,78 @@ class OrdersStore {
     return order;
   }
 
+  updateOrder(orderId, patch = {}) {
+    const order = this.orders.find(o => o.id === orderId || o.backendId === orderId);
+    if (!order) return null;
+
+    if (patch.customer) {
+      order.customer = {
+        ...order.customer,
+        ...patch.customer,
+      };
+    }
+
+    if (Array.isArray(patch.items) && patch.items.length > 0) {
+      order.items = patch.items.map(it => mapOrderItem(it));
+    }
+
+    if (patch.metrics) {
+      order.metrics = {
+        ...order.metrics,
+        ...patch.metrics,
+      };
+    }
+
+    if (patch.workshopNotes !== undefined) {
+      order.workshopNotes = patch.workshopNotes;
+    }
+    if (patch.productionStatus) {
+      order.productionStatus = patch.productionStatus;
+    }
+    if (patch.paymentStatus) {
+      order.paymentStatus = patch.paymentStatus;
+    }
+
+    order.updatedAt = new Date().toISOString();
+    this._notify();
+
+    if (typeof apiClient !== 'undefined' && apiClient.orders && apiClient.orders.update) {
+      const targetId = order.backendId || order.id;
+      const firstItem = order.items[0] || {};
+      const totalPieces = order.items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0) || 1;
+      apiClient.orders.update(targetId, {
+        customerName: order.customer.name,
+        customerPhone: order.customer.phone,
+        customerEmail: order.customer.email || '',
+        customerTaxId: order.customer.nit || 'CF',
+        customerAddress: order.customer.address || '',
+        widthCm: Number(firstItem.widthCm) || 5,
+        heightCm: Number(firstItem.heightCm) || 5,
+        qty: totalPieces,
+        linearMeters: Number(order.metrics.totalBillableMeters) || 1.0,
+        unitRateQ: Number(order.metrics.tierRate) || 115.0,
+        materialPriceQ: Number(order.metrics.materialTotalQ) || 0,
+        withCutting: Boolean(order.metrics.hasCutting),
+        cuttingPriceQ: Number(order.metrics.cuttingTotalQ) || 0,
+        totalAmountQ: Number(order.metrics.grandTotalQ) || 1.0,
+        stickersPerRow: Number(firstItem.stickersPerRow) || 1,
+        rows: Number(firstItem.rows) || 1,
+        notes: order.workshopNotes || null,
+        status: order.productionStatus,
+        paymentStatus: order.paymentStatus,
+        items: order.items.map(it => cleanOrderItemForApi(it)),
+      }).then(res => {
+        if (res && res.order && Array.isArray(res.order.items) && res.order.items.length > 0) {
+          order.items = res.order.items.map(it => mapOrderItem(it));
+          this._saveOrders();
+          this._notify();
+        }
+      }).catch(() => {});
+    }
+
+    return order;
+  }
+
   updateProductionStatus(orderId, newStatus) {
     const order = this.getOrderById(orderId);
     if (!order) return false;
