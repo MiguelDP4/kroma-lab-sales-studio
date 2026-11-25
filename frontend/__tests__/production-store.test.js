@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { productionStore, KANBAN_STAGES } from '../src/js/modules/production-store.js';
+import { ordersStore } from '../src/js/modules/orders-store.js';
 import { ORDER_STATUS } from '../src/shared/business-config.js';
 
 describe('Production Store — Almacén Kanban y Bobina de Film', () => {
@@ -179,5 +180,47 @@ describe('Production Store — Almacén Kanban y Bobina de Film', () => {
 
   it('ejecuta syncWithApi y sincroniza con ordersStore', async () => {
     await expect(productionStore.syncWithApi()).resolves.not.toThrow();
+  });
+
+  it('actualiza dimensiones, cantidad, metraje y corte en la cola Kanban cuando se edita una orden existente', () => {
+    ordersStore.resetToInitial();
+    const order = ordersStore.getOrderById('KL-00042');
+    expect(order).not.toBeNull();
+
+    // Sincronizar orden inicial en Kanban (5 x 5 cm, 150 pcs, 1.58 m)
+    productionStore.syncWithOrdersStore();
+    let prodCard = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+    expect(prodCard).toBeDefined();
+    expect(prodCard.widthCm).toBe(5);
+    expect(prodCard.heightCm).toBe(5);
+
+    // Editar dimensiones de la orden a 14 x 10 cm, 200 pcs, 10.04 m
+    ordersStore.updateOrder('KL-00042', {
+      items: [{
+        ...order.items[0],
+        title: 'San Judas 14x10',
+        widthCm: 14,
+        heightCm: 10,
+        qty: 200,
+        actualLinearMeters: 10.04,
+        includeCutting: false,
+      }],
+      metrics: {
+        ...order.metrics,
+        totalBillableMeters: 10.04,
+        hasCutting: false,
+      },
+      workshopNotes: 'Actualizado a 14x10 cm',
+    });
+
+    productionStore.syncWithOrdersStore();
+    prodCard = productionStore.getState().orders.find(o => o.id === 'KL-00042');
+    expect(prodCard.widthCm).toBe(14);
+    expect(prodCard.heightCm).toBe(10);
+    expect(prodCard.qty).toBe(200);
+    expect(prodCard.meters).toBe(10.04);
+    expect(prodCard.title).toBe('San Judas 14x10');
+    expect(prodCard.includeCutting).toBe(false);
+    expect(prodCard.notes).toBe('Actualizado a 14x10 cm');
   });
 });

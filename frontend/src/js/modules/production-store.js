@@ -259,6 +259,19 @@ class ProductionStore {
         existing.status = o.productionStatus || existing.status;
         existing.backendId = o.backendId || existing.backendId;
         existing.clientName = prodMapped.clientName;
+        existing.contactPhone = prodMapped.contactPhone;
+        existing.title = prodMapped.title;
+        existing.widthCm = prodMapped.widthCm;
+        existing.heightCm = prodMapped.heightCm;
+        existing.qty = prodMapped.qty;
+        existing.meters = prodMapped.meters;
+        existing.includeCutting = prodMapped.includeCutting;
+        existing.finishType = prodMapped.finishType;
+        existing.fileUrl = prodMapped.fileUrl || existing.fileUrl;
+        existing.fileName = prodMapped.fileName || existing.fileName;
+        existing.canvasSnapshot = prodMapped.canvasSnapshot || existing.canvasSnapshot;
+        existing.canvasSnapshotUrl = prodMapped.canvasSnapshotUrl || existing.canvasSnapshotUrl;
+        existing.notes = prodMapped.notes;
         existing.rawOrder = o;
       } else if (
         o.productionStatus === ORDER_STATUS.IN_AUDLEY_QUEUE ||
