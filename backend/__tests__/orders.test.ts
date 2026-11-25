@@ -205,4 +205,45 @@ describe('Orders API (/api/orders)', () => {
     expect(res.body.stats.totalOrders).toBeGreaterThanOrEqual(2);
     expect(res.body.stats.totalBillingQ).toBeGreaterThan(0);
   });
+
+  it('permite editar las dimensiones de una estampa y totales de una orden con PUT /api/orders/:id', async () => {
+    const res = await request(app)
+      .put(`/api/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        linearMeters: 2.4,
+        unitRateQ: 75.0,
+        materialPriceQ: 180.0,
+        totalAmountQ: 180.0,
+        notes: 'Dimensiones corregidas a 8x6 cm',
+        items: [
+          {
+            title: 'Estampa Corregida',
+            widthCm: 8,
+            heightCm: 6,
+            qty: 120,
+            actualLinearMeters: 2.4,
+            stickersPerRow: 3,
+            rows: 40,
+            includeCutting: false,
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Number(res.body.order.widthCm)).toBe(8);
+    expect(Number(res.body.order.heightCm)).toBe(6);
+    expect(Number(res.body.order.linearMeters)).toBe(2.4);
+    expect(Number(res.body.order.totalAmountQ)).toBe(180);
+    expect(res.body.order.items[0].title).toBe('Estampa Corregida');
+    expect(Number(res.body.order.items[0].widthCm)).toBe(8);
+    expect(Number(res.body.order.items[0].heightCm)).toBe(6);
+
+    const notFound = await request(app)
+      .put('/api/orders/orden-inexistente-999')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ notes: 'No existe' });
+    expect(notFound.status).toBe(404);
+  });
 });

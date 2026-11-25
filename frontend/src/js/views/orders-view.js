@@ -539,6 +539,100 @@ export const ordersView = {
         </div>
       </div>
 
+      <!-- MODAL: EDITAR FICHA DE PEDIDO (STAFF) -->
+      <div id="editOrderModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true">
+        <div class="modal-card" style="width: min(640px, 95vw); max-height: 92vh; overflow-y: auto;">
+          <div class="modal-header">
+            <div>
+              <span class="badge" id="editOrderCodeBadge">#0000000000</span>
+              <h2 style="font-size: 1.25rem; font-weight: 800; margin-top: 0.35rem;">✏️ Editar Ficha del Pedido</h2>
+              <p style="font-size: 0.84rem; color: var(--text-secondary);">Modifica dimensiones de estampas, cantidades, metraje, tarifa o notas.</p>
+            </div>
+            <button type="button" class="btn-close-modal" id="btnCloseEditOrderModal" aria-label="Cerrar modal">✕</button>
+          </div>
+
+          <form id="formEditOrder">
+            <input type="hidden" id="editOrderId" value="">
+
+            <!-- ESTAMPAS / DISEÑOS DEL PEDIDO -->
+            <div style="margin: 0.5rem 0 0.85rem; padding: 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.65rem; flex-wrap: wrap;">
+                <span style="font-size: 0.82rem; font-weight: 800; color: var(--cerulean); text-transform: uppercase;">
+                  🖼️ Estampas y Dimensiones (Bobina 28 cm)
+                </span>
+                <button type="button" id="btnAddEditOrderItem" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.7rem; min-height: 36px;">
+                  + Agregar Estampa
+                </button>
+              </div>
+              <div id="editOrderItemsList" style="display: flex; flex-direction: column; gap: 0.7rem;">
+                <!-- Filas de estampas inyectadas dinámicamente -->
+              </div>
+            </div>
+
+            <!-- TARIFA, METRAJE Y TOTAL -->
+            <div class="input-row">
+              <div class="form-group">
+                <label class="form-label" for="editOrderUnitRateQ">Tarifa por Metro (Q/m):</label>
+                <input type="number" id="editOrderUnitRateQ" class="input-control" min="1" max="500" step="0.5" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="editOrderMeters">Metros Totales:</label>
+                <input type="number" id="editOrderMeters" class="input-control" min="0.01" max="500" step="0.01" required>
+              </div>
+            </div>
+
+            <div class="input-row">
+              <div class="form-group">
+                <label class="form-label" for="editOrderTotalQ">Total de la Orden (Q):</label>
+                <input type="number" id="editOrderTotalQ" class="input-control" min="0.5" max="200000" step="0.01" required>
+              </div>
+              <div class="form-group" style="display: flex; align-items: flex-end;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; min-height: 44px;">
+                  <input type="checkbox" id="editOrderCutting" style="width: 18px; height: 18px;">
+                  <span>✂️ Incluye corte individual (+Q25)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="editOrderNotes">Notas de Producción:</label>
+              <textarea id="editOrderNotes" class="input-control" rows="2" placeholder="Instrucciones para el taller..."></textarea>
+            </div>
+
+            <details style="margin-bottom: 0.85rem; padding: 0.65rem 0.8rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 6px;">
+              <summary style="cursor: pointer; font-size: 0.84rem; font-weight: 700; color: var(--text-primary);">
+                👤 Datos del Cliente (opcional editar)
+              </summary>
+              <div class="input-row" style="margin-top: 0.65rem;">
+                <div class="form-group">
+                  <label class="form-label" for="editOrderCustName">Contacto:</label>
+                  <input type="text" id="editOrderCustName" class="input-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="editOrderCustPhone">Teléfono:</label>
+                  <input type="tel" id="editOrderCustPhone" class="input-control" required>
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="editOrderCustNit">NIT (SAT):</label>
+                  <input type="text" id="editOrderCustNit" class="input-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="editOrderCustAddress">Dirección:</label>
+                  <input type="text" id="editOrderCustAddress" class="input-control">
+                </div>
+              </div>
+            </details>
+
+            <div class="modal-actions-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+              <button type="button" class="btn btn-secondary" id="btnCancelEditOrderModal" style="min-height: 44px;">Cancelar</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveEditOrder" style="min-height: 44px;">💾 Guardar Cambios</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- MODAL: VISOR LIGHTBOX DE MONTAJE EN BOBINA (SNAPSHOT TÉCNICO) -->
       <div id="orderSnapshotLightboxModal" class="modal-backdrop" style="display: none; z-index: 10000;">
         <div class="modal-card" style="width: min(880px, 96vw); max-height: 94vh; padding: 1.25rem;">
@@ -627,6 +721,241 @@ export const ordersView = {
     const btnCloseCreateModal = document.getElementById('btnCloseCreateOrderModal');
     const btnCancelCreateModal = document.getElementById('btnCancelCreateOrderModal');
     const formCreateOrder = document.getElementById('formStaffCreateOrder');
+
+    const editModal = document.getElementById('editOrderModal');
+    const btnCloseEditModal = document.getElementById('btnCloseEditOrderModal');
+    const btnCancelEditModal = document.getElementById('btnCancelEditOrderModal');
+    const formEditOrder = document.getElementById('formEditOrder');
+    const editItemsList = document.getElementById('editOrderItemsList');
+    const btnAddEditItem = document.getElementById('btnAddEditOrderItem');
+    const editUnitRateInput = document.getElementById('editOrderUnitRateQ');
+    const editMetersInput = document.getElementById('editOrderMeters');
+    const editTotalQInput = document.getElementById('editOrderTotalQ');
+    const editCuttingCheckbox = document.getElementById('editOrderCutting');
+    let editingOriginalItems = [];
+
+    if (btnCloseEditModal) btnCloseEditModal.addEventListener('click', () => toggleModal(editModal, false));
+    if (btnCancelEditModal) btnCancelEditModal.addEventListener('click', () => toggleModal(editModal, false));
+
+    function calcAudleyItemMetrics(widthCm, heightCm, qty) {
+      const printableW = BUSINESS_CONFIG.printableWidthCm || 28.0;
+      const gap = BUSINESS_CONFIG.marginBetweenCm || 0.3;
+      const w = Math.max(0.5, Number(widthCm) || 5);
+      const h = Math.max(0.5, Number(heightCm) || 5);
+      const q = Math.max(1, parseInt(qty, 10) || 1);
+      const stickersPerRow = Math.max(1, Math.floor((printableW + gap) / (w + gap)));
+      const rows = Math.max(1, Math.ceil(q / stickersPerRow));
+      const lengthCm = (rows * (h + gap)) - gap;
+      const actualLinearMeters = Number(Math.max(0.01, lengthCm / 100.0).toFixed(2));
+      return { stickersPerRow, rows, actualLinearMeters };
+    }
+
+    function recalculateEditOrderTotals(syncMetersFromItems = true) {
+      const rate = parseFloat(editUnitRateInput?.value) || 115.0;
+      const includeCutting = Boolean(editCuttingCheckbox?.checked);
+
+      let totalMeters = parseFloat(editMetersInput?.value) || 0;
+      if (syncMetersFromItems && editItemsList) {
+        const meterInputs = editItemsList.querySelectorAll('.edit-item-meters');
+        if (meterInputs.length > 0) {
+          totalMeters = Array.from(meterInputs).reduce((sum, inp) => sum + (parseFloat(inp.value) || 0), 0);
+          totalMeters = Number(totalMeters.toFixed(2));
+          if (editMetersInput) editMetersInput.value = totalMeters.toFixed(2);
+        }
+      }
+
+      const materialQ = Number((totalMeters * rate).toFixed(2));
+      const cuttingQ = includeCutting ? 25.0 : 0.0;
+      const grandQ = Number((materialQ + cuttingQ).toFixed(2));
+      if (editTotalQInput) editTotalQInput.value = grandQ.toFixed(2);
+    }
+
+    function buildEditItemRowHtml(it, idx, showRemove) {
+      return `
+        <div class="edit-order-item-row" data-item-index="${idx}" style="padding: 0.65rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+            <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted);">Estampa #${idx + 1}</span>
+            ${showRemove ? `<button type="button" class="btn-remove-edit-item" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: 800; font-size: 0.9rem; min-width: 32px; min-height: 32px;" title="Quitar estampa">✕</button>` : ''}
+          </div>
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label class="form-label" style="font-size: 0.8rem;">Nombre / Diseño:</label>
+            <input type="text" class="input-control edit-item-title" value="${(it.title || 'Stickers UV DTF').replace(/"/g, '&quot;')}" required>
+          </div>
+          <div class="input-row">
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label class="form-label" style="font-size: 0.8rem;">Ancho (cm):</label>
+              <input type="number" class="input-control edit-item-width" value="${Number(it.widthCm || 5)}" min="0.5" max="28" step="0.1" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label class="form-label" style="font-size: 0.8rem;">Alto (cm):</label>
+              <input type="number" class="input-control edit-item-height" value="${Number(it.heightCm || 5)}" min="0.5" max="150" step="0.1" required>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.8rem;">Cantidad (pzs):</label>
+              <input type="number" class="input-control edit-item-qty" value="${parseInt(it.qty, 10) || 1}" min="1" max="50000" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.8rem;">Metros ocupados:</label>
+              <input type="number" class="input-control edit-item-meters" value="${Number(it.actualLinearMeters || 0.5).toFixed(2)}" min="0.01" max="200" step="0.01" required>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openEditOrderModal(orderId) {
+      const order = ordersStore.getOrderById(orderId);
+      if (!order || !editModal) return;
+
+      const idEl = document.getElementById('editOrderId');
+      if (idEl) idEl.value = order.id;
+
+      const badgeEl = document.getElementById('editOrderCodeBadge');
+      if (badgeEl) badgeEl.textContent = `#${order.id}`;
+
+      editingOriginalItems = (order.items && order.items.length > 0)
+        ? order.items.map(it => ({ ...it }))
+        : [{ title: 'Impresión UV DTF', widthCm: 5, heightCm: 5, qty: 1, actualLinearMeters: order.metrics.totalBillableMeters || 1.0 }];
+
+      if (editItemsList) {
+        editItemsList.innerHTML = editingOriginalItems
+          .map((it, idx) => buildEditItemRowHtml(it, idx, editingOriginalItems.length > 1))
+          .join('');
+      }
+
+      if (editUnitRateInput) editUnitRateInput.value = Number(order.metrics?.tierRate || 115.0).toFixed(2);
+      if (editMetersInput) editMetersInput.value = Number(order.metrics?.totalBillableMeters || 1.0).toFixed(2);
+      if (editTotalQInput) editTotalQInput.value = Number(order.metrics?.grandTotalQ || 0).toFixed(2);
+      if (editCuttingCheckbox) editCuttingCheckbox.checked = Boolean(order.metrics?.hasCutting);
+
+      const notesEl = document.getElementById('editOrderNotes');
+      if (notesEl) notesEl.value = order.workshopNotes || '';
+
+      const custNameEl = document.getElementById('editOrderCustName');
+      if (custNameEl) custNameEl.value = order.customer?.name || '';
+      const custPhoneEl = document.getElementById('editOrderCustPhone');
+      if (custPhoneEl) custPhoneEl.value = order.customer?.phone || '';
+      const custNitEl = document.getElementById('editOrderCustNit');
+      if (custNitEl) custNitEl.value = order.customer?.nit || 'CF';
+      const custAddrEl = document.getElementById('editOrderCustAddress');
+      if (custAddrEl) custAddrEl.value = order.customer?.address || '';
+
+      toggleModal(editModal, true);
+    }
+
+    if (editItemsList) {
+      editItemsList.addEventListener('input', (e) => {
+        const target = e.target;
+        if (!target) return;
+        const row = target.closest('.edit-order-item-row');
+        if (!row) return;
+
+        if (target.classList.contains('edit-item-width') || target.classList.contains('edit-item-height') || target.classList.contains('edit-item-qty')) {
+          const w = parseFloat(row.querySelector('.edit-item-width')?.value) || 5;
+          const h = parseFloat(row.querySelector('.edit-item-height')?.value) || 5;
+          const q = parseInt(row.querySelector('.edit-item-qty')?.value, 10) || 1;
+          const calc = calcAudleyItemMetrics(w, h, q);
+          const mInp = row.querySelector('.edit-item-meters');
+          if (mInp) mInp.value = calc.actualLinearMeters.toFixed(2);
+          recalculateEditOrderTotals(true);
+        } else if (target.classList.contains('edit-item-meters')) {
+          recalculateEditOrderTotals(true);
+        }
+      });
+
+      editItemsList.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.btn-remove-edit-item');
+        if (removeBtn && editItemsList.querySelectorAll('.edit-order-item-row').length > 1) {
+          const row = removeBtn.closest('.edit-order-item-row');
+          if (row) {
+            row.remove();
+            recalculateEditOrderTotals(true);
+          }
+        }
+      });
+    }
+
+    if (btnAddEditItem && editItemsList) {
+      btnAddEditItem.addEventListener('click', () => {
+        const idx = editItemsList.querySelectorAll('.edit-order-item-row').length;
+        editItemsList.insertAdjacentHTML('beforeend', buildEditItemRowHtml({
+          title: `Estampa #${idx + 1}`,
+          widthCm: 5,
+          heightCm: 5,
+          qty: 50,
+          actualLinearMeters: 0.55,
+        }, idx, true));
+        recalculateEditOrderTotals(true);
+      });
+    }
+
+    if (editUnitRateInput) editUnitRateInput.addEventListener('input', () => recalculateEditOrderTotals(false));
+    if (editMetersInput) editMetersInput.addEventListener('input', () => recalculateEditOrderTotals(false));
+    if (editCuttingCheckbox) editCuttingCheckbox.addEventListener('change', () => recalculateEditOrderTotals(false));
+
+    if (formEditOrder) {
+      formEditOrder.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const orderId = document.getElementById('editOrderId')?.value;
+        if (!orderId) return;
+
+        const unitRateQ = parseFloat(editUnitRateInput?.value) || 115.0;
+        const totalMeters = parseFloat(editMetersInput?.value) || 1.0;
+        const includeCutting = Boolean(editCuttingCheckbox?.checked);
+        const cuttingTotalQ = includeCutting ? 25.0 : 0.0;
+        const grandTotalQ = parseFloat(editTotalQInput?.value) || Number((totalMeters * unitRateQ + cuttingTotalQ).toFixed(2));
+        const materialTotalQ = Number(Math.max(0, grandTotalQ - cuttingTotalQ).toFixed(2));
+        const workshopNotes = document.getElementById('editOrderNotes')?.value.trim() || '';
+
+        const rows = editItemsList ? Array.from(editItemsList.querySelectorAll('.edit-order-item-row')) : [];
+        const updatedItems = rows.map((row, idx) => {
+          const orig = editingOriginalItems[idx] || {};
+          const title = row.querySelector('.edit-item-title')?.value.trim() || orig.title || 'Stickers UV DTF';
+          const widthCm = parseFloat(row.querySelector('.edit-item-width')?.value) || 5;
+          const heightCm = parseFloat(row.querySelector('.edit-item-height')?.value) || 5;
+          const qty = parseInt(row.querySelector('.edit-item-qty')?.value, 10) || 1;
+          const itemMeters = parseFloat(row.querySelector('.edit-item-meters')?.value) || totalMeters;
+          const calc = calcAudleyItemMetrics(widthCm, heightCm, qty);
+
+          return {
+            ...orig,
+            title,
+            widthCm,
+            heightCm,
+            qty,
+            actualLinearMeters: Number(itemMeters.toFixed(2)),
+            stickersPerRow: calc.stickersPerRow,
+            rows: calc.rows,
+            includeCutting,
+          };
+        });
+
+        ordersStore.updateOrder(orderId, {
+          customer: {
+            name: document.getElementById('editOrderCustName')?.value.trim() || undefined,
+            phone: document.getElementById('editOrderCustPhone')?.value.trim() || undefined,
+            nit: document.getElementById('editOrderCustNit')?.value.trim() || 'CF',
+            address: document.getElementById('editOrderCustAddress')?.value.trim() || '',
+          },
+          items: updatedItems,
+          metrics: {
+            totalBillableMeters: Number(totalMeters.toFixed(2)),
+            tierRate: Number(unitRateQ.toFixed(2)),
+            materialTotalQ,
+            cuttingTotalQ,
+            grandTotalQ: Number(grandTotalQ.toFixed(2)),
+            hasCutting: includeCutting,
+          },
+          workshopNotes,
+        });
+
+        toggleModal(editModal, false);
+        renderOrdersMetrics();
+        renderOrdersTable();
+      });
+    }
 
     function toggleModal(modal, show) {
       if (modal) modal.style.display = show ? 'block' : 'none';
@@ -769,6 +1098,14 @@ export const ordersView = {
         if (btnOpenReceipt && btnOpenReceipt.dataset.orderId) {
           toggleModal(detailModal, false);
           showWorkshopSheetModal(btnOpenReceipt.dataset.orderId);
+          return;
+        }
+
+        // Abrir Editar Ficha desde el modal de detalle
+        const btnEditFromDetail = e.target.closest('.btn-edit-order-from-detail');
+        if (btnEditFromDetail && btnEditFromDetail.dataset.orderId) {
+          toggleModal(detailModal, false);
+          openEditOrderModal(btnEditFromDetail.dataset.orderId);
           return;
         }
       });
@@ -1348,6 +1685,9 @@ export const ordersView = {
                   <span>🔍</span>
                 </button>
                 ${isStaff ? `
+                  <button type="button" class="btn-action-icon btn-edit-order" data-order-id="${order.id}" title="Editar Pedido">
+                    <span>✏️</span>
+                  </button>
                   <button class="btn-action-icon btn-workshop-sheet" data-order-id="${order.id}" title="Hoja de Taller Audley">
                     <span>🖨️</span>
                   </button>
@@ -1485,7 +1825,18 @@ export const ordersView = {
                   ${isStaff ? `
                     <button 
                       type="button" 
-                      class="btn btn-secondary btn-workshop-sheet" 
+                      class="btn btn-secondary btn-edit-order" 
+                      data-order-id="${order.id}" 
+                      title="Editar Pedido"
+                      style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
+                    >
+                      <span>✏️</span>
+                      <span>Editar</span>
+                    </button>
+
+                    <button 
+                      type="button" 
+                      class="btn btn-secondary btn-workshop-sheet"  
                       data-order-id="${order.id}" 
                       title="Hoja de Taller Audley"
                       style="font-size: 0.85rem; padding: 0.5rem 0.9rem; min-height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;"
@@ -1749,6 +2100,12 @@ export const ordersView = {
           ` : ''}
 
           <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
+            ${isStaff ? `
+              <button type="button" class="btn btn-secondary btn-edit-order-from-detail" data-order-id="${order.id}" style="font-size: 0.85rem; padding: 0.5rem 1rem; min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>✏️</span>
+                <span>Editar Ficha</span>
+              </button>
+            ` : ''}
             <button type="button" class="btn btn-secondary btn-open-receipt-from-detail" data-order-id="${order.id}" style="font-size: 0.85rem; padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.4rem;">
               <span>🖨️</span>
               <span>Imprimir Recibo / Orden</span>
@@ -1799,6 +2156,14 @@ export const ordersView = {
         btn.addEventListener('click', () => {
           const id = btn.dataset.orderId;
           showOrderDetailsModal(id);
+        });
+      });
+
+      // Editar ficha del pedido (Staff)
+      document.querySelectorAll('.btn-edit-order').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.orderId;
+          openEditOrderModal(id);
         });
       });
 
