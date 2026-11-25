@@ -895,7 +895,7 @@ export const inventoryView = {
                   </button>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; font-size: 0.75rem;">
-                  <div>🔴 Crítico: <strong>≤ ${item.minStockThreshold} ${item.unit}</strong></div>
+                  <div>🔴 Crítico: <strong>${item.category === 'INK' ? '<' : '≤'} ${item.minStockThreshold} ${item.unit}</strong></div>
                   <div>🟢 Óptimo: <strong>≥ ${item.optimalThreshold} ${item.unit}</strong></div>
                 </div>
                 <div>Costo Ref: <strong>Q${item.costPerUnitQ.toFixed(2)} / ${item.unit}</strong></div>

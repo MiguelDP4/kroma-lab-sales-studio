@@ -528,7 +528,8 @@ class InventoryStore {
       const optimalThreshold = Number(item.optimalThreshold !== undefined ? item.optimalThreshold : (criticalThreshold * (item.optimalRatio || 1.5)));
 
       let status = STOCK_STATUS.OPTIMAL;
-      if (item.currentStock <= criticalThreshold) {
+      const isInk = item.category === 'INK';
+      if (isInk ? item.currentStock < criticalThreshold : item.currentStock <= criticalThreshold) {
         status = STOCK_STATUS.CRITICAL;
       } else if (item.currentStock < optimalThreshold) {
         status = STOCK_STATUS.LOW;
@@ -1112,7 +1113,8 @@ class InventoryStore {
         totalFilmMeters += it.currentStock;
       }
       if (it.category === 'INK') {
-        totalInkLiters += (it.currentStock / 1000.0);
+        const unitLower = String(it.unit || '').trim().toLowerCase();
+        totalInkLiters += unitLower === 'ml' ? (it.currentStock / 1000.0) : it.currentStock;
       }
     });
 

@@ -1012,3 +1012,8 @@ Pensado para clientes B2B recurrentes y maquila de volumen (ej. **Arte Modelo Du
 4. **Recibo Consolidado / Estado de Cuenta (`clients-view.js` + `statement-helper.js`):**
    * Accesible desde el **Expediente 360°** del cliente cuando tiene saldo pendiente.
    * Permite **Imprimir / Guardar PDF** con diseño oficial Kroma Lab, **Copiar / Enviar por WhatsApp** el listado detallado por imagen, y **Liquidar Corte (Pago Masivo)** en 1 clic.
+5. **Correcciones de Inventario y Autenticación (`fix/inventory-ux-thresholds-and-auth-modal`):**
+   * `InventoryItem.supplier`: Columna persistente en PostgreSQL y SQLite para guardar el proveedor en alta, edición y reabastecimiento.
+   * Regla estricta de umbral crítico en tintas (`INK`): se marca `CRITICAL` únicamente cuando `currentStock < minStockThreshold` (menos de 1.0 L), mostrando `<` en las tarjetas.
+   * KPI de Tintas UV (`getInventorySummary`): suma litros directos cuando `unit === 'L'` y divide entre `1000` únicamente cuando `unit === 'ml'`.
+   * Botón **Iniciar Sesión** en pantallas de Acceso Restringido (`router.js` + `user-profile-modal.js`): abre directamente la pestaña `login`.

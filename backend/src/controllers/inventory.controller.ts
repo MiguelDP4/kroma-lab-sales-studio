@@ -56,8 +56,9 @@ export async function listInventory(_req: AuthenticatedRequest, res: Response, n
       let status = 'OPTIMAL';
       const criticalThreshold = Number(item.minStockThreshold);
       const optimalThreshold = criticalThreshold * (Number(item.optimalRatio) || 1.5);
+      const isInk = item.category === 'INK';
 
-      if (Number(item.currentStock) <= criticalThreshold) {
+      if (isInk ? Number(item.currentStock) < criticalThreshold : Number(item.currentStock) <= criticalThreshold) {
         status = 'CRITICAL';
       } else if (Number(item.currentStock) < optimalThreshold) {
         status = 'LOW';
@@ -113,6 +114,7 @@ export async function createInventoryItem(req: AuthenticatedRequest, res: Respon
         minStockThreshold: criticalThreshold,
         optimalRatio,
         unitCostQ: data.unitCostQ,
+        supplier: data.supplier?.trim() || null,
       },
     });
 
@@ -186,6 +188,7 @@ export async function updateInventoryItem(req: AuthenticatedRequest, res: Respon
         minStockThreshold: criticalThreshold,
         optimalRatio,
         unitCostQ: data.unitCostQ !== undefined ? data.unitCostQ : existing.unitCostQ,
+        supplier: data.supplier !== undefined ? (data.supplier.trim() || null) : existing.supplier,
       },
     });
 
@@ -259,7 +262,11 @@ export async function recordRestock(req: AuthenticatedRequest, res: Response, ne
     const [updatedItem, movement] = await prisma.$transaction([
       prisma.inventoryItem.update({
         where: { id: item.id },
-        data: { currentStock: newStock, unitCostQ },
+        data: {
+          currentStock: newStock,
+          unitCostQ,
+          ...(data.supplier && data.supplier.trim() ? { supplier: data.supplier.trim() } : {}),
+        },
       }),
       prisma.inventoryMovement.create({
         data: {
