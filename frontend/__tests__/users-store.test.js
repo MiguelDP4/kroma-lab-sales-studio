@@ -291,5 +291,29 @@ describe('UsersStore — Gestión de Usuarios y Permisos RBAC', () => {
       expect(hasPermission(null, 'PUBLIC_ACCESS')).toBe(false);
       expect(hasPermission('ADMIN', null)).toBe(false);
     });
+
+    it('mapea usuarios CUSTOMER sin department como Cliente B2B y nunca como Operador Audley & Taller', () => {
+      const mappedCustomer = usersStore._mapBackendUser({
+        id: 'usr_cust_99',
+        name: 'Hermana Dubois',
+        email: 'hermana@ejemplo.gt',
+        role: 'CUSTOMER',
+        department: null,
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      });
+      expect(mappedCustomer.role).toBe(USER_ROLES.CUSTOMER);
+      expect(mappedCustomer.department).toBe('Cliente B2B');
+
+      const mappedNoRole = usersStore._mapBackendUser({
+        id: 'usr_norole_100',
+        name: 'Sin Rol',
+        email: 'sinrol@ejemplo.gt',
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      });
+      expect(mappedNoRole.role).toBe(USER_ROLES.CUSTOMER);
+      expect(mappedNoRole.department).toBe('Cliente B2B');
+    });
   });
 });

@@ -447,7 +447,7 @@ export const usersView = {
       if (emptyState) emptyState.style.display = 'none';
 
       tableBody.innerHTML = usersList.map(u => {
-        const roleInfo = ROLE_DETAILS[u.role] || ROLE_DETAILS.EMPLOYEE;
+        const roleInfo = ROLE_DETAILS[u.role] || ROLE_DETAILS.CUSTOMER;
         const statusInfo = u.status === USER_STATUS.ACTIVE.id ? USER_STATUS.ACTIVE : USER_STATUS.INACTIVE;
         const roleClass = u.role === USER_ROLES.ADMIN
           ? 'role-badge-admin'

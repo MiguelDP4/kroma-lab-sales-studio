@@ -122,14 +122,18 @@ class UsersStore {
 
 
   _mapBackendUser(u) {
+    const role = u.role || USER_ROLES.CUSTOMER;
+    const defaultDept = role === USER_ROLES.CUSTOMER
+      ? 'Cliente B2B'
+      : (role === USER_ROLES.ADMIN ? 'Dirección General' : 'Operador Audley & Taller');
     return {
       id: u.id,
       backendId: u.id,
       name: u.name,
       email: u.email,
       phone: u.phone || '',
-      role: u.role || USER_ROLES.EMPLOYEE,
-      department: u.department || 'Operador Audley & Taller',
+      role,
+      department: u.department || defaultDept,
       status: u.isVerified ? USER_STATUS.ACTIVE.id : USER_STATUS.INACTIVE.id,
       company: u.company || '',
       nit: u.taxId || '',
@@ -230,9 +234,12 @@ class UsersStore {
   createUser(userData) {
     const name = userData?.name?.trim();
     const email = userData?.email?.trim().toLowerCase();
-    const role = userData?.role || USER_ROLES.EMPLOYEE;
+    const role = userData?.role || USER_ROLES.CUSTOMER;
     const phone = userData?.phone?.trim() || '';
-    const department = userData?.department?.trim() || 'Operador Audley & Taller';
+    const defaultDept = role === USER_ROLES.CUSTOMER
+      ? 'Cliente B2B'
+      : (role === USER_ROLES.ADMIN ? 'Dirección General' : 'Operador Audley & Taller');
+    const department = userData?.department?.trim() || defaultDept;
     const company = userData?.company?.trim() || '';
     const nit = userData?.nit?.trim() || '';
     const address = userData?.address?.trim() || '';

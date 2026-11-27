@@ -159,6 +159,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
         company: data.company,
         taxId: data.taxId,
         address: data.address,
+        department: isMasterAdmin ? 'Dirección General' : 'Cliente B2B',
         role: isMasterAdmin ? 'ADMIN' : 'CUSTOMER',
         isVerified: isMasterAdmin,
         verificationToken,
