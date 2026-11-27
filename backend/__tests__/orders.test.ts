@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app';
+import { prisma } from '../src/db/prisma';
 import { seedDatabase } from '../src/db/seed';
+import { emailService } from '../src/services/email.service';
 
 const app = createApp();
 
@@ -245,5 +247,57 @@ describe('Orders API (/api/orders)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ notes: 'No existe' });
     expect(notFound.status).toBe(404);
+  });
+
+  it('notifica por correo al administrador (miguel@kromalab.gt) cuando entra un pedido en PENDING_REVIEW', async () => {
+    const notifySpy = vi.spyOn(emailService, 'sendNewOrderAdminNotificationEmail');
+
+    const res = await request(app)
+      .post('/api/orders')
+      .send({
+        customerName: 'Cliente Notificación',
+        customerPhone: '+502 5555-8899',
+        customerEmail: 'cliente.notif@ejemplo.gt',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 50,
+        linearMeters: 1.0,
+        unitRateQ: 150.0,
+        materialPriceQ: 150.0,
+        totalAmountQ: 150.0,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.order.status).toBe('PENDING_REVIEW');
+    expect(notifySpy).toHaveBeenCalledTimes(1);
+    expect(notifySpy.mock.calls[0][0].code).toBe(res.body.order.code);
+
+    notifySpy.mockClear();
+
+    // Si el ADMIN registra un pedido directo como COMPLETED, no se auto-notifica
+    const adminDirectRes = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        customerName: 'Pedido Directo Admin',
+        customerPhone: '+502 5555-7700',
+        widthCm: 5,
+        heightCm: 5,
+        qty: 20,
+        linearMeters: 0.5,
+        unitRateQ: 75.0,
+        materialPriceQ: 37.5,
+        totalAmountQ: 37.5,
+        status: 'COMPLETED',
+        paymentStatus: 'PENDING',
+      });
+
+    expect(adminDirectRes.status).toBe(201);
+    expect(notifySpy).not.toHaveBeenCalled();
+
+    notifySpy.mockRestore();
+    await prisma.order.deleteMany({
+      where: { id: { in: [res.body.order.id, adminDirectRes.body.order.id] } },
+    });
   });
 });

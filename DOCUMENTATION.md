@@ -1024,3 +1024,5 @@ Pensado para clientes B2B recurrentes y maquila de volumen (ej. **Arte Modelo Du
 7. **Cotización Formal Imprimible / PDF (`feature/printable-quote-sheet`):**
    * Botón **🖨️ Imprimir** (`.btn-print-quote`) disponible en cada tarjeta de cotización (`quotes-view.js`) para todos los roles.
    * Modal `#quotePrintSheetModal` con `renderQuotePrintSheetHtml(quote)` utilizando la plantilla unificada de `print-helper.js` (idéntica en estructura visual a los recibos oficiales de Kroma Lab, incluyendo vigencia de 15 días, condiciones de anticipo del 50%, cuenta Banco Industrial y desglose por diseño).
+8. **Notificación por Correo al Administrador por Nuevos Pedidos (`feature/admin-order-notification-email`):**
+   * Al crearse cualquier pedido en estado `PENDING_REVIEW` (`POST /api/orders`), `emailService.sendNewOrderAdminNotificationEmail(order)` envía automáticamente una alerta por correo a `miguel@kromalab.gt` (configurable vía `ADMIN_NOTIFICATION_EMAIL`) con datos del cliente, desglose de diseños, metraje, total, estado de boleta y enlace directo a `/pedidos`.

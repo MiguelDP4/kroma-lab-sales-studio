@@ -313,6 +313,109 @@ Villa Nueva, Guatemala
   }
 
   /**
+   * Envía una notificación por correo al administrador (miguel@kromalab.gt)
+   * cuando un cliente envía un nuevo pedido pendiente de autorización (PENDING_REVIEW).
+   */
+  async sendNewOrderAdminNotificationEmail(order: any): Promise<boolean> {
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'miguel@kromalab.gt';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://kromalab.gt';
+    const cleanFrontendUrl = frontendUrl.replace(/\/+$/, '');
+    const ordersUrl = `${cleanFrontendUrl}/pedidos`;
+    const sender = process.env.SMTP_FROM || `"Kroma Lab Pedidos" <${process.env.SMTP_USER || 'no-reply@kromalab.gt'}>`;
+
+    const orderCode = order.code || order.id || 'NUEVO';
+    const customerName = order.customerName || 'Cliente';
+    const customerPhone = order.customerPhone || 'Sin teléfono';
+    const customerEmail = order.customerEmail || 'Sin correo';
+    const totalQ = Number(order.totalAmountQ || 0).toFixed(2);
+    const linearMeters = Number(order.linearMeters || 0).toFixed(2);
+    const unitRateQ = Number(order.unitRateQ || 0).toFixed(2);
+    const hasReceipt = Boolean(order.paymentReceiptUrl);
+    const itemsList = Array.isArray(order.items) && order.items.length > 0 ? order.items : [];
+
+    const subject = `🔔 Nuevo pedido #${orderCode} para autorización — ${customerName} (Q${totalQ})`;
+
+    const itemsHtml = itemsList.length > 0
+      ? itemsList.map((it: any) => `
+          <li style="margin-bottom: 6px;">
+            <strong>${it.title || 'Diseño UV DTF'}</strong> — ${Number(it.widthCm || 0)} × ${Number(it.heightCm || 0)} cm • ${it.qty || 1} pzs • ${Number(it.actualLinearMeters || 0).toFixed(2)} m
+          </li>
+        `).join('')
+      : `<li>${Number(order.widthCm || 0)} × ${Number(order.heightCm || 0)} cm • ${order.qty || 1} pzs • ${linearMeters} m</li>`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head><meta charset="UTF-8"><title>${subject}</title></head>
+      <body style="font-family: sans-serif; background: #f8fafc; padding: 20px; color: #0f172a;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 28px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <div style="display: inline-block; background: rgba(28, 114, 147, 0.12); color: #1c7293; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; text-transform: uppercase;">
+            Pendiente de Autorización
+          </div>
+          <h2 style="color: #1b3b6f; margin: 12px 0 8px;">🔔 Nuevo Pedido #${orderCode}</h2>
+          <p style="margin: 0 0 18px; color: #475569; font-size: 14px;">
+            Un cliente ha enviado un nuevo pedido en <strong>Kroma Lab Sales Studio</strong> y está esperando tu revisión para pasar a cola de impresión.
+          </p>
+
+          <div style="background: #f1f5f9; padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; line-height: 1.6;">
+            <div><strong>Cliente:</strong> ${customerName}</div>
+            <div><strong>Teléfono / WhatsApp:</strong> ${customerPhone}</div>
+            <div><strong>Correo:</strong> ${customerEmail}</div>
+            ${order.customerTaxId ? `<div><strong>NIT:</strong> ${order.customerTaxId}</div>` : ''}
+            ${order.customerAddress ? `<div><strong>Dirección:</strong> ${order.customerAddress}</div>` : ''}
+          </div>
+
+          <div style="border: 1px solid #e2e8f0; padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;">
+            <div style="font-weight: 700; color: #1b3b6f; margin-bottom: 8px;">📐 Detalle del Pedido:</div>
+            <ul style="margin: 0 0 12px; padding-left: 18px;">
+              ${itemsHtml}
+            </ul>
+            <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; line-height: 1.6;">
+              <div><strong>Metros totales:</strong> ${linearMeters} m (Tarifa: Q${unitRateQ}/m)</div>
+              <div><strong>Corte individual:</strong> ${order.withCutting ? 'Sí' : 'No (en rollo continuo)'}</div>
+              <div><strong>Comprobante de pago:</strong> ${hasReceipt ? '✅ Boleta adjunta' : '⏳ Pendiente de boleta'}</div>
+              <div style="font-size: 16px; color: #059669; margin-top: 4px;"><strong>Total del Pedido: Q${totalQ}</strong></div>
+            </div>
+            ${order.notes ? `<div style="margin-top: 10px; font-size: 13px; color: #475569;"><strong>Notas:</strong> ${order.notes}</div>` : ''}
+          </div>
+
+          <div style="text-align: center; margin: 22px 0 8px;">
+            <a href="${ordersUrl}" style="background: #1b3b6f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              🔍 Revisar y Autorizar en Pedidos
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 18px;">
+            Kroma Lab Sales Studio — Notificación automática de pedidos
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `Nuevo pedido #${orderCode} pendiente de autorización en Kroma Lab.\n\nCliente: ${customerName}\nTeléfono: ${customerPhone}\nCorreo: ${customerEmail}\nMetros: ${linearMeters} m\nTotal: Q${totalQ}\nBoleta: ${hasReceipt ? 'Adjunta' : 'Pendiente'}\n\nRevisar en: ${ordersUrl}`;
+
+    if (this.isConfigured && this.transporter && process.env.NODE_ENV !== 'test') {
+      try {
+        await this.transporter.sendMail({
+          from: sender,
+          to: adminEmail,
+          subject,
+          text: textContent,
+          html: htmlContent,
+        });
+        console.log(`[EmailService] Notificación de nuevo pedido #${orderCode} enviada a ${adminEmail}`);
+        return true;
+      } catch (e) {
+        console.error('[EmailService] Error enviando notificación de nuevo pedido al admin:', e);
+        return false;
+      }
+    } else {
+      console.log(`[EmailService MOCK/DEV] Notificación de nuevo pedido #${orderCode} para admin (${adminEmail}) — Total Q${totalQ}`);
+      return true;
+    }
+  }
+
+  /**
    * Envía una contraseña temporal generada por el flujo "Olvidé mi contraseña".
    */
   async sendTemporaryPasswordEmail(email: string, name: string, temporaryPassword: string): Promise<boolean> {

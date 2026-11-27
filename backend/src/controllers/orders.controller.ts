@@ -328,6 +328,14 @@ export async function createOrder(req: AuthenticatedRequest, res: Response, next
       },
     });
 
+    if (order.status === 'PENDING_REVIEW') {
+      try {
+        await emailService.sendNewOrderAdminNotificationEmail(order);
+      } catch (emailErr) {
+        console.warn('[OrdersController] Error enviando notificación de nuevo pedido al admin:', emailErr);
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Orden creada exitosamente.',
