@@ -14,6 +14,173 @@ import { mapOrderItem } from '../modules/order-item.js';
 import { renderCardsSkeleton, renderMetricsSkeleton } from '../components/skeleton-loader.js';
 import { apiClient } from '../modules/api-client.js';
 import { renderApiOfflineAlert } from '../components/api-offline-alert.js';
+import {
+  printDocument,
+  KROMA_PRINT_PALETTE,
+  renderKromaDocumentHeader,
+  renderKromaReceiptItemsAndSummary,
+} from '../modules/print-helper.js';
+
+/**
+ * Genera el HTML unificado de la Cotización Formal Imprimible UV DTF,
+ * compartiendo el mismo diseño oficial de los recibos de Kroma Lab.
+ * @param {object} quote
+ * @returns {string}
+ */
+export function renderQuotePrintSheetHtml(quote) {
+  if (!quote) return '';
+  const P = KROMA_PRINT_PALETTE;
+
+  const formattedDate = new Date(quote.createdAt || Date.now()).toLocaleDateString('es-GT', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const totalMeters = Number(quote.linearMeters || 1.0);
+  const grandTotalQ = Number(quote.totalPriceQ || 0);
+  const cuttingPriceQ = Number(quote.cuttingPriceQ || 0);
+  const unitRateQ = Number(quote.unitRateQ || 150.0);
+  const code = quote.code || quote.id || 'COT';
+
+  const rawItems = Array.isArray(quote.items) && quote.items.length > 0
+    ? quote.items
+    : [
+        {
+          title: quote.projectName || `Stickers UV DTF ${quote.widthCm || 5} × ${quote.heightCm || 5} cm`,
+          widthCm: Number(quote.widthCm || 5),
+          heightCm: Number(quote.heightCm || 5),
+          qty: Number(quote.qty || 1),
+          actualLinearMeters: totalMeters,
+          stickersPerRow: Number(quote.stickersPerRow || 1),
+          rows: Number(quote.rows || 1),
+          rotationDeg: Number(quote.rotationDeg || 0),
+          includeCutting: Boolean(quote.withCutting),
+        },
+      ];
+
+  const quoteItems = rawItems.map((it) => {
+    const qty = Math.max(1, Number(it.qty || 1));
+    const meters = Number(it.actualLinearMeters || 0) > 0
+      ? Number(it.actualLinearMeters)
+      : (rawItems.length === 1 ? totalMeters : 0);
+    const lineSubQ = Number((meters * unitRateQ).toFixed(2));
+    const unitRef = lineSubQ / qty;
+    const rot = it.rotationDeg ? ` • 🔄 ${it.rotationDeg}°` : '';
+
+    return {
+      qty,
+      descriptionHtml: `<strong>${it.title || quote.projectName || 'Diseño UV DTF'}</strong><div style="font-size: 0.72rem; color: ${P.TEXT_MUTED}; margin-top: 2px;">${it.stickersPerRow || 1} / fila (${it.rows || 1} filas)${rot}</div>`,
+      measure: `${Number(it.widthCm || 5)} × ${Number(it.heightCm || 5)} cm`,
+      linearMeters: `${meters.toFixed(2)} m`,
+      ratePerMeter: `Q${unitRateQ.toFixed(2)}`,
+      unitCostRef: `Q${unitRef.toFixed(2)}`,
+      subtotal: `Q${lineSubQ.toFixed(2)}`,
+    };
+  });
+
+  const totalPieces = quoteItems.reduce((acc, it) => acc + it.qty, 0);
+  const cuttingModeLabel = quote.withCutting ? '✂️ CORTE INDIVIDUAL' : '📜 EN ROLLO CONTINUO';
+  const clientLabel = [
+    quote.companyName || quote.leadName || 'Cliente',
+    quote.companyName && quote.leadName && quote.companyName !== quote.leadName ? `(${quote.leadName})` : '',
+    quote.leadPhone ? `• ${quote.leadPhone}` : '',
+  ].filter(Boolean).join(' ');
+
+  const headerHtml = renderKromaDocumentHeader({
+    title: 'COTIZACIÓN DE SERVICIO DE IMPRESIÓN UV DTF — PRESUPUESTO',
+    subtitle: 'KROMA LAB — IMPRESIÓN INDUSTRIAL UV DTF',
+    folioBadge: `Cotización #${code}`,
+    logoIdPrefix: `quote-logo-${String(code).replace(/[^a-zA-Z0-9]/g, '')}`,
+    metaRows: [
+      {
+        label: 'Proveedor:',
+        value: 'Kroma Lab — Miguel Dubois',
+        highlight: true,
+      },
+      {
+        label: 'Cliente:',
+        value: clientLabel,
+        highlight: true,
+      },
+      {
+        label: 'Proyecto / Fecha:',
+        value: `${quote.projectName || 'Impresión UV DTF'}   |   ${formattedDate} (Vigencia: 15 días)`,
+      },
+      {
+        label: 'Modalidad:',
+        value: `Impresión industrial UV DTF (Bobina 28 cm útiles) — ${cuttingModeLabel}`,
+      },
+      {
+        label: 'Tarifa cotizada:',
+        value: `Q${unitRateQ.toFixed(2)} por metro lineal (${totalMeters.toFixed(2)} metros lineales)`,
+        highlight: true,
+      },
+    ],
+  });
+
+  const termsAndNotesHtml = `
+    <div style="border: 1px solid ${P.POWDER_BLUE}; background: ${P.BG_LIGHT}; padding: 0.75rem 0.9rem; border-radius: 4px; border-left: 4px solid ${P.REGAL_NAVY}; height: 100%;">
+      <strong style="font-size: 0.78rem; text-transform: uppercase; color: ${P.REGAL_NAVY}; display: block; margin-bottom: 0.35rem;">
+        Condiciones Comerciales y Pago:
+      </strong>
+      <div style="font-size: 0.76rem; color: ${P.SPACE_INDIGO}; display: flex; flex-direction: column; gap: 0.2rem;">
+        <div>• <strong>Vigencia:</strong> 15 días calendario a partir de la fecha de emisión.</div>
+        <div>• <strong>Anticipo:</strong> 50% para ingresar a cola de impresión; 50% previo a entrega/envío.</div>
+        <div>• <strong>Cuenta Banco Industrial (Monetaria):</strong> 5371667253 (Miguel Angel Dubois).</div>
+        <div>• <strong>Flete:</strong> Precios de producción no incluyen envío (cotizado vía Forza / Guatex / Caex).</div>
+      </div>
+      ${quote.notes ? `
+        <div style="margin-top: 0.55rem; padding-top: 0.45rem; border-top: 1px dashed ${P.POWDER_BLUE}; font-size: 0.8rem; color: ${P.SPACE_INDIGO};">
+          <strong style="color: ${P.REGAL_NAVY};">Notas del Proyecto:</strong> ${quote.notes}
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  const summaryLines = [
+    {
+      label: 'Total de piezas cotizadas:',
+      value: `${totalPieces.toLocaleString('es-GT')} unidades`,
+    },
+    {
+      label: 'Total de metros lineales:',
+      value: `${totalMeters.toFixed(2)} m`,
+    },
+  ];
+
+  if (cuttingPriceQ > 0) {
+    summaryLines.push({
+      label: 'Servicio de corte individual:',
+      value: `Q ${cuttingPriceQ.toFixed(2)}`,
+    });
+  }
+
+  summaryLines.push({
+    label: 'TOTAL PRESUPUESTO:',
+    value: `Q ${grandTotalQ.toFixed(2)}`,
+    isGrand: true,
+  });
+
+  const tableAndSummaryHtml = renderKromaReceiptItemsAndSummary({
+    items: quoteItems,
+    totals: {
+      totalQty: `${totalPieces.toLocaleString('es-GT')}`,
+      totalMeters: `${totalMeters.toFixed(2)} m`,
+      rateLabel: `Q${unitRateQ.toFixed(2)}`,
+      grandTotal: `Q${grandTotalQ.toFixed(2)}`,
+    },
+    summaryLines,
+    leftSlotHtml: termsAndNotesHtml,
+  });
+
+  return `
+    <div class="workshop-sheet-card kroma-print-sheet">
+      ${headerHtml}
+      ${tableAndSummaryHtml}
+    </div>
+  `;
+}
 
 let currentFilter = 'ALL';
 let currentSearch = '';
@@ -165,6 +332,36 @@ export const quotesView = {
         <!-- Listado en Tarjetas (Mobile-First) -->
         <div id="quotesListContainer" style="display: flex; flex-direction: column; gap: 1rem;">
           ${renderQuotesCards(quotes)}
+        </div>
+
+        <!-- Modal: Hoja Imprimible de Cotización Formal -->
+        <div id="quotePrintSheetModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-label="Cotización imprimible">
+          <div class="modal-card" style="width: min(820px, 95vw); max-height: 92vh;">
+            <div class="modal-header btn-print-hide">
+              <div>
+                <span class="badge" style="color: var(--cerulean); border-color: var(--cerulean);">Presupuesto Formal</span>
+                <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 0.35rem;">Cotización Imprimible UV DTF</h2>
+              </div>
+              <button type="button" class="btn-close-modal" id="btnCloseQuotePrintModal" aria-label="Cerrar vista previa" style="min-width: 44px; min-height: 44px;">✕</button>
+            </div>
+
+            <div id="quotePrintSheetContainer" style="overflow-y: auto; max-height: calc(92vh - 200px); padding-right: 0.25rem;">
+              <!-- Cotización inyectada dinámicamente -->
+            </div>
+
+            <div class="btn-print-hide" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+              <span style="font-size: 0.84rem; color: var(--text-muted);">
+                💡 Imprime o guarda como PDF para entregar el presupuesto formal al cliente.
+              </span>
+              <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" id="btnCancelQuotePrintModal" style="min-height: 44px;">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmPrintQuote" style="min-height: 44px;">
+                  <span>🖨️</span>
+                  <span>Imprimir / Guardar PDF</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Modal Lightbox para Ampliar Snapshot de Bobina -->
@@ -556,6 +753,10 @@ function renderQuotesCards(quotes) {
                 <span>👤 ${(q.leadEmail && q.leadEmail.trim() !== '') ? 'Reasignar Cuenta' : 'Asignar a Cuenta'}</span>
               </button>
             ` : ''}
+            <button type="button" class="btn btn-secondary btn-print-quote" data-quote-id="${q.id}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Imprimir o guardar PDF de esta cotización">
+              <span>🖨️ Imprimir</span>
+            </button>
+
             <button type="button" class="btn btn-primary btn-add-quote-to-cart" data-quote-id="${q.id}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; min-height: 40px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Agregar esta cotización al carrito">
               <span>🛒 Agregar al Carrito</span>
             </button>
@@ -616,6 +817,14 @@ function attachQuotesViewEvents() {
         }
         return;
       }
+      // Imprimir Cotización Formal
+      const btnPrintQuote = e.target.closest('.btn-print-quote');
+      if (btnPrintQuote) {
+        const quoteId = btnPrintQuote.dataset.quoteId;
+        openQuotePrintModal(quoteId);
+        return;
+      }
+
       // Agregar al Carrito
       const btnAddToCart = e.target.closest('.btn-add-quote-to-cart');
       if (btnAddToCart) {
@@ -664,6 +873,30 @@ function attachQuotesViewEvents() {
           openSnapshotLightbox(snapshotUrl);
         }
         return;
+      }
+    });
+  }
+
+  // Modal: Hoja Imprimible de Cotización Formal
+  const btnClosePrintModal = document.getElementById('btnCloseQuotePrintModal');
+  const btnCancelPrintModal = document.getElementById('btnCancelQuotePrintModal');
+  const btnConfirmPrintQuote = document.getElementById('btnConfirmPrintQuote');
+  const printModalBackdrop = document.getElementById('quotePrintSheetModal');
+
+  if (btnClosePrintModal) btnClosePrintModal.addEventListener('click', closeQuotePrintModal);
+  if (btnCancelPrintModal) btnCancelPrintModal.addEventListener('click', closeQuotePrintModal);
+  if (printModalBackdrop) {
+    printModalBackdrop.addEventListener('click', (e) => {
+      if (e.target === printModalBackdrop) closeQuotePrintModal();
+    });
+  }
+  if (btnConfirmPrintQuote) {
+    btnConfirmPrintQuote.addEventListener('click', () => {
+      const container = document.getElementById('quotePrintSheetContainer');
+      if (container && container.innerHTML.trim()) {
+        printDocument(container.innerHTML, 'Cotización Formal UV DTF — Kroma Lab');
+      } else if (typeof window !== 'undefined' && window.print) {
+        window.print();
       }
     });
   }
@@ -945,6 +1178,21 @@ export function openAssignQuoteModal(quoteId, options = {}) {
   }
 
   if (modal) modal.style.display = 'block';
+}
+
+export function openQuotePrintModal(quoteId) {
+  const quote = quotesStore.getQuoteById(quoteId);
+  const modal = document.getElementById('quotePrintSheetModal');
+  const container = document.getElementById('quotePrintSheetContainer');
+  if (!quote || !modal || !container) return;
+
+  container.innerHTML = renderQuotePrintSheetHtml(quote);
+  modal.style.display = 'block';
+}
+
+export function closeQuotePrintModal() {
+  const modal = document.getElementById('quotePrintSheetModal');
+  if (modal) modal.style.display = 'none';
 }
 
 export function closeAssignQuoteModal() {

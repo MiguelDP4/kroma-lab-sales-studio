@@ -1021,3 +1021,6 @@ Pensado para clientes B2B recurrentes y maquila de volumen (ej. **Arte Modelo Du
    * Endpoint `PUT /api/orders/:id` (roles `ADMIN`, `EMPLOYEE`): actualiza dimensiones (`widthCm`, `heightCm`), cantidad, metraje, tarifa, corte, notas, datos de cliente y reemplaza atómicamente los `OrderItem` preservando artes/snapshots adjuntos.
    * Botón **✏️ Editar** disponible en la tabla de pedidos, tarjetas móviles y dentro del modal de **Detalle del Pedido** (`orders-view.js`), con recálculo en vivo del metraje en bobina Audley de 28 cm al cambiar dimensiones o cantidad.
    * **Sincronización automática con Cola Kanban (`production-store.js`):** `syncWithOrdersStore()` propaga los cambios de dimensiones (`widthCm`, `heightCm`), cantidad, metraje, título, corte y notas a cualquier tarjeta que ya esté en la cola de producción Audley.
+7. **Cotización Formal Imprimible / PDF (`feature/printable-quote-sheet`):**
+   * Botón **🖨️ Imprimir** (`.btn-print-quote`) disponible en cada tarjeta de cotización (`quotes-view.js`) para todos los roles.
+   * Modal `#quotePrintSheetModal` con `renderQuotePrintSheetHtml(quote)` utilizando la plantilla unificada de `print-helper.js` (idéntica en estructura visual a los recibos oficiales de Kroma Lab, incluyendo vigencia de 15 días, condiciones de anticipo del 50%, cuenta Banco Industrial y desglose por diseño).

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { quotesView, resetQuotesViewFilters } from '../src/js/views/quotes-view.js';
+import { quotesView, resetQuotesViewFilters, renderQuotePrintSheetHtml } from '../src/js/views/quotes-view.js';
 import { quotesStore } from '../src/js/modules/quotes-store.js';
 import { cartStore } from '../src/js/modules/cart-store.js';
 import { store } from '../src/js/store.js';
@@ -634,5 +634,72 @@ describe('QuotesView — Interfaz de Cotizaciones Guardadas y Conversión a Orde
     // 2. Cotización sin diseño: no renderiza miniatura en su tarjeta
     const cardNoArt = document.querySelector('.quote-item-card[data-quote-id="qt_no_art_02"]');
     expect(cardNoArt.querySelector('.btn-preview-quote-art')).toBeNull();
+  });
+
+  it('genera el HTML de cotización formal imprimible y abre/cierra el modal de impresión desde la tarjeta', () => {
+    quotesStore.quotes = [
+      {
+        id: 'qt_print_01',
+        code: 'COT-2026-777',
+        projectName: 'Etiquetas Café Premium',
+        leadName: 'Rodrigo Méndez',
+        companyName: 'Café San Cristóbal',
+        leadPhone: '+502 5555-1234',
+        widthCm: 8,
+        heightCm: 6,
+        qty: 120,
+        linearMeters: 2.5,
+        stickersPerRow: 3,
+        rows: 40,
+        unitRateQ: 125,
+        materialPriceQ: 312.5,
+        cuttingPriceQ: 36,
+        totalPriceQ: 348.5,
+        withCutting: true,
+        notes: 'Entregar cortado individualmente',
+        status: 'SAVED',
+        createdAt: new Date().toISOString(),
+        items: [
+          {
+            title: 'Logo Bolsa 8x6 cm',
+            widthCm: 8,
+            heightCm: 6,
+            qty: 120,
+            actualLinearMeters: 2.5,
+            stickersPerRow: 3,
+            rows: 40,
+            includeCutting: true,
+          },
+        ],
+      },
+    ];
+
+    // 1. Verificar helper puro de renderizado imprimible
+    const html = renderQuotePrintSheetHtml(quotesStore.quotes[0]);
+    expect(html).toContain('COTIZACIÓN DE SERVICIO DE IMPRESIÓN UV DTF');
+    expect(html).toContain('COT-2026-777');
+    expect(html).toContain('Café San Cristóbal');
+    expect(html).toContain('Logo Bolsa 8x6 cm');
+    expect(html).toContain('Q 348.50');
+    expect(html).toContain('5371667253');
+    expect(renderQuotePrintSheetHtml(null)).toBe('');
+
+    // 2. Verificar flujo interactivo desde la tarjeta
+    document.body.innerHTML = `<div id="app">${quotesView.render()}</div>`;
+    quotesView.onMount();
+
+    const btnPrint = document.querySelector('.btn-print-quote[data-quote-id="qt_print_01"]');
+    expect(btnPrint).not.toBeNull();
+    btnPrint.click();
+
+    const printModal = document.getElementById('quotePrintSheetModal');
+    const printContainer = document.getElementById('quotePrintSheetContainer');
+    expect(printModal.style.display).toBe('block');
+    expect(printContainer.innerHTML).toContain('COT-2026-777');
+    expect(printContainer.innerHTML).toContain('Q 348.50');
+
+    // Cerrar modal
+    document.getElementById('btnCloseQuotePrintModal').click();
+    expect(printModal.style.display).toBe('none');
   });
 });
