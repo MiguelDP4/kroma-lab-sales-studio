@@ -1222,5 +1222,44 @@ describe('Tarjetas Responsivas Estilo Despacho (<= 1200px)', () => {
       document.getElementById('btnCloseEditOrderModal').click();
       expect(document.getElementById('editOrderModal').style.display).toBe('none');
     });
+
+    it('permite abrir el arte del pedido en lightbox con la lupa y descargar el archivo original', () => {
+      const orderWithArt = ordersStore.createOrder({
+        customer: { name: 'Cliente Arte', phone: '+502 5555-3322' },
+        cartTotals: { totalBillableMeters: 1.0, tierRate: 150, materialTotalQ: 150, cuttingTotalQ: 0, grandTotalQ: 150 },
+        items: [
+          {
+            title: 'San Judas 14x10',
+            widthCm: 14,
+            heightCm: 10,
+            qty: 50,
+            actualLinearMeters: 1.0,
+            fileUrl: 'https://r2.kromalab.gt/san-judas.png',
+            fileName: 'san-judas.png',
+            previewUrl: 'https://r2.kromalab.gt/san-judas.png',
+          },
+        ],
+      });
+
+      const btnView = document.querySelector(`.btn-view-order[data-order-id="${orderWithArt.id}"]`);
+      expect(btnView).not.toBeNull();
+      btnView.click();
+
+      const btnDownload = document.querySelector('#modalDetailContent .btn-download-r2');
+      expect(btnDownload).not.toBeNull();
+      expect(btnDownload.href).toContain('san-judas.png');
+
+      const btnPreviewArt = document.querySelector('#modalDetailContent .btn-preview-order-art');
+      expect(btnPreviewArt).not.toBeNull();
+      btnPreviewArt.click();
+
+      const artModal = document.getElementById('orderArtLightboxModal');
+      expect(artModal.style.display).toBe('block');
+      expect(document.getElementById('orderArtLightboxImg').src).toContain('san-judas.png');
+      expect(document.getElementById('btnDownloadOrderArt').href).toContain('san-judas.png');
+
+      document.getElementById('btnCloseOrderArtLightbox').click();
+      expect(artModal.style.display).toBe('none');
+    });
   });
 });

@@ -691,6 +691,43 @@ export const ordersView = {
           </div>
         </div>
       </div>
+
+      <!-- MODAL: VISOR LIGHTBOX PARA AMPLIAR Y DESCARGAR ARTE DEL PEDIDO -->
+      <div id="orderArtLightboxModal" class="modal-backdrop" style="display: none; z-index: 10002;" role="dialog" aria-modal="true" aria-labelledby="orderArtLightboxTitle">
+        <div class="modal-card" style="width: min(850px, 95vw); max-height: 94vh; padding: 1.25rem; display: flex; flex-direction: column;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0;">
+              <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: var(--cerulean); border-color: var(--cerulean); font-size: 0.75rem;">
+                🎨 Arte para Impresión
+              </span>
+              <h3 id="orderArtLightboxTitle" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                Diseño del Pedido
+              </h3>
+            </div>
+            <button type="button" id="btnCloseOrderArtLightbox" class="btn-close-modal" style="min-width: 44px; min-height: 44px;" aria-label="Cerrar vista grande">✕</button>
+          </div>
+
+          <div style="text-align: center; background: #090e1c; border-radius: var(--radius-sm); padding: 0.75rem; overflow: auto; border: 1px solid var(--border-color); flex: 1; min-height: 240px; max-height: 70vh; display: flex; align-items: center; justify-content: center;">
+            <img id="orderArtLightboxImg" src="" alt="Arte del pedido" style="max-width: 100%; max-height: 68vh; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <div id="orderArtLightboxPdf" style="display: none; padding: 2rem; text-align: center;">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">📄</div>
+              <p style="color: var(--text-primary); font-weight: 700; margin-bottom: 0.75rem;">Documento PDF adjunto para impresión</p>
+              <a id="orderArtLightboxPdfLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <span>📥 Abrir / Descargar PDF</span>
+              </a>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; gap: 0.5rem; flex-wrap: wrap;">
+            <a id="btnDownloadOrderArt" href="#" download target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.86rem; text-decoration: none;">
+              <span>💾 Descargar / Abrir archivo original</span>
+            </a>
+            <button type="button" id="btnDismissOrderArtLightbox" class="btn btn-secondary" style="min-height: 44px; font-weight: 700;">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   },
 
@@ -1038,8 +1075,63 @@ export const ordersView = {
       });
     }
 
+    // Lightbox modal para ampliar y descargar el arte original del pedido
+    const orderArtModal = document.getElementById('orderArtLightboxModal');
+    const orderArtTitle = document.getElementById('orderArtLightboxTitle');
+    const orderArtImg = document.getElementById('orderArtLightboxImg');
+    const orderArtPdf = document.getElementById('orderArtLightboxPdf');
+    const orderArtPdfLink = document.getElementById('orderArtLightboxPdfLink');
+    const btnDownloadOrderArt = document.getElementById('btnDownloadOrderArt');
+    const btnCloseOrderArt = document.getElementById('btnCloseOrderArtLightbox');
+    const btnDismissOrderArt = document.getElementById('btnDismissOrderArtLightbox');
+
+    function openOrderArtLightbox(url, title = 'Diseño del Pedido', fileName = 'diseño.png') {
+      if (!orderArtModal || !url) return;
+      if (orderArtTitle) orderArtTitle.textContent = `${title}${fileName ? ` — ${fileName}` : ''}`;
+      if (btnDownloadOrderArt) {
+        btnDownloadOrderArt.href = url;
+        btnDownloadOrderArt.setAttribute('download', fileName || 'arte-impresion');
+      }
+      const isPdf = url.toLowerCase().includes('.pdf') || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+      if (isPdf) {
+        if (orderArtImg) orderArtImg.style.display = 'none';
+        if (orderArtPdf) orderArtPdf.style.display = 'block';
+        if (orderArtPdfLink) orderArtPdfLink.href = url;
+      } else {
+        if (orderArtPdf) orderArtPdf.style.display = 'none';
+        if (orderArtImg) {
+          orderArtImg.src = url;
+          orderArtImg.style.display = 'block';
+        }
+      }
+      orderArtModal.style.display = 'block';
+    }
+
+    function closeOrderArtLightbox() {
+      if (orderArtModal) orderArtModal.style.display = 'none';
+    }
+
+    if (btnCloseOrderArt) btnCloseOrderArt.addEventListener('click', closeOrderArtLightbox);
+    if (btnDismissOrderArt) btnDismissOrderArt.addEventListener('click', closeOrderArtLightbox);
+    if (orderArtModal) {
+      orderArtModal.addEventListener('click', (e) => {
+        if (e.target === orderArtModal) closeOrderArtLightbox();
+      });
+    }
+
     if (detailModal) {
       detailModal.addEventListener('click', async (e) => {
+        // Arte del pedido lightbox (lupa en miniatura)
+        const artTarget = e.target.closest('.btn-preview-order-art');
+        if (artTarget && artTarget.dataset.artUrl) {
+          openOrderArtLightbox(
+            artTarget.dataset.artUrl,
+            artTarget.dataset.artTitle || 'Diseño del Pedido',
+            artTarget.dataset.artFile || 'diseño.png'
+          );
+          return;
+        }
+
         // Snapshot lightbox
         const snapTarget = e.target.closest('.btn-expand-order-snapshot, .order-snapshot-img');
         if (snapTarget && snapTarget.dataset.snapshot) {
@@ -1965,16 +2057,35 @@ export const ordersView = {
                   </div>
                 ` : ''}
 
-                ${(it.previewUrl || it.fileInfo?.fileUrl || it.fileUrl || order.previewUrl || order.fileUrl) ? `
-                  <div class="order-item-thumbnail-wrap" style="margin-top: 0.65rem; display: flex; align-items: center; gap: 0.65rem; background: var(--bg-surface-elevated); padding: 0.45rem 0.65rem; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <img src="${it.previewUrl || it.fileInfo?.fileUrl || it.fileUrl || order.previewUrl || order.fileUrl}" alt="Arte a imprimir" class="order-item-thumbnail-img" style="width: 44px; height: 44px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color); background: #090e1c;">
-                    <div style="font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      <span style="color: var(--text-primary); font-weight: 600;">🖼️ ${it.fileInfo?.name || it.fileName || order.fileName || 'Diseño a imprimir'}</span>
-                      <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">Miniatura para impresión</div>
-                    <a href="${it.fileInfo?.fileUrl || it.fileUrl || order.fileUrl}" target="_blank" rel="noopener noreferrer" class="btn-download-r2" style="display: none;"></a>
+                ${(it.previewUrl || it.fileInfo?.fileUrl || it.fileUrl || order.previewUrl || order.fileUrl) ? (() => {
+                  const artUrl = it.fileInfo?.fileUrl || it.fileUrl || it.previewUrl || order.fileUrl || order.previewUrl;
+                  const thumbUrl = it.previewUrl || it.fileInfo?.fileUrl || it.fileUrl || order.previewUrl || order.fileUrl;
+                  const artFile = it.fileInfo?.name || it.fileName || order.fileName || 'diseño.png';
+                  return `
+                    <div class="order-item-thumbnail-wrap" style="margin-top: 0.65rem; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; flex-wrap: wrap; background: var(--bg-surface-elevated); padding: 0.5rem 0.7rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                      <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
+                        <button type="button"
+                          class="btn-preview-order-art"
+                          data-art-url="${artUrl}"
+                          data-art-title="${(it.title || order.id || 'Diseño').replace(/"/g, '&quot;')}"
+                          data-art-file="${artFile.replace(/"/g, '&quot;')}"
+                          style="background: #090e1c; border: 1.5px solid var(--border-color); border-radius: 6px; padding: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 62px; height: 62px; position: relative; flex-shrink: 0;"
+                          title="Haz clic para ampliar y descargar el arte original"
+                          aria-label="Ampliar imagen del arte">
+                          <img src="${thumbUrl}" alt="Arte a imprimir" class="order-item-thumbnail-img" style="width: 54px; height: 54px; object-fit: contain; border-radius: 4px; display: block;">
+                          <span style="position: absolute; bottom: 2px; right: 2px; background: rgba(2, 132, 199, 0.95); color: #ffffff; border-radius: 3px; font-size: 0.65rem; padding: 1px 4px; font-weight: 800; line-height: 1.2;">🔍</span>
+                        </button>
+                        <div style="font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">
+                          <span style="color: var(--text-primary); font-weight: 700;">🖼️ ${artFile}</span>
+                          <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">Clic en la lupa para ampliar o descargar</div>
+                        </div>
+                      </div>
+                      <a href="${artUrl}" download="${artFile.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-download-r2" style="font-size: 0.78rem; padding: 0.35rem 0.7rem; min-height: 38px; display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; flex-shrink: 0;">
+                        <span>📥 Descargar</span>
+                      </a>
                     </div>
-                  </div>
-                ` : ''}
+                  `;
+                })() : ''}
               </div>
             `).join('')}
           </div>
